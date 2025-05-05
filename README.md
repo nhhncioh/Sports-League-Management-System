@@ -31,41 +31,68 @@ The Sports League Management System aims to manage comprehensive data associated
 - **Other Libraries:** Requests, Gunicorn, Psycopg2, Python-Dotenv, Werkzeug
 
 ## Installation
+
+### Prerequisites
+- Docker and Docker Compose installed on your system
+- Git for cloning the repository
+
+### Setup Steps
 1. Clone the repository:
    ```sh
    git clone https://github.com/yourusername/sports-league-management.git
    cd sports-league-management
    ```
 
-2. Create and activate a virtual environment:
+2. Set up the environment variables:
+   ```sh
+   # The setup script will automatically create .env from .env.example if it doesn't exist
+   cp .env.example .env
+   ```
+   Edit the `.env` file and set your environment variables:
+   - `POSTGRES_USER`: Database username
+   - `POSTGRES_PASSWORD`: Database password
+   - `POSTGRES_DB`: Database name
+   - `FOOTBALL_DATA_API_KEY`: Your API token from football-data.org
+   - Other configuration variables as needed
+
+3. Run the setup script:
+   ```sh
+   chmod +x setup.sh
+   ./setup.sh
+   ```
+   This will:
+   - Check if Docker is running
+   - Create necessary environment files
+   - Build and start the Docker containers
+
+The application will be available at `http://localhost:5000`
+
+### Manual Setup (Without Docker)
+If you prefer to run the application without Docker:
+
+1. Create and activate a virtual environment:
    ```sh
    python3 -m venv env
    source env/bin/activate
    ```
 
-3. Install the required packages:
+2. Install dependencies using Poetry:
+   ```sh
+   pip install poetry
+   poetry install
+   ```
+   
+   Or using pip:
    ```sh
    pip install -r requirements.txt
    ```
 
-4. Set up the environment variables:
-   - Create a `.env` file in the project root directory.
-   - Add the following environment variables to the `.env` file:
-     ```sh
-     FLASK_APP=run.py
-     FLASK_ENV=development
-     DATABASE_URL=postgresql://username:password@localhost:5432/sports_league_db
-     API_TOKEN=your_api_token
-     ```
-
-5. Initialize the database:
+3. Set up PostgreSQL database and run the schema:
    ```sh
-   flask db init
-   flask db migrate -m "Initial migration."
-   flask db upgrade
+   psql -U your_username -d your_database -a -f schema.sql
    ```
 
-6. Run the application:
+4. Run the application:
    ```sh
    flask run
    ```
