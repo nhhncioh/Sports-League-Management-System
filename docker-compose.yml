@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+      - ./static:/app/static
+      - ./templates:/app/templates
+      - ./img:/app/img
+    env_file:
+      - .env
+    environment:
+      - FLASK_APP=main.py
+      - FLASK_ENV=development
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - sports_network
+
+  db:
+    image: postgres:16.2
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/1-schema.sql
+      - ./init-db.sh:/docker-entrypoint-initdb.d/0-init-db.sh
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-sports_league_owner}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-sports_league_password}
+      - POSTGRES_DB=${POSTGRES_DB:-sports_league}
+    ports:
+      - "5432:5432"
+    networks:
+      - sports_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sports_league_owner} -d ${POSTGRES_DB:-sports_league}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+
+networks:
+  sports_network:
+    driver: bridge 
