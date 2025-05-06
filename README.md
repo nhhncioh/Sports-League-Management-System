@@ -114,6 +114,17 @@ If you prefer to run the application without Docker:
 ### Search Functionality
 - **Search:** Find specific players, teams, stadiums, and coaches by name.
 
+## 🎯 Kaggle Dataset
+The data from this system is now available as a public dataset on Kaggle:
+[European Football Leagues Database 2023-2024](https://www.kaggle.com/datasets/kamrangayibov/football-data-european-top-5-leagues)
+
+Features of the dataset:
+- Complete statistics for top 5 European leagues
+- Weekly automated updates
+- Available in both CSV and SQLite formats
+- Comprehensive documentation and usage examples
+- Clean, validated data with proper relationships
+
 ## Database Schema
 The database schema is designed to minimize redundancy and ensure data integrity by using foreign keys and transactions. The main entities include users, stadiums, leagues, seasons, teams, coaches, players, matches, scores, scorers, standings, referees, and match referees.
 
