@@ -1,0 +1,612 @@
+{% extends "base.html" %}
+{% from "admin/components/data_table.html" import render_data_table %}
+
+{% block title %}Games Management - Admin{% endblock %}
+
+{% block extra_head %}
+<script src="https://unpkg.com/htmx.org@1.9.9"></script>
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+    }
+
+    .stats-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-left: 4px solid #28a745;
+    }
+
+    .stats-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #28a745;
+    }
+
+    .game-score {
+        font-weight: 600;
+        color: #495057;
+    }
+
+    .game-status {
+        font-size: 0.7rem;
+        padding: 0.35em 0.65em;
+        border-radius: 0.375rem;
+    }
+
+    .status-scheduled {
+        background: #e3f2fd;
+        color: #1976d2;
+    }
+
+    .status-live {
+        background: #fff3e0;
+        color: #f57c00;
+        animation: pulse 2s infinite;
+    }
+
+    .status-completed {
+        background: #e8f5e8;
+        color: #2e7d32;
+    }
+
+    .status-cancelled {
+        background: #ffebee;
+        color: #c62828;
+    }
+
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.7; }
+        100% { opacity: 1; }
+    }
+
+    .vs-divider {
+        color: #6c757d;
+        font-weight: 600;
+        margin: 0 0.5rem;
+    }
+
+    .team-name {
+        font-weight: 500;
+    }
+
+    .game-time {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+
+    .venue-name {
+        font-size: 0.875rem;
+        color: #495057;
+    }
+
+    .quick-actions {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .action-group {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .filter-badge {
+        background: #e3f2fd;
+        color: #1976d2;
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-0">
+                    <i class="bi bi-calendar-event"></i> Games Management
+                </h1>
+                <p class="mb-0 mt-2 opacity-75">Schedule, track, and manage all games</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{{ url_for('admin.create_game') }}" class="btn btn-light">
+                    <i class="bi bi-plus"></i> Schedule Game
+                </a>
+                <a href="{{ url_for('admin.bulk_schedule') }}" class="btn btn-outline-light">
+                    <i class="bi bi-calendar-plus"></i> Bulk Schedule
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-number">{{ stats.total_games or 0 }}</div>
+                <div class="stats-label">Total Games</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-number">{{ stats.upcoming_games or 0 }}</div>
+                <div class="stats-label">Upcoming</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-number">{{ stats.live_games or 0 }}</div>
+                <div class="stats-label">Live Now</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-number">{{ stats.completed_games or 0 }}</div>
+                <div class="stats-label">Completed</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h6 class="mb-2">Quick Actions</h6>
+                <div class="action-group">
+                    <button class="btn btn-outline-primary btn-sm" onclick="showTodaysGames()">
+                        <i class="bi bi-calendar-day"></i> Today's Games
+                    </button>
+                    <button class="btn btn-outline-success btn-sm" onclick="showLiveGames()">
+                        <i class="bi bi-broadcast"></i> Live Games
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm" onclick="showPendingResults()">
+                        <i class="bi bi-clock-history"></i> Pending Results
+                    </button>
+                    <button class="btn btn-outline-info btn-sm" onclick="showConflicts()">
+                        <i class="bi bi-exclamation-triangle"></i> Scheduling Conflicts
+                    </button>
+                </div>
+            </div>
+            <div>
+                <button class="btn btn-outline-secondary btn-sm" onclick="exportSchedule()">
+                    <i class="bi bi-download"></i> Export Schedule
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="printSchedule()">
+                    <i class="bi bi-printer"></i> Print
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Filters Display -->
+    <div id="active-filters" class="mb-3" style="display: none;">
+        <div class="d-flex align-items-center">
+            <span class="text-muted me-2">Active filters:</span>
+            <div id="filter-badges"></div>
+            <button class="btn btn-link btn-sm text-decoration-none ms-2" onclick="clearAllFilters()">
+                Clear all
+            </button>
+        </div>
+    </div>
+
+    <!-- Games Data Table -->
+    {{ render_data_table(
+        table_id='games-table',
+        title='Games',
+        columns=[
+            {'key': 'date', 'label': 'Date & Time', 'sortable': True},
+            {'key': 'teams', 'label': 'Matchup', 'sortable': False},
+            {'key': 'score', 'label': 'Score', 'sortable': False},
+            {'key': 'venue', 'label': 'Venue', 'sortable': True},
+            {'key': 'league', 'label': 'League', 'sortable': True},
+            {'key': 'status', 'label': 'Status', 'sortable': True}
+        ],
+        data_url=url_for('admin.api_games_data'),
+        create_url=url_for('admin.create_game'),
+        export_urls={
+            'csv': url_for('admin.export_games', format='csv'),
+            'excel': url_for('admin.export_games', format='excel'),
+            'pdf': url_for('admin.export_games', format='pdf')
+        },
+        filters=[
+            {
+                'name': 'league',
+                'label': 'League',
+                'type': 'select',
+                'options': leagues_filter_options
+            },
+            {
+                'name': 'status',
+                'label': 'Status',
+                'type': 'select',
+                'options': [
+                    {'value': 'scheduled', 'label': 'Scheduled'},
+                    {'value': 'live', 'label': 'Live'},
+                    {'value': 'completed', 'label': 'Completed'},
+                    {'value': 'cancelled', 'label': 'Cancelled'},
+                    {'value': 'postponed', 'label': 'Postponed'}
+                ]
+            },
+            {
+                'name': 'date_from',
+                'label': 'From Date',
+                'type': 'date'
+            },
+            {
+                'name': 'date_to',
+                'label': 'To Date',
+                'type': 'date'
+            }
+        ]
+    ) }}
+</div>
+
+<!-- Game Detail Modal -->
+<div class="modal fade" id="gameDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Game Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="game-detail-content">
+                <!-- Content loaded via HTMX -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Score Entry Modal -->
+<div class="modal fade" id="scoreEntryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Enter Score</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="score-entry-form">
+                    <input type="hidden" id="score-game-id" name="game_id">
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="home-score" class="form-label">Home Team Score</label>
+                                <input type="number" class="form-control" id="home-score" name="home_score" min="0" required>
+                                <div class="form-text" id="home-team-name">Home Team</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="away-score" class="form-label">Away Team Score</label>
+                                <input type="number" class="form-control" id="away-score" name="away_score" min="0" required>
+                                <div class="form-text" id="away-team-name">Away Team</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="game-notes" class="form-label">Game Notes (Optional)</label>
+                        <textarea class="form-control" id="game-notes" name="notes" rows="3" placeholder="Any additional notes about the game..."></textarea>
+                    </div>
+
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="mark-completed" name="mark_completed" checked>
+                        <label for="mark-completed" class="form-check-label">
+                            Mark game as completed
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitScore()">
+                    <i class="bi bi-check"></i> Save Score
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Actions Modal -->
+<div class="modal fade" id="bulkActionsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Bulk Actions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <strong><span id="bulk-selected-count">0</span> games selected</strong>
+                </div>
+
+                <div class="mb-3">
+                    <label for="bulk-action-select" class="form-label">Action</label>
+                    <select class="form-select" id="bulk-action-select">
+                        <option value="">Choose an action...</option>
+                        <option value="reschedule">Reschedule Games</option>
+                        <option value="cancel">Cancel Games</option>
+                        <option value="change_venue">Change Venue</option>
+                        <option value="notify">Send Notifications</option>
+                    </select>
+                </div>
+
+                <div id="bulk-action-details" style="display: none;">
+                    <!-- Action-specific fields will be shown here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="executeBulkAction()">
+                    Execute Action
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+let selectedGames = new Set();
+let currentFilters = {};
+
+// Quick action functions
+function showTodaysGames() {
+    const today = new Date().toISOString().split('T')[0];
+    setFilter('date_from', today);
+    setFilter('date_to', today);
+    refreshTable();
+}
+
+function showLiveGames() {
+    setFilter('status', 'live');
+    refreshTable();
+}
+
+function showPendingResults() {
+    setFilter('status', 'completed');
+    // Additional filter for games without scores
+    refreshTable();
+}
+
+function showConflicts() {
+    // This would show games with scheduling conflicts
+    htmx.ajax('GET', '/admin/api/games/conflicts', {
+        target: '#games-table-tbody'
+    });
+}
+
+function setFilter(name, value) {
+    const filterElement = document.getElementById(`games-table-${name}`);
+    if (filterElement) {
+        filterElement.value = value;
+        currentFilters[name] = value;
+        updateActiveFilters();
+    }
+}
+
+function updateActiveFilters() {
+    const activeFilters = document.getElementById('active-filters');
+    const filterBadges = document.getElementById('filter-badges');
+
+    const activeFilterNames = Object.keys(currentFilters).filter(key => currentFilters[key]);
+
+    if (activeFilterNames.length > 0) {
+        activeFilters.style.display = 'block';
+        filterBadges.innerHTML = activeFilterNames.map(name => {
+            const value = currentFilters[name];
+            return `<span class="filter-badge me-1">${name}: ${value} <button type="button" class="btn-close btn-close-white" style="font-size: 0.6rem;" onclick="removeFilter('${name}')"></button></span>`;
+        }).join('');
+    } else {
+        activeFilters.style.display = 'none';
+    }
+}
+
+function removeFilter(name) {
+    delete currentFilters[name];
+    const filterElement = document.getElementById(`games-table-${name}`);
+    if (filterElement) {
+        filterElement.value = '';
+        filterElement.dispatchEvent(new Event('change'));
+    }
+    updateActiveFilters();
+}
+
+function clearAllFilters() {
+    currentFilters = {};
+    const filterElements = document.querySelectorAll('#games-table-filters input, #games-table-filters select');
+    filterElements.forEach(element => {
+        element.value = '';
+    });
+    document.getElementById('games-table-search').value = '';
+    updateActiveFilters();
+    refreshTable();
+}
+
+function refreshTable() {
+    htmx.trigger('#games-table-tbody', 'refresh');
+}
+
+// Game management functions
+function viewGame(gameId) {
+    const modal = new bootstrap.Modal(document.getElementById('gameDetailModal'));
+
+    htmx.ajax('GET', `/admin/api/games/${gameId}/detail`, {
+        target: '#game-detail-content'
+    });
+
+    modal.show();
+}
+
+function editGame(gameId) {
+    window.location.href = `/admin/games/${gameId}/edit`;
+}
+
+function enterScore(gameId, homeTeam, awayTeam) {
+    document.getElementById('score-game-id').value = gameId;
+    document.getElementById('home-team-name').textContent = homeTeam;
+    document.getElementById('away-team-name').textContent = awayTeam;
+
+    // Clear previous values
+    document.getElementById('home-score').value = '';
+    document.getElementById('away-score').value = '';
+    document.getElementById('game-notes').value = '';
+
+    const modal = new bootstrap.Modal(document.getElementById('scoreEntryModal'));
+    modal.show();
+}
+
+function submitScore() {
+    const form = document.getElementById('score-entry-form');
+    const formData = new FormData(form);
+
+    htmx.ajax('PUT', `/admin/api/games/${formData.get('game_id')}/score`, {
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+        },
+        values: {
+            home_score: formData.get('home_score'),
+            away_score: formData.get('away_score'),
+            notes: formData.get('notes'),
+            mark_completed: formData.get('mark_completed') === 'on'
+        }
+    }).then(() => {
+        bootstrap.Modal.getInstance(document.getElementById('scoreEntryModal')).hide();
+        refreshTable();
+        showAlert('Score updated successfully', 'success');
+    }).catch(() => {
+        showAlert('Error updating score', 'danger');
+    });
+}
+
+function startGame(gameId) {
+    if (confirm('Mark this game as started/live?')) {
+        htmx.ajax('PUT', `/admin/api/games/${gameId}/status`, {
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+            },
+            values: {
+                status: 'live'
+            }
+        }).then(() => {
+            refreshTable();
+            showAlert('Game marked as live', 'success');
+        }).catch(() => {
+            showAlert('Error updating game status', 'danger');
+        });
+    }
+}
+
+function cancelGame(gameId, gameInfo) {
+    if (confirm(`Are you sure you want to cancel the game: ${gameInfo}?`)) {
+        htmx.ajax('PUT', `/admin/api/games/${gameId}/status`, {
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+            },
+            values: {
+                status: 'cancelled'
+            }
+        }).then(() => {
+            refreshTable();
+            showAlert('Game cancelled', 'warning');
+        }).catch(() => {
+            showAlert('Error cancelling game', 'danger');
+        });
+    }
+}
+
+function deleteGame(gameId, gameInfo) {
+    if (confirm(`Are you sure you want to delete the game: ${gameInfo}? This action cannot be undone.`)) {
+        htmx.ajax('DELETE', `/admin/api/games/${gameId}`, {
+            headers: {'X-CSRFToken': document.querySelector('[name=csrf_token]').value}
+        }).then(() => {
+            refreshTable();
+            showAlert('Game deleted successfully', 'success');
+        }).catch(() => {
+            showAlert('Error deleting game', 'danger');
+        });
+    }
+}
+
+// Export and print functions
+function exportSchedule() {
+    const filters = new URLSearchParams(currentFilters);
+    window.open(`/admin/games/export?${filters}`, '_blank');
+}
+
+function printSchedule() {
+    const filters = new URLSearchParams(currentFilters);
+    window.open(`/admin/games/print?${filters}`, '_blank');
+}
+
+// Utility functions
+function showAlert(message, type) {
+    const alertContainer = document.getElementById('alert-container') || createAlertContainer();
+
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} alert-dismissible fade show`;
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+
+    alertContainer.appendChild(alert);
+
+    setTimeout(() => {
+        alert.remove();
+    }, 5000);
+}
+
+function createAlertContainer() {
+    const container = document.createElement('div');
+    container.id = 'alert-container';
+    container.style.position = 'fixed';
+    container.style.top = '20px';
+    container.style.right = '20px';
+    container.style.zIndex = '9999';
+    container.style.width = '400px';
+    document.body.appendChild(container);
+    return container;
+}
+
+// Monitor filter changes
+document.addEventListener('change', function(e) {
+    if (e.target.matches('#games-table-filters input, #games-table-filters select')) {
+        const name = e.target.name;
+        const value = e.target.value;
+
+        if (value) {
+            currentFilters[name] = value;
+        } else {
+            delete currentFilters[name];
+        }
+
+        updateActiveFilters();
+    }
+});
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    updateActiveFilters();
+});
+</script>
+{% endblock %}
+{% endblock %}

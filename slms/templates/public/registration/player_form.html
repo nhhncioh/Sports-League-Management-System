@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block title %}Player Registration - {{ season.name }} - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('portal.index') }}">Home</a></li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('portal.season_standings', season_id=season.id) }}">
+                            {{ season.name }}
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active">Player Registration</li>
+                </ol>
+            </nav>
+
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1>Player Registration</h1>
+                    <p class="text-muted">{{ season.name }} - {{ season.league.name }}</p>
+                </div>
+                <div class="text-end">
+                    {% if season.fee_cents %}
+                        <div class="badge bg-primary fs-6">
+                            Fee: ${{ "%.2f"|format(season.fee_cents / 100) }} {{ season.currency }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Registration Form -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-person"></i>
+                        Individual Player Registration
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" novalidate>
+                        {{ form.hidden_tag() }}
+
+                        <!-- Player Information -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.name.label(class="form-label") }}
+                                    {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else "")) }}
+                                    {% if form.name.errors %}
+                                        <div class="invalid-feedback">
+                                            {% for error in form.name.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.email.label(class="form-label") }}
+                                    {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else "")) }}
+                                    {% if form.email.errors %}
+                                        <div class="invalid-feedback">
+                                            {% for error in form.email.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Preferences -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.preferred_division.label(class="form-label") }}
+                                    {{ form.preferred_division(class="form-control" + (" is-invalid" if form.preferred_division.errors else "")) }}
+                                    {% if form.preferred_division.errors %}
+                                        <div class="invalid-feedback">
+                                            {% for error in form.preferred_division.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">Optional - specify skill level or division preference</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Additional Notes -->
+                        <div class="mb-4">
+                            {{ form.notes.label(class="form-label") }}
+                            {{ form.notes(class="form-control" + (" is-invalid" if form.notes.errors else "")) }}
+                            {% if form.notes.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.notes.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Optional - skill level, availability, or other information</div>
+                        </div>
+
+                        <!-- Waiver Agreement -->
+                        <div class="mb-4">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <div class="form-check">
+                                        {{ form.waiver_agreement(class="form-check-input" + (" is-invalid" if form.waiver_agreement.errors else "")) }}
+                                        <label class="form-check-label" for="{{ form.waiver_agreement.id }}">
+                                            I agree to the
+                                            <button type="button" class="btn btn-link p-0 text-decoration-underline"
+                                                    data-bs-toggle="modal" data-bs-target="#waiverModal">
+                                                waiver v{{ waiver.version }}
+                                            </button>
+                                        </label>
+                                        {% if form.waiver_agreement.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.waiver_agreement.errors %}{{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-check-circle"></i>
+                                Submit Player Registration
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Registration Info -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-info-circle"></i>
+                        Registration Information
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2">
+                            <strong>Season:</strong> {{ season.name }}
+                        </li>
+                        <li class="mb-2">
+                            <strong>League:</strong> {{ season.league.name }}
+                        </li>
+                        <li class="mb-2">
+                            <strong>Sport:</strong> {{ season.league.sport.value.title() }}
+                        </li>
+                        {% if season.fee_cents %}
+                            <li class="mb-2">
+                                <strong>Registration Fee:</strong>
+                                ${{ "%.2f"|format(season.fee_cents / 100) }} {{ season.currency }}
+                            </li>
+                        {% endif %}
+                        {% if season.start_date and season.end_date %}
+                            <li class="mb-2">
+                                <strong>Season Dates:</strong><br>
+                                {{ season.start_date.strftime('%b %d') }} -
+                                {{ season.end_date.strftime('%b %d, %Y') }}
+                            </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Team Assignment Note -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-people"></i>
+                        Team Assignment
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">
+                        <small class="text-muted">
+                            As an individual player, you will be assigned to a team based on skill level,
+                            availability, and league requirements. Team assignments will be communicated
+                            before the season starts.
+                        </small>
+                    </p>
+                </div>
+            </div>
+
+            <!-- What Happens Next -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-list-check"></i>
+                        What Happens Next?
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ol class="mb-0">
+                        <li class="mb-2">Submit your registration form</li>
+                        <li class="mb-2">You'll receive a confirmation email</li>
+                        <li class="mb-2">Payment instructions will be provided</li>
+                        <li class="mb-2">Team assignment notification</li>
+                        <li class="mb-0">Season schedule distribution</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Waiver Modal -->
+<div class="modal fade" id="waiverModal" tabindex="-1" aria-labelledby="waiverModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="waiverModalLabel">{{ waiver.title }} (v{{ waiver.version }})</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="overflow-auto" style="max-height: 400px;">
+                    {{ waiver.content|safe }}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

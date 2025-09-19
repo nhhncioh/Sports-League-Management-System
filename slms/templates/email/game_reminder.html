@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Game Reminder</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+            color: #212529;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .header .icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        .content {
+            padding: 30px 20px;
+        }
+        .content h2 {
+            color: #ffc107;
+            margin-top: 0;
+            font-size: 20px;
+        }
+        .game-info {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 10px;
+            padding: 25px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .teams {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0;
+        }
+        .team {
+            flex: 1;
+            text-align: center;
+        }
+        .team-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #007bff;
+            margin-bottom: 5px;
+        }
+        .team-type {
+            font-size: 12px;
+            color: #6c757d;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        .vs {
+            font-size: 24px;
+            font-weight: bold;
+            color: #495057;
+            padding: 0 20px;
+        }
+        .game-details {
+            background: #fff;
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .detail-item:last-child {
+            border-bottom: none;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #495057;
+        }
+        .detail-value {
+            color: #007bff;
+            font-weight: 500;
+        }
+        .time-highlight {
+            background: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 18px;
+            font-weight: 600;
+            margin: 15px 0;
+            text-align: center;
+        }
+        .cta-button {
+            display: inline-block;
+            background: #007bff;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: 600;
+            margin: 20px 0;
+        }
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+            font-size: 14px;
+            border-top: 1px solid #e9ecef;
+        }
+        .urgent {
+            background: #dc3545;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 15px 0;
+            text-align: center;
+            font-weight: 600;
+        }
+        @media (max-width: 600px) {
+            .container {
+                margin: 0;
+                box-shadow: none;
+            }
+            .content {
+                padding: 20px 15px;
+            }
+            .teams {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .vs {
+                padding: 10px 0;
+            }
+            .detail-item {
+                flex-direction: column;
+                gap: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="icon">⚽</div>
+            <h1>Game Reminder</h1>
+            <p>Your game is coming up!</p>
+        </div>
+
+        <div class="content">
+            <div class="urgent">
+                🚨 Game starts in less than 24 hours!
+            </div>
+
+            <h2>Don't forget about your upcoming game:</h2>
+
+            <div class="game-info">
+                <div class="teams">
+                    <div class="team">
+                        <div class="team-name">{{ home_team.name }}</div>
+                        <div class="team-type">Home</div>
+                    </div>
+                    <div class="vs">VS</div>
+                    <div class="team">
+                        <div class="team-name">{{ away_team.name }}</div>
+                        <div class="team-type">Away</div>
+                    </div>
+                </div>
+
+                {% if game.start_time %}
+                <div class="time-highlight">
+                    📅 {{ game.start_time.strftime('%A, %B %d, %Y') }}<br>
+                    🕐 {{ game.start_time.strftime('%I:%M %p') }}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="game-details">
+                {% if venue %}
+                <div class="detail-item">
+                    <span class="detail-label">📍 Venue:</span>
+                    <span class="detail-value">{{ venue.name }}</span>
+                </div>
+                {% if venue.address %}
+                <div class="detail-item">
+                    <span class="detail-label">📮 Address:</span>
+                    <span class="detail-value">{{ venue.address }}</span>
+                </div>
+                {% endif %}
+                {% endif %}
+                {% if season %}
+                <div class="detail-item">
+                    <span class="detail-label">🏆 Season:</span>
+                    <span class="detail-value">{{ season.name }}</span>
+                </div>
+                {% endif %}
+                <div class="detail-item">
+                    <span class="detail-label">📊 Status:</span>
+                    <span class="detail-value">{{ game.status.value.replace('_', ' ').title() }}</span>
+                </div>
+            </div>
+
+            <h3>Pre-Game Checklist:</h3>
+            <ul>
+                <li>✅ Confirm team roster and attendance</li>
+                <li>✅ Check equipment and uniforms</li>
+                <li>✅ Review venue location and parking</li>
+                <li>✅ Arrive 30 minutes early for warm-up</li>
+                <li>✅ Bring water and any needed supplies</li>
+            </ul>
+
+            <div style="background: #d1ecf1; border: 1px solid #bee5eb; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <strong>💡 Coach Tip:</strong>
+                <p>Make sure to communicate with your team about arrival time and any last-minute updates. Good luck!</p>
+            </div>
+
+            <a href="{{ base_url }}" class="cta-button">View Game Details</a>
+
+            <p>Questions or need to report changes? Contact our admin team immediately.</p>
+
+            <p>Good luck and have a great game!<br>
+            <strong>{{ org_name }} Team</strong></p>
+        </div>
+
+        <div class="footer">
+            <p>This is an automated reminder from {{ org_name }}.</p>
+            <p>Game reminders are sent 24 hours before scheduled start time.</p>
+        </div>
+    </div>
+</body>
+</html>

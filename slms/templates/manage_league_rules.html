@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Manage League Rules{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h1 class="mb-4">Manage League Rules</h1>
+  <div class="row">
+    <div class="col-md-5">
+      <h4>Create / Update</h4>
+      <form method="POST" action="{{ url_for('admin.manage_league_rules') }}">
+        <div class="form-group">
+          <label for="league_id">League</label>
+          <select class="form-control" id="league_id" name="league_id" required>
+            <option value="">Select league</option>
+            {% for l in leagues %}
+              <option value="{{ l[0] }}">{{ l[1] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group col-md-4">
+            <label for="points_win">Points Win</label>
+            <input class="form-control" type="number" id="points_win" name="points_win" value="3">
+          </div>
+          <div class="form-group col-md-4">
+            <label for="points_draw">Points Draw</label>
+            <input class="form-control" type="number" id="points_draw" name="points_draw" value="1">
+          </div>
+          <div class="form-group col-md-4">
+            <label for="points_loss">Points Loss</label>
+            <input class="form-control" type="number" id="points_loss" name="points_loss" value="0">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="tiebreakers">Tiebreakers (comma-separated e.g., GD,GF,H2H)</label>
+          <input class="form-control" type="text" id="tiebreakers" name="tiebreakers" placeholder="GD,GF,H2H">
+        </div>
+        <div class="form-row">
+          <div class="form-group col-md-6">
+            <label for="substitution_limit">Substitution Limit</label>
+            <input class="form-control" type="number" id="substitution_limit" name="substitution_limit" placeholder="e.g., 5">
+          </div>
+          <div class="form-group col-md-6">
+            <label for="foreign_player_limit">Foreign Player Limit</label>
+            <input class="form-control" type="number" id="foreign_player_limit" name="foreign_player_limit" placeholder="e.g., 3">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="notes">Notes</label>
+          <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Save Rules</button>
+      </form>
+    </div>
+    <div class="col-md-7">
+      <h4>Existing Rules</h4>
+      <table class="table table-striped table-sm">
+        <thead>
+          <tr>
+            <th>League</th>
+            <th>W/D/L</th>
+            <th>Tiebreakers</th>
+            <th>Subs</th>
+            <th>Foreign</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rules %}
+          <tr>
+            <td>{{ r[1] }}</td>
+            <td>{{ r[2] }}/{{ r[3] }}/{{ r[4] }}</td>
+            <td>{{ r[5] }}</td>
+            <td>{{ r[6] }}</td>
+            <td>{{ r[7] }}</td>
+            <td>{{ r[8] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

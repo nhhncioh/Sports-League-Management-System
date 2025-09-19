@@ -1,0 +1,795 @@
+{% extends "base.html" %}
+
+{% block title %}Step 5: Schedule - Create Season - Admin - {{ super() }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .wizard-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .wizard-progress {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+
+    .progress-step {
+        flex: 1;
+        text-align: center;
+        position: relative;
+        padding: 0 10px;
+    }
+
+    .progress-step:not(:last-child):after {
+        content: '';
+        position: absolute;
+        top: 20px;
+        right: -50%;
+        width: 100%;
+        height: 2px;
+        background: #dee2e6;
+        z-index: 1;
+    }
+
+    .progress-step.completed:not(:last-child):after,
+    .progress-step.active:not(:last-child):after {
+        background: #28a745;
+    }
+
+    .step-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #dee2e6;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 8px;
+        position: relative;
+        z-index: 2;
+        font-weight: 600;
+    }
+
+    .progress-step.completed .step-circle {
+        background: #28a745;
+        color: white;
+    }
+
+    .progress-step.active .step-circle {
+        background: #007bff;
+        color: white;
+    }
+
+    .step-label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #6c757d;
+    }
+
+    .progress-step.completed .step-label,
+    .progress-step.active .step-label {
+        color: #495057;
+        font-weight: 600;
+    }
+
+    .wizard-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+
+    .wizard-header {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+    }
+
+    .wizard-body {
+        padding: 40px;
+    }
+
+    .wizard-footer {
+        background: #f8f9fa;
+        padding: 20px 40px;
+        border-top: 1px solid #dee2e6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .btn-wizard {
+        min-width: 120px;
+        padding: 12px 24px;
+        font-weight: 600;
+        border-radius: 8px;
+    }
+
+    .schedule-section {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 25px;
+        margin-bottom: 25px;
+    }
+
+    .section-title {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+    }
+
+    .section-title i {
+        margin-right: 10px;
+        color: #007bff;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 8px;
+    }
+
+    .form-control,
+    .form-select {
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        padding: 12px 16px;
+        font-size: 1rem;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+    .schedule-preview {
+        background: white;
+        border-radius: 10px;
+        padding: 25px;
+        margin-top: 30px;
+        border: 1px solid #dee2e6;
+        display: none;
+    }
+
+    .schedule-preview.show {
+        display: block;
+    }
+
+    .schedule-grid {
+        overflow-x: auto;
+    }
+
+    .schedule-table {
+        width: 100%;
+        font-size: 0.875rem;
+    }
+
+    .schedule-table th {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 12px 8px;
+        text-align: center;
+        font-weight: 600;
+    }
+
+    .schedule-table td {
+        padding: 10px 8px;
+        text-align: center;
+        border: 1px solid #dee2e6;
+        vertical-align: middle;
+    }
+
+    .schedule-table tbody tr:hover {
+        background: #f8f9fa;
+    }
+
+    .game-slot {
+        background: #e3f2fd;
+        border-radius: 6px;
+        padding: 8px;
+        margin: 2px 0;
+        font-size: 0.75rem;
+        border-left: 3px solid #2196f3;
+    }
+
+    .game-slot .teams {
+        font-weight: 600;
+        color: #1976d2;
+    }
+
+    .game-slot .time {
+        color: #666;
+        font-size: 0.7rem;
+    }
+
+    .game-slot .venue {
+        color: #888;
+        font-size: 0.7rem;
+    }
+
+    .schedule-stats {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .stat-item {
+        text-align: center;
+        padding: 15px;
+    }
+
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #007bff;
+        display: block;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .generate-btn {
+        background: linear-gradient(45deg, #28a745, #20c997);
+        border: none;
+        color: white;
+        padding: 15px 30px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        transition: all 0.3s ease;
+    }
+
+    .generate-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+        color: white;
+    }
+
+    .regenerate-btn {
+        background: #ffc107;
+        border: none;
+        color: #212529;
+        font-weight: 600;
+    }
+
+    .regenerate-btn:hover {
+        background: #e0a800;
+        color: #212529;
+    }
+
+    .loading-spinner {
+        display: none;
+        text-align: center;
+        padding: 40px;
+    }
+
+    .loading-spinner.show {
+        display: block;
+    }
+
+    .schedule-actions {
+        text-align: center;
+        padding: 20px;
+        border-top: 1px solid #dee2e6;
+        background: #f8f9fa;
+    }
+
+    .btn-export {
+        margin: 0 5px;
+    }
+
+    .alert-schedule {
+        border-left: 4px solid #007bff;
+        background: #f8f9ff;
+        border: 1px solid #b3d7ff;
+    }
+
+    .time-slot-group {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        border: 1px solid #dee2e6;
+    }
+
+    .day-selector {
+        margin-bottom: 15px;
+    }
+
+    .day-checkbox {
+        margin-right: 15px;
+        margin-bottom: 10px;
+    }
+
+    .form-check-input {
+        transform: scale(1.2);
+        margin-right: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="wizard-container">
+        <!-- Progress Bar -->
+        <div class="wizard-progress">
+            <div class="d-flex">
+                <div class="progress-step completed">
+                    <div class="step-circle"><i class="bi bi-check"></i></div>
+                    <div class="step-label">Season Info</div>
+                </div>
+                <div class="progress-step completed">
+                    <div class="step-circle"><i class="bi bi-check"></i></div>
+                    <div class="step-label">Teams</div>
+                </div>
+                <div class="progress-step completed">
+                    <div class="step-circle"><i class="bi bi-check"></i></div>
+                    <div class="step-label">Venues</div>
+                </div>
+                <div class="progress-step completed">
+                    <div class="step-circle"><i class="bi bi-check"></i></div>
+                    <div class="step-label">Registration</div>
+                </div>
+                <div class="progress-step active">
+                    <div class="step-circle">5</div>
+                    <div class="step-label">Schedule</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 5 Form -->
+        <div class="wizard-card">
+            <div class="wizard-header">
+                <h1><i class="bi bi-calendar-event"></i> Step 5: Generate Schedule</h1>
+                <p class="mb-0">Create the game schedule for your season</p>
+            </div>
+
+            <div class="wizard-body">
+                <!-- Schedule Configuration -->
+                <div class="schedule-section">
+                    <h5 class="section-title">
+                        <i class="bi bi-sliders"></i> Schedule Configuration
+                    </h5>
+
+                    <form id="schedule-form">
+                        {{ csrf_token() }}
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="schedule_type" class="form-label">Schedule Type</label>
+                                    <select class="form-select" id="schedule_type" name="schedule_type">
+                                        <option value="round_robin" {{ 'selected' if wizard_data and wizard_data.data and wizard_data.data.step5 and wizard_data.data.step5.schedule_type == 'round_robin' }}>
+                                            Round Robin (Everyone plays everyone)
+                                        </option>
+                                        <option value="single_elimination" {{ 'selected' if wizard_data and wizard_data.data and wizard_data.data.step5 and wizard_data.data.step5.schedule_type == 'single_elimination' }}>
+                                            Single Elimination Tournament
+                                        </option>
+                                        <option value="double_elimination" {{ 'selected' if wizard_data and wizard_data.data and wizard_data.data.step5 and wizard_data.data.step5.schedule_type == 'double_elimination' }}>
+                                            Double Elimination Tournament
+                                        </option>
+                                        <option value="custom" {{ 'selected' if wizard_data and wizard_data.data and wizard_data.data.step5 and wizard_data.data.step5.schedule_type == 'custom' }}>
+                                            Custom Schedule
+                                        </option>
+                                    </select>
+                                    <div class="form-text">How should games be organized?</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="games_per_week" class="form-label">Games per Week</label>
+                                    <select class="form-select" id="games_per_week" name="games_per_week">
+                                        <option value="1" {{ 'selected' if wizard_data and wizard_data.data and wizard_data.data.step5 and wizard_data.data.step5.games_per_week == '1' }}>1 game per week</option>
+                                        <option value="2" {{ 'selected' if wizard_data and wizard_data.data and wizard_data.data.step5 and wizard_data.data.step5.games_per_week == '2' }}>2 games per week</option>
+                                        <option value="3" {{ 'selected' if wizard_data and wizard_data.data and wizard_data.data.step5 and wizard_data.data.step5.games_per_week == '3' }}>3 games per week</option>
+                                        <option value="flexible" {{ 'selected' if wizard_data and wizard_data.data and wizard_data.data.step5 and wizard_data.data.step5.games_per_week == 'flexible' }}>Flexible scheduling</option>
+                                    </select>
+                                    <div class="form-text">How many games should be scheduled weekly?</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Game Day Selection -->
+                        <div class="time-slot-group">
+                            <h6><i class="bi bi-calendar-day"></i> Game Days</h6>
+                            <div class="day-selector">
+                                {% for day_name, day_code in [('Monday', 'mon'), ('Tuesday', 'tue'), ('Wednesday', 'wed'), ('Thursday', 'thu'), ('Friday', 'fri'), ('Saturday', 'sat'), ('Sunday', 'sun')] %}
+                                <div class="form-check form-check-inline day-checkbox">
+                                    <input type="checkbox" class="form-check-input" id="day_{{ day_code }}"
+                                           name="game_days[]" value="{{ day_code }}"
+                                           {% if wizard_data and wizard_data.data and wizard_data.data.step5 and wizard_data.data.step5.game_days and day_code in wizard_data.data.step5.game_days %}checked{% endif %}>
+                                    <label for="day_{{ day_code }}" class="form-check-label">{{ day_name }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Preferred Game Times -->
+                        <div class="time-slot-group">
+                            <h6><i class="bi bi-clock"></i> Preferred Game Times</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="earliest_start" class="form-label">Earliest Start Time</label>
+                                        <input type="time" class="form-control" id="earliest_start"
+                                               name="earliest_start"
+                                               value="{{ wizard_data.data.step5.earliest_start if wizard_data and wizard_data.data and wizard_data.data.step5 else '10:00' }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="latest_start" class="form-label">Latest Start Time</label>
+                                        <input type="time" class="form-control" id="latest_start"
+                                               name="latest_start"
+                                               value="{{ wizard_data.data.step5.latest_start if wizard_data and wizard_data.data and wizard_data.data.step5 else '18:00' }}">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Advanced Options -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="min_rest_days" class="form-label">Minimum Rest Days</label>
+                                    <select class="form-select" id="min_rest_days" name="min_rest_days">
+                                        <option value="0" {{ 'selected' if wizard_data and wizard_data.data and wizard_data.data.step5 and wizard_data.data.step5.min_rest_days == '0' }}>No minimum</option>
+                                        <option value="1" {{ 'selected' if wizard_data and wizard_data.data and wizard_data.data.step5 and wizard_data.data.step5.min_rest_days == '1' }}>1 day</option>
+                                        <option value="2" {{ 'selected' if wizard_data and wizard_data.data and wizard_data.data.step5 and wizard_data.data.step5.min_rest_days == '2' }}>2 days</option>
+                                        <option value="3" {{ 'selected' if wizard_data and wizard_data.data and wizard_data.data.step5 and wizard_data.data.step5.min_rest_days == '3' }}>3 days</option>
+                                    </select>
+                                    <div class="form-text">Rest between games for same team</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="randomize_home_away" class="form-label">Home/Away Assignment</label>
+                                    <select class="form-select" id="randomize_home_away" name="randomize_home_away">
+                                        <option value="true" {{ 'selected' if wizard_data and wizard_data.data and wizard_data.data.step5 and wizard_data.data.step5.randomize_home_away == 'true' }}>Random</option>
+                                        <option value="false" {{ 'selected' if wizard_data and wizard_data.data and wizard_data.data.step5 and wizard_data.data.step5.randomize_home_away == 'false' }}>Alphabetical</option>
+                                        <option value="balanced" {{ 'selected' if wizard_data and wizard_data.data and wizard_data.data.step5 and wizard_data.data.step5.randomize_home_away == 'balanced' }}>Balanced</option>
+                                    </select>
+                                    <div class="form-text">How to assign home/away teams</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-center mt-4">
+                            <button type="button" class="btn generate-btn" onclick="generateSchedule()">
+                                <i class="bi bi-magic"></i> Generate Schedule
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Loading Spinner -->
+                <div id="loading-spinner" class="loading-spinner">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Generating schedule...</span>
+                    </div>
+                    <p class="mt-3">Generating your schedule...</p>
+                </div>
+
+                <!-- Schedule Preview -->
+                <div id="schedule-preview" class="schedule-preview">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h5 class="section-title">
+                            <i class="bi bi-eye"></i> Schedule Preview
+                        </h5>
+                        <div>
+                            <button type="button" class="btn btn-outline-warning regenerate-btn me-2" onclick="generateSchedule()">
+                                <i class="bi bi-arrow-clockwise"></i> Regenerate
+                            </button>
+                            <button type="button" class="btn btn-outline-info btn-export" onclick="exportSchedule('csv')">
+                                <i class="bi bi-download"></i> Export CSV
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Schedule Statistics -->
+                    <div id="schedule-stats" class="schedule-stats">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="stat-item">
+                                    <span class="stat-number" id="total-games">0</span>
+                                    <span class="stat-label">Total Games</span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-item">
+                                    <span class="stat-number" id="total-weeks">0</span>
+                                    <span class="stat-label">Weeks</span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-item">
+                                    <span class="stat-number" id="games-per-team">0</span>
+                                    <span class="stat-label">Games per Team</span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-item">
+                                    <span class="stat-number" id="total-venues">0</span>
+                                    <span class="stat-label">Venues Used</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Schedule Grid -->
+                    <div class="schedule-grid">
+                        <div id="schedule-content">
+                            <!-- Schedule table will be generated here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alerts -->
+                <div class="alert alert-schedule">
+                    <h6><i class="bi bi-info-circle"></i> Schedule Generation Tips:</h6>
+                    <ul class="mb-0">
+                        <li><strong>Round Robin:</strong> Best for regular season play, ensures all teams play each other</li>
+                        <li><strong>Tournament:</strong> Elimination format for playoff scenarios</li>
+                        <li><strong>Rest Days:</strong> Prevents teams from playing too frequently</li>
+                        <li><strong>Venue Conflicts:</strong> System will automatically resolve scheduling conflicts</li>
+                        <li>You can regenerate the schedule multiple times until you're satisfied</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="wizard-footer">
+                <a href="{{ url_for('admin.season_wizard_step', step=4) }}" class="btn btn-outline-secondary btn-wizard">
+                    <i class="bi bi-arrow-left"></i> Back
+                </a>
+                <div>
+                    <button type="button" class="btn btn-outline-success btn-wizard me-2" onclick="saveAsDraft()">
+                        <i class="bi bi-save"></i> Save Draft
+                    </button>
+                    <button type="button" class="btn btn-success btn-wizard" onclick="finalizeSeason()" id="finalize-btn" disabled>
+                        <i class="bi bi-check-circle"></i> Create Season
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+let currentSchedule = null;
+
+function generateSchedule() {
+    const form = document.getElementById('schedule-form');
+    const formData = new FormData(form);
+
+    // Show loading spinner
+    document.getElementById('loading-spinner').classList.add('show');
+    document.getElementById('schedule-preview').classList.remove('show');
+
+    // Simulate schedule generation (replace with actual API call)
+    setTimeout(() => {
+        // Hide loading spinner
+        document.getElementById('loading-spinner').classList.remove('show');
+
+        // Generate mock schedule data
+        const scheduleData = generateMockSchedule(formData);
+        currentSchedule = scheduleData;
+
+        // Display schedule
+        displaySchedule(scheduleData);
+
+        // Show preview section
+        document.getElementById('schedule-preview').classList.add('show');
+
+        // Enable finalize button
+        document.getElementById('finalize-btn').disabled = false;
+    }, 2000);
+}
+
+function generateMockSchedule(formData) {
+    const scheduleType = formData.get('schedule_type');
+    const gamesPerWeek = formData.get('games_per_week');
+    const gameDays = formData.getAll('game_days[]');
+
+    // Mock data - replace with actual schedule generation logic
+    const teams = ['Team A', 'Team B', 'Team C', 'Team D', 'Team E', 'Team F'];
+    const venues = ['Stadium 1', 'Stadium 2', 'Field 3'];
+
+    const games = [];
+    let gameId = 1;
+    let currentDate = new Date();
+    currentDate.setDate(currentDate.getDate() + 7); // Start next week
+
+    // Generate round robin schedule
+    for (let i = 0; i < teams.length; i++) {
+        for (let j = i + 1; j < teams.length; j++) {
+            games.push({
+                id: gameId++,
+                homeTeam: teams[i],
+                awayTeam: teams[j],
+                date: new Date(currentDate),
+                time: '14:00',
+                venue: venues[Math.floor(Math.random() * venues.length)],
+                week: Math.ceil(games.length / parseInt(gamesPerWeek) || 1)
+            });
+
+            // Increment date for next game
+            currentDate.setDate(currentDate.getDate() + 3);
+        }
+    }
+
+    return {
+        games: games,
+        stats: {
+            totalGames: games.length,
+            totalWeeks: Math.max(...games.map(g => g.week)),
+            gamesPerTeam: Math.floor(games.length * 2 / teams.length),
+            totalVenues: venues.length
+        }
+    };
+}
+
+function displaySchedule(scheduleData) {
+    // Update statistics
+    document.getElementById('total-games').textContent = scheduleData.stats.totalGames;
+    document.getElementById('total-weeks').textContent = scheduleData.stats.totalWeeks;
+    document.getElementById('games-per-team').textContent = scheduleData.stats.gamesPerTeam;
+    document.getElementById('total-venues').textContent = scheduleData.stats.totalVenues;
+
+    // Generate schedule table
+    let html = '<table class="table table-striped schedule-table">';
+    html += '<thead><tr>';
+    html += '<th>Week</th><th>Date</th><th>Time</th><th>Home Team</th><th>Away Team</th><th>Venue</th>';
+    html += '</tr></thead><tbody>';
+
+    scheduleData.games.forEach(game => {
+        html += '<tr>';
+        html += `<td>Week ${game.week}</td>`;
+        html += `<td>${game.date.toLocaleDateString()}</td>`;
+        html += `<td>${game.time}</td>`;
+        html += `<td><strong>${game.homeTeam}</strong></td>`;
+        html += `<td>${game.awayTeam}</td>`;
+        html += `<td>${game.venue}</td>`;
+        html += '</tr>';
+    });
+
+    html += '</tbody></table>';
+    document.getElementById('schedule-content').innerHTML = html;
+}
+
+function exportSchedule(format) {
+    if (!currentSchedule) {
+        alert('Please generate a schedule first');
+        return;
+    }
+
+    if (format === 'csv') {
+        let csv = 'Week,Date,Time,Home Team,Away Team,Venue\n';
+        currentSchedule.games.forEach(game => {
+            csv += `Week ${game.week},${game.date.toLocaleDateString()},${game.time},${game.homeTeam},${game.awayTeam},${game.venue}\n`;
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'season_schedule.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    }
+}
+
+function saveAsDraft() {
+    // Save current wizard state as draft
+    const formData = {
+        step5: {
+            schedule: currentSchedule,
+            draft: true
+        }
+    };
+
+    fetch("{{ url_for('admin.season_wizard_step', step=5) }}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Draft saved successfully!');
+        } else {
+            alert('Error saving draft: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error saving draft');
+    });
+}
+
+function finalizeSeason() {
+    if (!currentSchedule) {
+        alert('Please generate a schedule first');
+        return;
+    }
+
+    if (confirm('Are you sure you want to create this season? This action cannot be undone.')) {
+        // Show loading state
+        const finalizeBtn = document.getElementById('finalize-btn');
+        const originalText = finalizeBtn.innerHTML;
+        finalizeBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Creating...';
+        finalizeBtn.disabled = true;
+
+        // Submit final wizard data
+        const formData = {
+            step5: {
+                schedule: currentSchedule,
+                finalize: true
+            }
+        };
+
+        fetch("{{ url_for('admin.season_wizard_step', step=5) }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Redirect to season management or show success
+                window.location.href = "{{ url_for('admin.manage_seasons') }}";
+            } else {
+                alert('Error creating season: ' + data.message);
+                finalizeBtn.innerHTML = originalText;
+                finalizeBtn.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error creating season');
+            finalizeBtn.innerHTML = originalText;
+            finalizeBtn.disabled = false;
+        });
+    }
+}
+
+// Initialize form state
+document.addEventListener('DOMContentLoaded', function() {
+    // If we have saved schedule data, display it
+    {% if wizard_data and wizard_data.data and wizard_data.data.step5 and wizard_data.data.step5.schedule %}
+    currentSchedule = {{ wizard_data.data.step5.schedule | tojson }};
+    displaySchedule(currentSchedule);
+    document.getElementById('schedule-preview').classList.add('show');
+    document.getElementById('finalize-btn').disabled = false;
+    {% endif %}
+});
+</script>
+{% endblock %}
+{% endblock %}

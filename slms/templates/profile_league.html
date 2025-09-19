@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}{{ league.name }} - League Profile{% endblock %}
+{% block content %}
+<div class="league-hero" style="background-image: {% if homepage.background_url %}linear-gradient(180deg, rgba(15,23,42,0.55), rgba(15,23,42,0.75)), url({{ homepage.background_url }}){% else %}linear-gradient(180deg, rgba(37,99,235,0.85), rgba(14,116,144,0.92)){% endif %};">
+    <div class="container py-5 text-white">
+        <div class="row align-items-center g-4">
+            <div class="col-lg-8">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    {% if league.icon_url %}
+                        <span class="league-hero-logo" style="background-image: url({{ league.icon_url }});"></span>
+                    {% else %}
+                        <span class="league-hero-logo placeholder">{{ league.name[:2]|upper }}</span>
+                    {% endif %}
+                    <div>
+                        <h1 class="h2 mb-1">{{ homepage.title or league.name }}</h1>
+                        <p class="mb-0 text-white-50">{{ homepage.subtitle or league.country }}</p>
+                    </div>
+                </div>
+                {% if homepage.cta_text %}
+                <a href="{{ homepage.cta_url or '#' }}" class="btn btn-light btn-lg px-4">{{ homepage.cta_text }}</a>
+                {% endif %}
+            </div>
+            <div class="col-lg-4 text-lg-end">
+                <div class="badge bg-light text-dark">{{ league.country }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if homepage.highlights %}
+<section class="container my-4">
+    <div class="row g-3">
+        {% for highlight in homepage.highlights %}
+            <div class="col-md-4">
+                <div class="card h-100 shadow-sm border-0">
+                    <div class="card-body">
+                        <div class="text-primary mb-2"><i class="bi {{ highlight.icon or 'bi-star' }}"></i></div>
+                        <h3 class="h6">{{ highlight.title }}</h3>
+                        <p class="text-muted small mb-0">{{ highlight.body }}</p>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<div class="container my-4">
+    <div class="row g-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Standings</h2>
+                    {% if standings %}
+                        <div class="table-responsive">
+                            <table class="table table-striped align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Pos</th>
+                                        <th>Team</th>
+                                        <th>P</th>
+                                        <th>W</th>
+                                        <th>D</th>
+                                        <th>L</th>
+                                        <th>Pts</th>
+                                        <th>GF</th>
+                                        <th>GA</th>
+                                        <th>GD</th>
+                                        <th>Form</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for standing in standings %}
+                                        <tr>
+                                            <td class="position-cell {% if standing.champions_spot %}champions{% elif standing.europa_spot %}europa{% elif standing.relegation_spot %}relegated{% endif %}">{{ standing.position }}</td>
+                                            <td>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    {% if standing.crest %}
+                                                        <img src="{{ standing.crest }}" alt="{{ standing.team_name }}" class="team-badge">
+                                                    {% endif %}
+                                                    <a href="{{ url_for('user.profile_team', team_id=standing.team_id) }}" class="text-reset text-decoration-none">{{ standing.team_name }}</a>
+                                                </div>
+                                            </td>
+                                            <td>{{ standing.played_games }}</td>
+                                            <td>{{ standing.won }}</td>
+                                            <td>{{ standing.draw }}</td>
+                                            <td>{{ standing.lost }}</td>
+                                            <td><span class="badge bg-primary">{{ standing.points }}</span></td>
+                                            <td>{{ standing.goals_for }}</td>
+                                            <td>{{ standing.goals_against }}</td>
+                                            <td>{{ '%+d'|format(standing.goal_difference) }}</td>
+                                            <td>
+                                                {% for result in standing.form %}
+                                                    <span class="badge {% if result == 'W' %}bg-success{% elif result == 'D' %}bg-secondary{% else %}bg-danger{% endif %} me-1">{{ result }}</span>
+                                                {% endfor %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="alert alert-light border mt-3 mb-0">
+                            <div class="d-flex align-items-center gap-3">
+                                <span><span class="legend-dot champions"></span> Champions League spots (Top {{ league.cl_spot }})</span>
+                                <span><span class="legend-dot europa"></span> Europa League spots (Next {{ league.uel_spot }})</span>
+                                <span><span class="legend-dot relegated"></span> Relegation zone (Bottom {{ league.relegation_spot }})</span>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info mb-0">No standings available for this league yet.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Teams</h2>
+                    {% if teams %}
+                        <div class="row g-3">
+                            {% for team in teams %}
+                            <div class="col-md-4 col-lg-3">
+                                <a href="{{ url_for('user.profile_team', team_id=team.team_id) }}" class="team-card text-decoration-none">
+                                    {% if team.crest %}
+                                        <img src="{{ team.crest }}" alt="{{ team.name }} crest">
+                                    {% else %}
+                                        <span class="placeholder">{{ team.name[:2]|upper }}</span>
+                                    {% endif %}
+                                    <span>{{ team.name }}</span>
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info mb-0">No teams registered for this league yet.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

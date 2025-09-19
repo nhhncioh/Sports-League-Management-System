@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Game Recap</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .header .icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        .content {
+            padding: 30px 20px;
+        }
+        .content h2 {
+            color: #28a745;
+            margin-top: 0;
+            font-size: 20px;
+        }
+        .score-board {
+            background: linear-gradient(135deg, #343a40 0%, #495057 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .score-display {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0;
+        }
+        .team-score {
+            flex: 1;
+            text-align: center;
+        }
+        .team-name {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #adb5bd;
+        }
+        .team-name.winner {
+            color: #28a745;
+        }
+        .score {
+            font-size: 36px;
+            font-weight: bold;
+            color: white;
+        }
+        .score.winner {
+            color: #28a745;
+        }
+        .vs {
+            font-size: 20px;
+            font-weight: bold;
+            color: #6c757d;
+            padding: 0 20px;
+        }
+        .final-badge {
+            background: #dc3545;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+        .game-details {
+            background: #f8f9fa;
+            border-left: 4px solid #28a745;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .detail-item:last-child {
+            border-bottom: none;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #495057;
+        }
+        .detail-value {
+            color: #28a745;
+            font-weight: 500;
+        }
+        .winner-banner {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            color: #212529;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            text-align: center;
+            font-weight: 600;
+            font-size: 18px;
+        }
+        .stats-section {
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .stats-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #28a745;
+            padding-bottom: 5px;
+        }
+        .cta-button {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: 600;
+            margin: 20px 0;
+        }
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+            font-size: 14px;
+            border-top: 1px solid #e9ecef;
+        }
+        @media (max-width: 600px) {
+            .container {
+                margin: 0;
+                box-shadow: none;
+            }
+            .content {
+                padding: 20px 15px;
+            }
+            .score-display {
+                flex-direction: column;
+                gap: 15px;
+            }
+            .vs {
+                padding: 10px 0;
+            }
+            .detail-item {
+                flex-direction: column;
+                gap: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="icon">📊</div>
+            <h1>Game Recap</h1>
+            <p>Final results are in!</p>
+        </div>
+
+        <div class="content">
+            <h2>Game Summary</h2>
+
+            <div class="score-board">
+                <div class="final-badge">FINAL</div>
+
+                <div class="score-display">
+                    <div class="team-score">
+                        <div class="team-name {% if (game.home_score or 0) > (game.away_score or 0) %}winner{% endif %}">
+                            {{ home_team.name }}
+                        </div>
+                        <div class="score {% if (game.home_score or 0) > (game.away_score or 0) %}winner{% endif %}">
+                            {{ game.home_score or 0 }}
+                        </div>
+                    </div>
+                    <div class="vs">-</div>
+                    <div class="team-score">
+                        <div class="team-name {% if (game.away_score or 0) > (game.home_score or 0) %}winner{% endif %}">
+                            {{ away_team.name }}
+                        </div>
+                        <div class="score {% if (game.away_score or 0) > (game.home_score or 0) %}winner{% endif %}">
+                            {{ game.away_score or 0 }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if winner %}
+            <div class="winner-banner">
+                🏆 Congratulations {{ winner.name }}! 🏆
+            </div>
+            {% endif %}
+
+            <div class="game-details">
+                {% if game.start_time %}
+                <div class="detail-item">
+                    <span class="detail-label">📅 Date:</span>
+                    <span class="detail-value">{{ game.start_time.strftime('%A, %B %d, %Y') }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">🕐 Time:</span>
+                    <span class="detail-value">{{ game.start_time.strftime('%I:%M %p') }}</span>
+                </div>
+                {% endif %}
+                {% if venue %}
+                <div class="detail-item">
+                    <span class="detail-label">📍 Venue:</span>
+                    <span class="detail-value">{{ venue.name }}</span>
+                </div>
+                {% endif %}
+                {% if season %}
+                <div class="detail-item">
+                    <span class="detail-label">🏆 Season:</span>
+                    <span class="detail-value">{{ season.name }}</span>
+                </div>
+                {% endif %}
+                <div class="detail-item">
+                    <span class="detail-label">📊 Final Score:</span>
+                    <span class="detail-value">{{ final_score }}</span>
+                </div>
+            </div>
+
+            {% if game.notes %}
+            <div class="stats-section">
+                <div class="stats-title">📝 Game Notes</div>
+                <p>{{ game.notes }}</p>
+            </div>
+            {% endif %}
+
+            <div class="stats-section">
+                <div class="stats-title">📈 Quick Stats</div>
+                <div class="detail-item">
+                    <span class="detail-label">Home Team Performance:</span>
+                    <span class="detail-value">{{ game.home_score or 0 }} points</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Away Team Performance:</span>
+                    <span class="detail-value">{{ game.away_score or 0 }} points</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Game Status:</span>
+                    <span class="detail-value">{{ game.status.value.replace('_', ' ').title() }}</span>
+                </div>
+            </div>
+
+            <h3>What's Next?</h3>
+            <ul>
+                <li>📅 Check the schedule for upcoming games</li>
+                <li>📊 View updated league standings</li>
+                <li>🏆 Keep building momentum for the season</li>
+                <li>💪 Prepare for the next matchup</li>
+            </ul>
+
+            <a href="{{ base_url }}" class="cta-button">View Full Schedule</a>
+
+            <div style="background: #d1ecf1; border: 1px solid #bee5eb; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <strong>👏 Great Game!</strong>
+                <p>Thanks to all players, coaches, and fans who made this game exciting. See you at the next one!</p>
+            </div>
+
+            <p>Stay tuned for more updates and upcoming games.<br>
+            <strong>{{ org_name }} Team</strong></p>
+        </div>
+
+        <div class="footer">
+            <p>This is an automated recap from {{ org_name }}.</p>
+            <p>Game recaps are sent after final scores are confirmed.</p>
+        </div>
+    </div>
+</body>
+</html>

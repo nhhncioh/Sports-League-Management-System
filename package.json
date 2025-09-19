@@ -1,0 +1,41 @@
+{
+  "name": "sports-league-management-system",
+  "version": "1.0.0",
+  "description": "Sports League Management System - Flask Application",
+  "scripts": {
+    "dev": "docker-compose up --build",
+    "dev-local": "python run_dev.py",
+    "start": "docker-compose up",
+    "stop": "docker-compose down",
+    "restart": "docker-compose restart",
+    "logs": "docker-compose logs -f web",
+    "setup": "docker-compose build",
+    "shell": "docker-compose exec web bash",
+    "db-shell": "docker-compose exec db psql -U sports_league_owner -d sports_league",
+    "create-org": "docker-compose exec web flask org:create --name \"Demo League\" --slug demo --admin-email admin@demo.com --admin-password password123",
+    "seed-demo": "docker-compose exec web flask seed:demo --org demo",
+    "export-data": "docker-compose exec web flask export:season --season $SEASON_ID --what all",
+    "test": "docker-compose exec web python -m pytest tests/",
+    "test-cli": "docker-compose exec web python test_cli_commands.py",
+    "security-test": "python security_test.py http://localhost:5000"
+  },
+  "repository": {
+    "type": "git",
+    "url": "."
+  },
+  "keywords": [
+    "flask",
+    "sports",
+    "league",
+    "management",
+    "python"
+  ],
+  "author": "SLMS Development Team",
+  "license": "MIT",
+  "engines": {
+    "python": ">=3.8"
+  },
+  "dependencies": {
+    "note": "This is a Python Flask application. See requirements.txt for Python dependencies."
+  }
+}

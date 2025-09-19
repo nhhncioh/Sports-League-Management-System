@@ -1,0 +1,593 @@
+{% extends "base.html" %}
+
+{% block title %}Step 2: Teams - Create Season - Admin - {{ super() }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .wizard-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .wizard-progress {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+
+    .progress-step {
+        flex: 1;
+        text-align: center;
+        position: relative;
+        padding: 0 10px;
+    }
+
+    .progress-step:not(:last-child):after {
+        content: '';
+        position: absolute;
+        top: 20px;
+        right: -50%;
+        width: 100%;
+        height: 2px;
+        background: #dee2e6;
+        z-index: 1;
+    }
+
+    .progress-step.completed:not(:last-child):after,
+    .progress-step.active:not(:last-child):after {
+        background: #28a745;
+    }
+
+    .step-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #dee2e6;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 8px;
+        position: relative;
+        z-index: 2;
+        font-weight: 600;
+    }
+
+    .progress-step.completed .step-circle {
+        background: #28a745;
+        color: white;
+    }
+
+    .progress-step.active .step-circle {
+        background: #007bff;
+        color: white;
+    }
+
+    .step-label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #6c757d;
+    }
+
+    .progress-step.completed .step-label,
+    .progress-step.active .step-label {
+        color: #495057;
+        font-weight: 600;
+    }
+
+    .wizard-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+
+    .wizard-header {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+    }
+
+    .wizard-body {
+        padding: 40px;
+    }
+
+    .wizard-footer {
+        background: #f8f9fa;
+        padding: 20px 40px;
+        border-top: 1px solid #dee2e6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .btn-wizard {
+        min-width: 120px;
+        padding: 12px 24px;
+        font-weight: 600;
+        border-radius: 8px;
+    }
+
+    .team-method-selector {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+
+    .method-option {
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 15px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .method-option:hover {
+        border-color: #007bff;
+        box-shadow: 0 2px 4px rgba(0,123,255,0.1);
+    }
+
+    .method-option.active {
+        border-color: #007bff;
+        background: #f8f9ff;
+    }
+
+    .method-icon {
+        font-size: 2rem;
+        color: #007bff;
+        margin-bottom: 10px;
+    }
+
+    .team-form-section {
+        display: none;
+    }
+
+    .team-form-section.active {
+        display: block;
+    }
+
+    .team-row {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        border: 1px solid #e9ecef;
+    }
+
+    .team-row .form-control {
+        border-radius: 6px;
+        border: 1px solid #dee2e6;
+    }
+
+    .csv-drop-zone {
+        border: 2px dashed #dee2e6;
+        border-radius: 10px;
+        padding: 40px;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .csv-drop-zone:hover,
+    .csv-drop-zone.dragover {
+        border-color: #007bff;
+        background: #f8f9ff;
+    }
+
+    .csv-preview {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 20px;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .csv-table {
+        font-size: 0.875rem;
+    }
+
+    .csv-table th {
+        background: #007bff;
+        color: white;
+        border: none;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 8px;
+    }
+
+    .form-control {
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        padding: 12px 16px;
+        font-size: 1rem;
+    }
+
+    .form-control:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+    .btn-outline-danger {
+        border-width: 1px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="wizard-container">
+        <!-- Progress Bar -->
+        <div class="wizard-progress">
+            <div class="d-flex">
+                <div class="progress-step completed">
+                    <div class="step-circle"><i class="bi bi-check"></i></div>
+                    <div class="step-label">Season Info</div>
+                </div>
+                <div class="progress-step active">
+                    <div class="step-circle">2</div>
+                    <div class="step-label">Teams</div>
+                </div>
+                <div class="progress-step">
+                    <div class="step-circle">3</div>
+                    <div class="step-label">Venues</div>
+                </div>
+                <div class="progress-step">
+                    <div class="step-circle">4</div>
+                    <div class="step-label">Registration</div>
+                </div>
+                <div class="progress-step">
+                    <div class="step-circle">5</div>
+                    <div class="step-label">Schedule</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2 Form -->
+        <div class="wizard-card">
+            <div class="wizard-header">
+                <h1><i class="bi bi-people"></i> Step 2: Teams</h1>
+                <p class="mb-0">Add teams to your season by creating them manually or importing from CSV</p>
+            </div>
+
+            <form method="POST" action="{{ url_for('admin.season_wizard_step', step=2) }}" enctype="multipart/form-data">
+                {{ csrf_token() }}
+
+                <div class="wizard-body">
+                    <!-- Team Method Selector -->
+                    <div class="team-method-selector">
+                        <h4 class="mb-3">How would you like to add teams?</h4>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="method-option" data-method="manual" onclick="selectTeamMethod('manual')">
+                                    <div class="text-center">
+                                        <div class="method-icon">
+                                            <i class="bi bi-plus-circle"></i>
+                                        </div>
+                                        <h5>Create Manually</h5>
+                                        <p class="text-muted mb-0">Add teams one by one with custom details</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="method-option" data-method="csv" onclick="selectTeamMethod('csv')">
+                                    <div class="text-center">
+                                        <div class="method-icon">
+                                            <i class="bi bi-file-earmark-spreadsheet"></i>
+                                        </div>
+                                        <h5>Import from CSV</h5>
+                                        <p class="text-muted mb-0">Upload a CSV file with team data</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="team_method" name="team_method" value="{{ wizard_data.data.step2.team_method if wizard_data and wizard_data.data and wizard_data.data.step2 else 'manual' }}">
+
+                    <!-- Manual Team Creation -->
+                    <div id="manual-section" class="team-form-section">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5>Teams</h5>
+                            <button type="button" class="btn btn-outline-primary" onclick="addTeamRow()">
+                                <i class="bi bi-plus"></i> Add Team
+                            </button>
+                        </div>
+
+                        <div id="teams-container">
+                            {% if wizard_data and wizard_data.data and wizard_data.data.step2 and wizard_data.data.step2.teams %}
+                                {% for team in wizard_data.data.step2.teams %}
+                                <div class="team-row">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-4">
+                                            <input type="text" class="form-control" name="team_names[]"
+                                                   placeholder="Team Name" value="{{ team.name }}" required>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <input type="text" class="form-control" name="team_cities[]"
+                                                   placeholder="City (optional)" value="{{ team.city or '' }}">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <input type="text" class="form-control" name="team_codes[]"
+                                                   placeholder="Code (e.g. NYC)" value="{{ team.code or '' }}" maxlength="5">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button type="button" class="btn btn-outline-danger" onclick="removeTeamRow(this)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <!-- Default team rows -->
+                                <div class="team-row">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-4">
+                                            <input type="text" class="form-control" name="team_names[]"
+                                                   placeholder="Team Name" required>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <input type="text" class="form-control" name="team_cities[]"
+                                                   placeholder="City (optional)">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <input type="text" class="form-control" name="team_codes[]"
+                                                   placeholder="Code (e.g. NYC)" maxlength="5">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button type="button" class="btn btn-outline-danger" onclick="removeTeamRow(this)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="team-row">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-4">
+                                            <input type="text" class="form-control" name="team_names[]"
+                                                   placeholder="Team Name" required>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <input type="text" class="form-control" name="team_cities[]"
+                                                   placeholder="City (optional)">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <input type="text" class="form-control" name="team_codes[]"
+                                                   placeholder="Code (e.g. NYC)" maxlength="5">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button type="button" class="btn btn-outline-danger" onclick="removeTeamRow(this)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="alert alert-info mt-3">
+                            <h6><i class="bi bi-lightbulb"></i> Tips for Manual Entry:</h6>
+                            <ul class="mb-0">
+                                <li>Team names must be unique within the season</li>
+                                <li>Team codes are useful for abbreviations (max 5 characters)</li>
+                                <li>You need at least 2 teams to create a schedule</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- CSV Import Section -->
+                    <div id="csv-section" class="team-form-section">
+                        <div class="form-group">
+                            <label class="form-label">Upload CSV File</label>
+                            <div class="csv-drop-zone" onclick="document.getElementById('csv_file').click()">
+                                <i class="bi bi-cloud-upload" style="font-size: 3rem; color: #6c757d;"></i>
+                                <h5 class="mt-3">Drop CSV file here or click to browse</h5>
+                                <p class="text-muted">Maximum file size: 5MB</p>
+                                <input type="file" id="csv_file" name="csv_file" accept=".csv" style="display: none;" onchange="handleCsvUpload(this)">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="alert alert-info">
+                                    <h6><i class="bi bi-info-circle"></i> CSV Format Requirements:</h6>
+                                    <p class="mb-2">Your CSV should have these columns (in any order):</p>
+                                    <ul class="mb-0">
+                                        <li><strong>name</strong> - Team name (required)</li>
+                                        <li><strong>city</strong> - Team city (optional)</li>
+                                        <li><strong>code</strong> - Team abbreviation (optional)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="alert alert-success">
+                                    <h6><i class="bi bi-download"></i> Sample CSV:</h6>
+                                    <p class="mb-2">Download a sample file to get started:</p>
+                                    <a href="{{ url_for('admin.download_sample_csv', type='teams') }}"
+                                       class="btn btn-sm btn-outline-success">
+                                        <i class="bi bi-download"></i> Download Sample
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CSV Preview -->
+                        <div id="csv-preview" class="csv-preview" style="display: none;">
+                            <h6>CSV Preview:</h6>
+                            <div id="csv-content"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="wizard-footer">
+                    <a href="{{ url_for('admin.season_wizard_step', step=1) }}" class="btn btn-outline-secondary btn-wizard">
+                        <i class="bi bi-arrow-left"></i> Back
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-wizard">
+                        Next: Venues <i class="bi bi-arrow-right"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+// Initialize method selection
+document.addEventListener('DOMContentLoaded', function() {
+    const savedMethod = document.getElementById('team_method').value;
+    selectTeamMethod(savedMethod);
+});
+
+function selectTeamMethod(method) {
+    // Update visual selection
+    document.querySelectorAll('.method-option').forEach(option => {
+        option.classList.remove('active');
+    });
+    document.querySelector(`.method-option[data-method="${method}"]`).classList.add('active');
+
+    // Update hidden input
+    document.getElementById('team_method').value = method;
+
+    // Show/hide sections
+    document.querySelectorAll('.team-form-section').forEach(section => {
+        section.classList.remove('active');
+    });
+    document.getElementById(`${method}-section`).classList.add('active');
+}
+
+function addTeamRow() {
+    const container = document.getElementById('teams-container');
+    const teamRow = document.createElement('div');
+    teamRow.className = 'team-row';
+    teamRow.innerHTML = `
+        <div class="row align-items-center">
+            <div class="col-md-4">
+                <input type="text" class="form-control" name="team_names[]"
+                       placeholder="Team Name" required>
+            </div>
+            <div class="col-md-3">
+                <input type="text" class="form-control" name="team_cities[]"
+                       placeholder="City (optional)">
+            </div>
+            <div class="col-md-3">
+                <input type="text" class="form-control" name="team_codes[]"
+                       placeholder="Code (e.g. NYC)" maxlength="5">
+            </div>
+            <div class="col-md-2">
+                <button type="button" class="btn btn-outline-danger" onclick="removeTeamRow(this)">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    container.appendChild(teamRow);
+}
+
+function removeTeamRow(button) {
+    const container = document.getElementById('teams-container');
+    if (container.children.length > 1) {
+        button.closest('.team-row').remove();
+    } else {
+        alert('You need at least one team!');
+    }
+}
+
+function handleCsvUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+        alert('File size must be less than 5MB');
+        input.value = '';
+        return;
+    }
+
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+        alert('Please select a CSV file');
+        input.value = '';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const csv = e.target.result;
+        const lines = csv.split('\n').filter(line => line.trim());
+
+        if (lines.length < 2) {
+            alert('CSV file must contain at least a header and one data row');
+            return;
+        }
+
+        const preview = document.getElementById('csv-preview');
+        const content = document.getElementById('csv-content');
+
+        let html = '<table class="table table-sm csv-table"><thead><tr>';
+        const headers = lines[0].split(',').map(h => h.trim());
+        headers.forEach(header => {
+            html += `<th>${header}</th>`;
+        });
+        html += '</tr></thead><tbody>';
+
+        // Show first 5 rows
+        for (let i = 1; i < Math.min(6, lines.length); i++) {
+            html += '<tr>';
+            const cells = lines[i].split(',').map(c => c.trim());
+            cells.forEach(cell => {
+                html += `<td>${cell}</td>`;
+            });
+            html += '</tr>';
+        }
+
+        if (lines.length > 6) {
+            html += `<tr><td colspan="${headers.length}" class="text-center text-muted">... and ${lines.length - 6} more rows</td></tr>`;
+        }
+
+        html += '</tbody></table>';
+        content.innerHTML = html;
+        preview.style.display = 'block';
+    };
+
+    reader.readAsText(file);
+}
+
+// Drag and drop functionality
+const dropZone = document.querySelector('.csv-drop-zone');
+
+dropZone.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    this.classList.add('dragover');
+});
+
+dropZone.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    this.classList.remove('dragover');
+});
+
+dropZone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    this.classList.remove('dragover');
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        document.getElementById('csv_file').files = files;
+        handleCsvUpload(document.getElementById('csv_file'));
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

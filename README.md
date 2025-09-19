@@ -68,7 +68,16 @@ The Sports League Management System aims to manage comprehensive data associated
    - Create necessary environment files
    - Build and start the Docker containers
 
-The application will be available at `http://localhost:5000`
+The application will be available at `http://localhost:5000`.
+
+Multi-tenant note (local development):
+- Create a demo org:
+  - `flask org:create --name "Demo League" --slug demo --admin-email admin@demo.com --admin-password password123`
+  - `flask seed:demo --org demo`
+- Access options:
+  - http://demo.localhost:5000 (if subdomains of localhost work on your OS)
+  - http://localhost:5000/?org=demo (works everywhere)
+  - Or set `DEFAULT_ORG_SLUG=demo` in `.env` and just visit http://localhost:5000
 
 ### Manual Setup (Without Docker)
 If you prefer to run the application without Docker:

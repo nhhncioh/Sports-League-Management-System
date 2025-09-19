@@ -1,0 +1,774 @@
+{% extends "base.html" %}
+{% from "admin/components/data_table.html" import render_data_table %}
+
+{% block title %}Registrations Management - Admin{% endblock %}
+
+{% block extra_head %}
+<script src="https://unpkg.com/htmx.org@1.9.9"></script>
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #6f42c1 0%, #5a6268 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+    }
+
+    .stats-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-left: 4px solid #6f42c1;
+    }
+
+    .stats-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #6f42c1;
+    }
+
+    .registration-status {
+        font-size: 0.7rem;
+        padding: 0.35em 0.65em;
+        border-radius: 0.375rem;
+        font-weight: 500;
+    }
+
+    .status-pending {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .status-approved {
+        background: #d1edff;
+        color: #0f5132;
+    }
+
+    .status-rejected {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    .status-waitlist {
+        background: #e2e3e5;
+        color: #41464b;
+    }
+
+    .status-cancelled {
+        background: #f1f3f4;
+        color: #5f6368;
+    }
+
+    .player-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: linear-gradient(45deg, #6f42c1, #5a6268);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 0.75rem;
+    }
+
+    .payment-status {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+    }
+
+    .payment-paid {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .payment-pending {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .payment-failed {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    .quick-approval {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .approval-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .batch-actions {
+        background: #e9ecef;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        display: none;
+    }
+
+    .batch-actions.show {
+        display: block;
+    }
+
+    .registration-details {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+
+    .age-info {
+        font-size: 0.75rem;
+        color: #6c757d;
+    }
+
+    .contact-info {
+        font-size: 0.875rem;
+    }
+
+    .emergency-contact {
+        color: #dc3545;
+        font-weight: 500;
+    }
+
+    .waitlist-position {
+        background: #e2e3e5;
+        color: #495057;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-0">
+                    <i class="bi bi-person-plus"></i> Registrations Management
+                </h1>
+                <p class="mb-0 mt-2 opacity-75">Review, approve, and manage player registrations</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{{ url_for('admin.create_registration') }}" class="btn btn-light">
+                    <i class="bi bi-plus"></i> Add Registration
+                </a>
+                <a href="{{ url_for('admin.registration_settings') }}" class="btn btn-outline-light">
+                    <i class="bi bi-gear"></i> Settings
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-number">{{ stats.total_registrations or 0 }}</div>
+                <div class="stats-label">Total Registrations</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-number">{{ stats.pending_approval or 0 }}</div>
+                <div class="stats-label">Pending Approval</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-number">{{ stats.approved_registrations or 0 }}</div>
+                <div class="stats-label">Approved</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-number">{{ stats.waitlist_count or 0 }}</div>
+                <div class="stats-label">Waitlisted</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Approval Actions -->
+    <div class="quick-approval">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h6 class="mb-2">Quick Actions</h6>
+                <div class="approval-actions">
+                    <button class="btn btn-outline-success btn-sm" onclick="showPendingApprovals()">
+                        <i class="bi bi-clock"></i> Pending Approvals ({{ stats.pending_approval or 0 }})
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm" onclick="showPaymentPending()">
+                        <i class="bi bi-credit-card"></i> Payment Pending
+                    </button>
+                    <button class="btn btn-outline-info btn-sm" onclick="showWaitlist()">
+                        <i class="bi bi-list-ul"></i> Waitlist ({{ stats.waitlist_count or 0 }})
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="showIncompleteRegistrations()">
+                        <i class="bi bi-exclamation-circle"></i> Incomplete
+                    </button>
+                </div>
+            </div>
+            <div>
+                <button class="btn btn-outline-primary btn-sm" onclick="sendBulkNotifications()">
+                    <i class="bi bi-envelope"></i> Send Notifications
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="exportRegistrations()">
+                    <i class="bi bi-download"></i> Export All
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Batch Actions -->
+    <div id="batch-actions" class="batch-actions">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <strong><span id="selected-count">0</span> registrations selected</strong>
+            </div>
+            <div>
+                <button class="btn btn-success btn-sm me-2" onclick="batchApprove()">
+                    <i class="bi bi-check-circle"></i> Approve
+                </button>
+                <button class="btn btn-warning btn-sm me-2" onclick="batchWaitlist()">
+                    <i class="bi bi-list-ul"></i> Move to Waitlist
+                </button>
+                <button class="btn btn-danger btn-sm me-2" onclick="batchReject()">
+                    <i class="bi bi-x-circle"></i> Reject
+                </button>
+                <button class="btn btn-outline-primary btn-sm" onclick="batchSendEmail()">
+                    <i class="bi bi-envelope"></i> Send Email
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Registrations Data Table -->
+    {{ render_data_table(
+        table_id='registrations-table',
+        title='Registrations',
+        columns=[
+            {'key': 'player', 'label': 'Player', 'sortable': True},
+            {'key': 'contact', 'label': 'Contact Info', 'sortable': False},
+            {'key': 'league', 'label': 'League/Season', 'sortable': True},
+            {'key': 'registration_date', 'label': 'Registered', 'sortable': True},
+            {'key': 'payment', 'label': 'Payment', 'sortable': True},
+            {'key': 'status', 'label': 'Status', 'sortable': True}
+        ],
+        data_url=url_for('admin.api_registrations_data'),
+        create_url=url_for('admin.create_registration'),
+        export_urls={
+            'csv': url_for('admin.export_registrations', format='csv'),
+            'excel': url_for('admin.export_registrations', format='excel'),
+            'pdf': url_for('admin.export_registrations', format='pdf')
+        },
+        filters=[
+            {
+                'name': 'league',
+                'label': 'League',
+                'type': 'select',
+                'options': leagues_filter_options
+            },
+            {
+                'name': 'status',
+                'label': 'Status',
+                'type': 'select',
+                'options': [
+                    {'value': 'pending', 'label': 'Pending'},
+                    {'value': 'approved', 'label': 'Approved'},
+                    {'value': 'rejected', 'label': 'Rejected'},
+                    {'value': 'waitlist', 'label': 'Waitlisted'},
+                    {'value': 'cancelled', 'label': 'Cancelled'}
+                ]
+            },
+            {
+                'name': 'payment_status',
+                'label': 'Payment',
+                'type': 'select',
+                'options': [
+                    {'value': 'paid', 'label': 'Paid'},
+                    {'value': 'pending', 'label': 'Pending'},
+                    {'value': 'failed', 'label': 'Failed'},
+                    {'value': 'waived', 'label': 'Waived'}
+                ]
+            },
+            {
+                'name': 'date_from',
+                'label': 'From Date',
+                'type': 'date'
+            }
+        ]
+    ) }}
+</div>
+
+<!-- Registration Detail Modal -->
+<div class="modal fade" id="registrationDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Registration Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="registration-detail-content">
+                <!-- Content loaded via HTMX -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Approval Modal -->
+<div class="modal fade" id="approvalModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Review Registration</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="approval-player-info" class="mb-3">
+                    <!-- Player info will be populated here -->
+                </div>
+
+                <div class="mb-3">
+                    <label for="approval-action" class="form-label">Action</label>
+                    <select class="form-select" id="approval-action" onchange="toggleApprovalFields()">
+                        <option value="">Choose an action...</option>
+                        <option value="approve">Approve Registration</option>
+                        <option value="waitlist">Move to Waitlist</option>
+                        <option value="reject">Reject Registration</option>
+                    </select>
+                </div>
+
+                <div id="team-assignment" class="mb-3" style="display: none;">
+                    <label for="assigned-team" class="form-label">Assign to Team</label>
+                    <select class="form-select" id="assigned-team">
+                        <option value="">Select a team...</option>
+                        {% for team in available_teams %}
+                        <option value="{{ team.id }}">{{ team.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div id="rejection-reason" class="mb-3" style="display: none;">
+                    <label for="rejection-notes" class="form-label">Reason for Rejection</label>
+                    <textarea class="form-control" id="rejection-notes" rows="3" placeholder="Please provide a reason for rejection..."></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label for="admin-notes" class="form-label">Admin Notes (Internal)</label>
+                    <textarea class="form-control" id="admin-notes" rows="2" placeholder="Internal notes for this registration..."></textarea>
+                </div>
+
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="send-notification" checked>
+                    <label for="send-notification" class="form-check-label">
+                        Send email notification to player
+                    </label>
+                </div>
+
+                <input type="hidden" id="approval-registration-id">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitApproval()">
+                    <i class="bi bi-check"></i> Submit Decision
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Email Modal -->
+<div class="modal fade" id="bulkEmailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Send Bulk Email</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="bulk-email-form">
+                    <div class="mb-3">
+                        <label for="email-template" class="form-label">Email Template</label>
+                        <select class="form-select" id="email-template" onchange="loadEmailTemplate()">
+                            <option value="">Select a template...</option>
+                            <option value="welcome">Welcome Message</option>
+                            <option value="approval">Approval Notification</option>
+                            <option value="rejection">Rejection Notice</option>
+                            <option value="waitlist">Waitlist Notification</option>
+                            <option value="payment_reminder">Payment Reminder</option>
+                            <option value="custom">Custom Message</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email-subject" class="form-label">Subject</label>
+                        <input type="text" class="form-control" id="email-subject" placeholder="Email subject...">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email-body" class="form-label">Message</label>
+                        <textarea class="form-control" id="email-body" rows="8" placeholder="Email message content..."></textarea>
+                        <div class="form-text">
+                            Available variables: {player_name}, {league_name}, {registration_date}, {payment_amount}
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <strong><span id="bulk-email-count">0</span> recipients</strong> will receive this email.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="sendBulkEmail()">
+                    <i class="bi bi-send"></i> Send Emails
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+let selectedRegistrations = new Set();
+
+// Quick filter functions
+function showPendingApprovals() {
+    setFilter('status', 'pending');
+    refreshTable();
+}
+
+function showPaymentPending() {
+    setFilter('payment_status', 'pending');
+    refreshTable();
+}
+
+function showWaitlist() {
+    setFilter('status', 'waitlist');
+    refreshTable();
+}
+
+function showIncompleteRegistrations() {
+    // Custom filter for incomplete registrations
+    htmx.ajax('GET', '/admin/api/registrations/incomplete', {
+        target: '#registrations-table-tbody'
+    });
+}
+
+// Registration management functions
+function viewRegistration(registrationId) {
+    const modal = new bootstrap.Modal(document.getElementById('registrationDetailModal'));
+
+    htmx.ajax('GET', `/admin/api/registrations/${registrationId}/detail`, {
+        target: '#registration-detail-content'
+    });
+
+    modal.show();
+}
+
+function reviewRegistration(registrationId, playerName, leagueName) {
+    document.getElementById('approval-registration-id').value = registrationId;
+    document.getElementById('approval-player-info').innerHTML = `
+        <strong>Player:</strong> ${playerName}<br>
+        <strong>League:</strong> ${leagueName}
+    `;
+
+    // Reset form
+    document.getElementById('approval-action').value = '';
+    document.getElementById('admin-notes').value = '';
+    document.getElementById('send-notification').checked = true;
+    toggleApprovalFields();
+
+    const modal = new bootstrap.Modal(document.getElementById('approvalModal'));
+    modal.show();
+}
+
+function toggleApprovalFields() {
+    const action = document.getElementById('approval-action').value;
+
+    document.getElementById('team-assignment').style.display = action === 'approve' ? 'block' : 'none';
+    document.getElementById('rejection-reason').style.display = action === 'reject' ? 'block' : 'none';
+}
+
+function submitApproval() {
+    const registrationId = document.getElementById('approval-registration-id').value;
+    const action = document.getElementById('approval-action').value;
+    const adminNotes = document.getElementById('admin-notes').value;
+    const sendNotification = document.getElementById('send-notification').checked;
+
+    if (!action) {
+        alert('Please select an action');
+        return;
+    }
+
+    const data = {
+        action: action,
+        admin_notes: adminNotes,
+        send_notification: sendNotification
+    };
+
+    if (action === 'approve') {
+        data.team_id = document.getElementById('assigned-team').value;
+    } else if (action === 'reject') {
+        data.rejection_reason = document.getElementById('rejection-notes').value;
+        if (!data.rejection_reason) {
+            alert('Please provide a reason for rejection');
+            return;
+        }
+    }
+
+    htmx.ajax('PUT', `/admin/api/registrations/${registrationId}/review`, {
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+        },
+        values: data
+    }).then(() => {
+        bootstrap.Modal.getInstance(document.getElementById('approvalModal')).hide();
+        refreshTable();
+        showAlert(`Registration ${action}d successfully`, 'success');
+    }).catch(() => {
+        showAlert(`Error ${action}ing registration`, 'danger');
+    });
+}
+
+// Batch operations
+function updateBatchActions() {
+    const batchActions = document.getElementById('batch-actions');
+    const selectedCount = document.getElementById('selected-count');
+
+    selectedCount.textContent = selectedRegistrations.size;
+
+    if (selectedRegistrations.size > 0) {
+        batchActions.classList.add('show');
+    } else {
+        batchActions.classList.remove('show');
+    }
+}
+
+function batchApprove() {
+    if (selectedRegistrations.size === 0) return;
+
+    if (confirm(`Approve ${selectedRegistrations.size} registrations?`)) {
+        batchAction('approve');
+    }
+}
+
+function batchWaitlist() {
+    if (selectedRegistrations.size === 0) return;
+
+    if (confirm(`Move ${selectedRegistrations.size} registrations to waitlist?`)) {
+        batchAction('waitlist');
+    }
+}
+
+function batchReject() {
+    if (selectedRegistrations.size === 0) return;
+
+    const reason = prompt('Please provide a reason for rejection:');
+    if (reason) {
+        batchAction('reject', { rejection_reason: reason });
+    }
+}
+
+function batchAction(action, extraData = {}) {
+    const registrationIds = Array.from(selectedRegistrations);
+
+    htmx.ajax('PUT', '/admin/api/registrations/bulk/review', {
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+        },
+        values: {
+            registration_ids: registrationIds,
+            action: action,
+            ...extraData
+        }
+    }).then(() => {
+        refreshTable();
+        selectedRegistrations.clear();
+        updateBatchActions();
+        showAlert(`${registrationIds.length} registrations ${action}d`, 'success');
+    }).catch(() => {
+        showAlert(`Error performing batch ${action}`, 'danger');
+    });
+}
+
+function batchSendEmail() {
+    if (selectedRegistrations.size === 0) return;
+
+    document.getElementById('bulk-email-count').textContent = selectedRegistrations.size;
+    const modal = new bootstrap.Modal(document.getElementById('bulkEmailModal'));
+    modal.show();
+}
+
+function loadEmailTemplate() {
+    const template = document.getElementById('email-template').value;
+    const subjectField = document.getElementById('email-subject');
+    const bodyField = document.getElementById('email-body');
+
+    const templates = {
+        welcome: {
+            subject: 'Welcome to {league_name}!',
+            body: 'Dear {player_name},\n\nWelcome to {league_name}! We\'re excited to have you join us.\n\nBest regards,\nThe League Team'
+        },
+        approval: {
+            subject: 'Registration Approved - {league_name}',
+            body: 'Dear {player_name},\n\nGreat news! Your registration for {league_name} has been approved.\n\nBest regards,\nThe League Team'
+        },
+        rejection: {
+            subject: 'Registration Update - {league_name}',
+            body: 'Dear {player_name},\n\nThank you for your interest in {league_name}. Unfortunately, we are unable to approve your registration at this time.\n\nBest regards,\nThe League Team'
+        },
+        waitlist: {
+            subject: 'Waitlist Notification - {league_name}',
+            body: 'Dear {player_name},\n\nYour registration for {league_name} has been placed on our waitlist. We\'ll notify you if a spot becomes available.\n\nBest regards,\nThe League Team'
+        },
+        payment_reminder: {
+            subject: 'Payment Reminder - {league_name}',
+            body: 'Dear {player_name},\n\nThis is a friendly reminder that your payment of {payment_amount} for {league_name} is still pending.\n\nBest regards,\nThe League Team'
+        }
+    };
+
+    if (templates[template]) {
+        subjectField.value = templates[template].subject;
+        bodyField.value = templates[template].body;
+    } else {
+        subjectField.value = '';
+        bodyField.value = '';
+    }
+}
+
+function sendBulkEmail() {
+    const subject = document.getElementById('email-subject').value;
+    const body = document.getElementById('email-body').value;
+
+    if (!subject || !body) {
+        alert('Please provide both subject and message');
+        return;
+    }
+
+    const registrationIds = Array.from(selectedRegistrations);
+
+    htmx.ajax('POST', '/admin/api/registrations/bulk/email', {
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+        },
+        values: {
+            registration_ids: registrationIds,
+            subject: subject,
+            body: body
+        }
+    }).then(() => {
+        bootstrap.Modal.getInstance(document.getElementById('bulkEmailModal')).hide();
+        showAlert(`Email sent to ${registrationIds.length} recipients`, 'success');
+    }).catch(() => {
+        showAlert('Error sending bulk email', 'danger');
+    });
+}
+
+// Utility functions
+function setFilter(name, value) {
+    const filterElement = document.getElementById(`registrations-table-${name}`);
+    if (filterElement) {
+        filterElement.value = value;
+        filterElement.dispatchEvent(new Event('change'));
+    }
+}
+
+function refreshTable() {
+    htmx.trigger('#registrations-table-tbody', 'refresh');
+}
+
+function exportRegistrations() {
+    // Export based on current filters
+    const searchParams = new URLSearchParams();
+
+    // Add current filter values
+    const filters = document.querySelectorAll('#registrations-table-filters input, #registrations-table-filters select');
+    filters.forEach(filter => {
+        if (filter.value) {
+            searchParams.append(filter.name, filter.value);
+        }
+    });
+
+    window.open(`/admin/registrations/export?${searchParams}`, '_blank');
+}
+
+function sendBulkNotifications() {
+    if (confirm('Send registration status notifications to all pending registrations?')) {
+        htmx.ajax('POST', '/admin/api/registrations/bulk/notifications', {
+            headers: {'X-CSRFToken': document.querySelector('[name=csrf_token]').value}
+        }).then(() => {
+            showAlert('Notifications sent successfully', 'success');
+        }).catch(() => {
+            showAlert('Error sending notifications', 'danger');
+        });
+    }
+}
+
+function showAlert(message, type) {
+    const alertContainer = document.getElementById('alert-container') || createAlertContainer();
+
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} alert-dismissible fade show`;
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+
+    alertContainer.appendChild(alert);
+
+    setTimeout(() => {
+        alert.remove();
+    }, 5000);
+}
+
+function createAlertContainer() {
+    const container = document.createElement('div');
+    container.id = 'alert-container';
+    container.style.position = 'fixed';
+    container.style.top = '20px';
+    container.style.right = '20px';
+    container.style.zIndex = '9999';
+    container.style.width = '400px';
+    document.body.appendChild(container);
+    return container;
+}
+
+// Handle selection changes
+document.addEventListener('change', function(e) {
+    if (e.target.matches('.registration-checkbox')) {
+        const registrationId = e.target.value;
+        if (e.target.checked) {
+            selectedRegistrations.add(registrationId);
+        } else {
+            selectedRegistrations.delete(registrationId);
+        }
+        updateBatchActions();
+    }
+});
+
+// Clear selections when table refreshes
+document.addEventListener('htmx:afterSwap', function(e) {
+    if (e.detail.target.id === 'registrations-table-tbody') {
+        selectedRegistrations.clear();
+        updateBatchActions();
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

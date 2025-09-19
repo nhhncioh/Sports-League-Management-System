@@ -1,0 +1,455 @@
+{% extends "base.html" %}
+{% from "admin/components/data_table.html" import render_data_table %}
+
+{% block title %}Teams Management - Admin{% endblock %}
+
+{% block extra_head %}
+<script src="https://unpkg.com/htmx.org@1.9.9"></script>
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+    }
+
+    .stats-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-left: 4px solid #007bff;
+    }
+
+    .stats-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #007bff;
+    }
+
+    .stats-label {
+        color: #6c757d;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 0.25rem;
+    }
+
+    .bulk-actions {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        display: none;
+    }
+
+    .bulk-actions.show {
+        display: block;
+    }
+
+    .team-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: linear-gradient(45deg, #007bff, #0056b3);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 0.75rem;
+    }
+
+    .status-badge {
+        font-size: 0.7rem;
+        padding: 0.35em 0.65em;
+    }
+
+    .league-tag {
+        background: #e3f2fd;
+        color: #1976d2;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-0">
+                    <i class="bi bi-people"></i> Teams Management
+                </h1>
+                <p class="mb-0 mt-2 opacity-75">Manage teams, players, and league assignments</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{{ url_for('admin.create_team') }}" class="btn btn-light">
+                    <i class="bi bi-plus"></i> Add Team
+                </a>
+                <a href="{{ url_for('admin.import_teams') }}" class="btn btn-outline-light">
+                    <i class="bi bi-upload"></i> Import
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-number">{{ stats.total_teams or 0 }}</div>
+                <div class="stats-label">Total Teams</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-number">{{ stats.active_teams or 0 }}</div>
+                <div class="stats-label">Active Teams</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-number">{{ stats.total_players or 0 }}</div>
+                <div class="stats-label">Total Players</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-number">{{ stats.leagues_count or 0 }}</div>
+                <div class="stats-label">Leagues</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Actions -->
+    <div id="bulk-actions" class="bulk-actions">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <strong><span id="selected-count">0</span> teams selected</strong>
+            </div>
+            <div>
+                <button class="btn btn-outline-primary btn-sm me-2" onclick="bulkAssignLeague()">
+                    <i class="bi bi-tag"></i> Assign League
+                </button>
+                <button class="btn btn-outline-warning btn-sm me-2" onclick="bulkDeactivate()">
+                    <i class="bi bi-pause"></i> Deactivate
+                </button>
+                <button class="btn btn-outline-danger btn-sm" onclick="bulkDelete()">
+                    <i class="bi bi-trash"></i> Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Teams Data Table -->
+    {{ render_data_table(
+        table_id='teams-table',
+        title='Teams',
+        columns=[
+            {'key': 'name', 'label': 'Team', 'sortable': True},
+            {'key': 'league', 'label': 'League', 'sortable': True},
+            {'key': 'players_count', 'label': 'Players', 'sortable': True},
+            {'key': 'stadium', 'label': 'Home Venue', 'sortable': True},
+            {'key': 'founded_year', 'label': 'Founded', 'sortable': True},
+            {'key': 'status', 'label': 'Status', 'sortable': True}
+        ],
+        data_url=url_for('admin.api_teams_data'),
+        create_url=url_for('admin.create_team'),
+        export_urls={
+            'csv': url_for('admin.export_teams', format='csv'),
+            'excel': url_for('admin.export_teams', format='excel'),
+            'pdf': url_for('admin.export_teams', format='pdf')
+        },
+        filters=[
+            {
+                'name': 'league',
+                'label': 'League',
+                'type': 'select',
+                'options': leagues_filter_options
+            },
+            {
+                'name': 'status',
+                'label': 'Status',
+                'type': 'select',
+                'options': [
+                    {'value': 'active', 'label': 'Active'},
+                    {'value': 'inactive', 'label': 'Inactive'},
+                    {'value': 'suspended', 'label': 'Suspended'}
+                ]
+            },
+            {
+                'name': 'founded_after',
+                'label': 'Founded After',
+                'type': 'date'
+            }
+        ]
+    ) }}
+</div>
+
+<!-- Team Detail Modal -->
+<div class="modal fade" id="teamDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Team Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="team-detail-content">
+                <!-- Content loaded via HTMX -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Action Modals -->
+<div class="modal fade" id="bulkLeagueModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Assign League to Teams</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="bulk-league-form">
+                    <div class="mb-3">
+                        <label for="bulk-league-select" class="form-label">Select League</label>
+                        <select class="form-select" id="bulk-league-select" name="league_id" required>
+                            <option value="">Choose a league...</option>
+                            {% for league in leagues %}
+                            <option value="{{ league.id }}">{{ league.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="alert alert-info">
+                        <strong><span id="bulk-league-count">0</span> teams</strong> will be assigned to the selected league.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="confirmBulkLeague()">
+                    <i class="bi bi-check"></i> Assign League
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+// Track selected teams
+let selectedTeams = new Set();
+
+// Handle row selection
+document.addEventListener('change', function(e) {
+    if (e.target.matches('.team-checkbox')) {
+        const teamId = e.target.value;
+        if (e.target.checked) {
+            selectedTeams.add(teamId);
+        } else {
+            selectedTeams.delete(teamId);
+        }
+        updateBulkActions();
+    }
+});
+
+// Handle "select all" checkbox
+document.addEventListener('change', function(e) {
+    if (e.target.matches('#select-all-teams')) {
+        const checkboxes = document.querySelectorAll('.team-checkbox');
+        selectedTeams.clear();
+
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = e.target.checked;
+            if (e.target.checked) {
+                selectedTeams.add(checkbox.value);
+            }
+        });
+        updateBulkActions();
+    }
+});
+
+function updateBulkActions() {
+    const bulkActions = document.getElementById('bulk-actions');
+    const selectedCount = document.getElementById('selected-count');
+    const bulkLeagueCount = document.getElementById('bulk-league-count');
+
+    selectedCount.textContent = selectedTeams.size;
+    if (bulkLeagueCount) {
+        bulkLeagueCount.textContent = selectedTeams.size;
+    }
+
+    if (selectedTeams.size > 0) {
+        bulkActions.classList.add('show');
+    } else {
+        bulkActions.classList.remove('show');
+    }
+}
+
+function viewTeam(teamId) {
+    const modal = new bootstrap.Modal(document.getElementById('teamDetailModal'));
+
+    // Load team details via HTMX
+    htmx.ajax('GET', `/admin/api/teams/${teamId}/detail`, {
+        target: '#team-detail-content'
+    });
+
+    modal.show();
+}
+
+function editTeam(teamId) {
+    window.location.href = `/admin/teams/${teamId}/edit`;
+}
+
+function deleteTeam(teamId, teamName) {
+    if (confirm(`Are you sure you want to delete "${teamName}"? This action cannot be undone.`)) {
+        htmx.ajax('DELETE', `/admin/api/teams/${teamId}`, {
+            headers: {'X-CSRFToken': document.querySelector('[name=csrf_token]').value}
+        }).then(() => {
+            // Reload table
+            htmx.trigger('#teams-table-tbody', 'refresh');
+            showAlert('Team deleted successfully', 'success');
+        }).catch(() => {
+            showAlert('Error deleting team', 'danger');
+        });
+    }
+}
+
+function bulkAssignLeague() {
+    if (selectedTeams.size === 0) return;
+
+    const modal = new bootstrap.Modal(document.getElementById('bulkLeagueModal'));
+    modal.show();
+}
+
+function confirmBulkLeague() {
+    const leagueId = document.getElementById('bulk-league-select').value;
+    if (!leagueId) {
+        alert('Please select a league');
+        return;
+    }
+
+    const teamIds = Array.from(selectedTeams);
+
+    htmx.ajax('PUT', '/admin/api/teams/bulk/league', {
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+        },
+        values: {
+            team_ids: teamIds,
+            league_id: leagueId
+        }
+    }).then(() => {
+        // Close modal and reload table
+        bootstrap.Modal.getInstance(document.getElementById('bulkLeagueModal')).hide();
+        htmx.trigger('#teams-table-tbody', 'refresh');
+        selectedTeams.clear();
+        updateBulkActions();
+        showAlert(`${teamIds.length} teams assigned to league`, 'success');
+    }).catch(() => {
+        showAlert('Error assigning teams to league', 'danger');
+    });
+}
+
+function bulkDeactivate() {
+    if (selectedTeams.size === 0) return;
+
+    if (confirm(`Are you sure you want to deactivate ${selectedTeams.size} teams?`)) {
+        const teamIds = Array.from(selectedTeams);
+
+        htmx.ajax('PUT', '/admin/api/teams/bulk/status', {
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+            },
+            values: {
+                team_ids: teamIds,
+                status: 'inactive'
+            }
+        }).then(() => {
+            htmx.trigger('#teams-table-tbody', 'refresh');
+            selectedTeams.clear();
+            updateBulkActions();
+            showAlert(`${teamIds.length} teams deactivated`, 'success');
+        }).catch(() => {
+            showAlert('Error deactivating teams', 'danger');
+        });
+    }
+}
+
+function bulkDelete() {
+    if (selectedTeams.size === 0) return;
+
+    if (confirm(`Are you sure you want to delete ${selectedTeams.size} teams? This action cannot be undone.`)) {
+        const teamIds = Array.from(selectedTeams);
+
+        htmx.ajax('DELETE', '/admin/api/teams/bulk', {
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+            },
+            values: {
+                team_ids: teamIds
+            }
+        }).then(() => {
+            htmx.trigger('#teams-table-tbody', 'refresh');
+            selectedTeams.clear();
+            updateBulkActions();
+            showAlert(`${teamIds.length} teams deleted`, 'success');
+        }).catch(() => {
+            showAlert('Error deleting teams', 'danger');
+        });
+    }
+}
+
+function showAlert(message, type) {
+    const alertContainer = document.getElementById('alert-container') || createAlertContainer();
+
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} alert-dismissible fade show`;
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+
+    alertContainer.appendChild(alert);
+
+    setTimeout(() => {
+        alert.remove();
+    }, 5000);
+}
+
+function createAlertContainer() {
+    const container = document.createElement('div');
+    container.id = 'alert-container';
+    container.style.position = 'fixed';
+    container.style.top = '20px';
+    container.style.right = '20px';
+    container.style.zIndex = '9999';
+    container.style.width = '400px';
+    document.body.appendChild(container);
+    return container;
+}
+
+// Clear selections when table is refreshed
+document.addEventListener('htmx:afterSwap', function(e) {
+    if (e.detail.target.id === 'teams-table-tbody') {
+        selectedTeams.clear();
+        updateBulkActions();
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

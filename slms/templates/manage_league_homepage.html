@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}League Homepage Builder{% endblock %}
+{% block content %}
+<div class="container py-4 league-homepage-builder">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+            <h1 class="h3 mb-1">League Homepage Builder</h1>
+            <p class="text-muted mb-0">Craft the hero, call-to-action, and highlight cards shown on the public league page.</p>
+        </div>
+        {% if leagues %}
+        <form method="get" class="d-flex align-items-center gap-2">
+            <label for="league_id" class="form-label mb-0">League</label>
+            <select class="form-select" id="league_id" name="league_id" onchange="this.form.submit()">
+                {% for league in leagues %}
+                    <option value="{{ league.id }}" {% if selected_league_id and league.id == selected_league_id|int %}selected{% endif %}>{{ league.name }}</option>
+                {% endfor %}
+            </select>
+        </form>
+        {% endif %}
+    </div>
+
+    {% if not leagues %}
+        <div class="alert alert-info">No leagues found. Add a league first to customize its homepage.</div>
+    {% else %}
+    <div class="row g-4">
+        <div class="col-lg-5 col-xl-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Hero Section</h2>
+                    <form method="post" class="hero-form">
+                        <input type="hidden" name="action" value="save">
+                        <input type="hidden" name="league_id" value="{{ selected_league_id }}">
+
+                        <div class="mb-3">
+                            <label class="form-label" for="homepage_title">Headline</label>
+                            <input type="text" class="form-control" id="homepage_title" name="homepage_title" value="{{ config.title }}" placeholder="Dominate the Season">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="homepage_subtitle">Subtitle</label>
+                            <textarea class="form-control" id="homepage_subtitle" name="homepage_subtitle" rows="2" placeholder="Add a short positioning statement">{{ config.subtitle }}</textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="homepage_background_url">Background image URL</label>
+                            <input type="url" class="form-control" id="homepage_background_url" name="homepage_background_url" value="{{ config.background_url }}" placeholder="https://example.com/hero.jpg">
+                            <small class="text-muted">Used as the hero banner backdrop.</small>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-sm-6">
+                                <label class="form-label" for="homepage_cta_text">CTA text</label>
+                                <input type="text" class="form-control" id="homepage_cta_text" name="homepage_cta_text" value="{{ config.cta_text }}" placeholder="View Schedule">
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="form-label" for="homepage_cta_url">CTA link</label>
+                                <input type="url" class="form-control" id="homepage_cta_url" name="homepage_cta_url" value="{{ config.cta_url }}" placeholder="https://">
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+                        <h3 class="h6">Highlight Cards</h3>
+                        <p class="text-muted small">Fill up to three quick highlights. Leave blank to hide.</p>
+
+                        {% for highlight in highlights %}
+                            <div class="border rounded-3 p-3 mb-3 bg-light-subtle">
+                                <div class="mb-2">
+                                    <label class="form-label" for="highlight_title_{{ loop.index }}">Title</label>
+                                    <input type="text" class="form-control" id="highlight_title_{{ loop.index }}" name="highlight_title_{{ loop.index }}" value="{{ highlight.title }}" placeholder="Key stat or feature">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label" for="highlight_body_{{ loop.index }}">Description</label>
+                                    <textarea class="form-control" id="highlight_body_{{ loop.index }}" name="highlight_body_{{ loop.index }}" rows="2" placeholder="Supporting copy">{{ highlight.body }}</textarea>
+                                </div>
+                                <div class="mb-0">
+                                    <label class="form-label" for="highlight_icon_{{ loop.index }}">Bootstrap Icon</label>
+                                    <input type="text" class="form-control" id="highlight_icon_{{ loop.index }}" name="highlight_icon_{{ loop.index }}" value="{{ highlight.icon }}" placeholder="bi-trophy">
+                                    <small class="text-muted">Use any <a href="https://icons.getbootstrap.com" target="_blank" rel="noopener">Bootstrap icon</a> class.</small>
+                                </div>
+                            </div>
+                        {% endfor %}
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Save homepage
+                            </button>
+                            <button type="submit" name="action" value="reset" class="btn btn-outline-danger" onclick="return confirm('Reset homepage to defaults?');">
+                                Reset
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7 col-xl-8">
+            <div class="card shadow-sm border-0">
+                <div class="league-preview-wrapper">
+                    <div class="preview-hero" id="homepage-hero-preview" style="background-image: {% if config.background_url %}linear-gradient(180deg, rgba(15, 23, 42, 0.1), rgba(15, 23, 42, 0.6)), url({{ config.background_url }}){% else %}linear-gradient(180deg, rgba(37,99,235,0.85), rgba(14,116,144,0.9)){% endif %};">
+                        <div class="preview-overlay">
+                            <span class="badge bg-light text-dark mb-3">League hero</span>
+                            <h2 class="display-6 mb-3" id="preview-title">{{ config.title or 'League headline' }}</h2>
+                            <p class="lead mb-4" id="preview-subtitle">{{ config.subtitle or 'Add a compelling sentence to inspire players and fans.' }}</p>
+                            <a href="{{ config.cta_url or '#' }}" class="btn btn-primary btn-lg" id="preview-cta">{{ config.cta_text or 'See Schedule' }}</a>
+                        </div>
+                    </div>
+                    <div class="preview-highlights row g-3 p-4">
+                        {% for highlight in highlights %}
+                            {% if highlight.title or highlight.body %}
+                            <div class="col-md-4">
+                                <div class="card shadow-sm border-0 h-100">
+                                    <div class="card-body">
+                                        <div class="text-primary mb-2"><i class="bi {{ highlight.icon or 'bi-star' }}"></i></div>
+                                        <h3 class="h6">{{ highlight.title }}</h3>
+                                        <p class="text-muted small mb-0">{{ highlight.body }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                        {% if highlights|length == 0 or (highlights[0].title == '' and highlights[0].body == '') %}
+                            <div class="col-12">
+                                <div class="alert alert-info mb-0">Highlight cards will appear here once you add content.</div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+<script>
+    document.querySelectorAll('.hero-form input, .hero-form textarea').forEach(input => {
+        input.addEventListener('input', () => updatePreview());
+    });
+
+    function updatePreview() {
+        const title = document.getElementById('homepage_title').value || 'League headline';
+        const subtitle = document.getElementById('homepage_subtitle').value || 'Add a compelling sentence to inspire players and fans.';
+        const background = document.getElementById('homepage_background_url').value.trim();
+        const ctaText = document.getElementById('homepage_cta_text').value || 'See Schedule';
+        const ctaUrl = document.getElementById('homepage_cta_url').value || '#';
+
+        const hero = document.getElementById('homepage-hero-preview');
+        const titleEl = document.getElementById('preview-title');
+        const subtitleEl = document.getElementById('preview-subtitle');
+        const ctaEl = document.getElementById('preview-cta');
+
+        if (background) {
+            hero.style.backgroundImage = `linear-gradient(180deg, rgba(15, 23, 42, 0.1), rgba(15, 23, 42, 0.6)), url(${background})`;
+        } else {
+            hero.style.backgroundImage = 'linear-gradient(180deg, rgba(37,99,235,0.85), rgba(14,116,144,0.9))';
+        }
+
+        titleEl.textContent = title;
+        subtitleEl.textContent = subtitle;
+        ctaEl.textContent = ctaText;
+        ctaEl.href = ctaUrl || '#';
+    }
+
+    updatePreview();
+</script>
+{% endblock %}

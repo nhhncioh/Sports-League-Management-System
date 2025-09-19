@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}{{ season.name }} Standings - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('public.landing') }}">Home</a></li>
+                    <li class="breadcrumb-item active">{{ season.name }} Standings</li>
+                </ol>
+            </nav>
+
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1>{{ season.name }} Standings</h1>
+                    <p class="text-muted">{{ season.league.name }}</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('portal.season_schedule', season_id=season.id) }}"
+                       class="btn btn-outline-primary">
+                        <i class="bi bi-calendar-event"></i> Schedule
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Standings Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="text-center">#</th>
+                                    <th>Team</th>
+                                    <th class="text-center">GP</th>
+                                    <th class="text-center">W</th>
+                                    <th class="text-center">L</th>
+                                    <th class="text-center">PCT</th>
+                                    <th class="text-center">PF</th>
+                                    <th class="text-center">PA</th>
+                                    <th class="text-center">DIFF</th>
+                                    <th class="text-center">FORM</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for standing in standings %}
+                                    <tr>
+                                        <!-- Rank -->
+                                        <td class="text-center">
+                                            <strong>{{ loop.index }}</strong>
+                                        </td>
+
+                                        <!-- Team Name -->
+                                        <td>
+                                            <a href="{{ url_for('portal.team_detail', team_id=standing.team.id) }}"
+                                               class="text-decoration-none">
+                                                <strong>{{ standing.team.name }}</strong>
+                                            </a>
+                                        </td>
+
+                                        <!-- Games Played -->
+                                        <td class="text-center">{{ standing.games_played }}</td>
+
+                                        <!-- Wins -->
+                                        <td class="text-center">
+                                            <span class="text-success">{{ standing.wins }}</span>
+                                        </td>
+
+                                        <!-- Losses -->
+                                        <td class="text-center">
+                                            <span class="text-danger">{{ standing.losses }}</span>
+                                        </td>
+
+                                        <!-- Win Percentage -->
+                                        <td class="text-center">
+                                            <strong>{{ "%.3f"|format(standing.win_percentage) }}</strong>
+                                        </td>
+
+                                        <!-- Points For -->
+                                        <td class="text-center">{{ standing.points_for }}</td>
+
+                                        <!-- Points Against -->
+                                        <td class="text-center">{{ standing.points_against }}</td>
+
+                                        <!-- Differential -->
+                                        <td class="text-center">
+                                            {% set diff = standing.point_differential %}
+                                            <span class="{% if diff > 0 %}text-success{% elif diff < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                                {% if diff > 0 %}+{% endif %}{{ diff }}
+                                            </span>
+                                        </td>
+
+                                        <!-- Form (last 5 games) -->
+                                        <td class="text-center">
+                                            {% if standing.recent_form %}
+                                                <div class="d-flex justify-content-center gap-1">
+                                                    {% for result in standing.recent_form %}
+                                                        <span class="badge
+                                                            {% if result == 'W' %}bg-success
+                                                            {% elif result == 'L' %}bg-danger
+                                                            {% else %}bg-secondary{% endif %}"
+                                                              style="width: 20px; height: 20px; line-height: 20px; font-size: 10px;">
+                                                            {{ result }}
+                                                        </span>
+                                                    {% endfor %}
+                                                </div>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Summary -->
+    {% if standings %}
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <i class="bi bi-trophy"></i>
+                            Top Performer
+                        </h6>
+                        {% set leader = standings[0] %}
+                        <p class="mb-1">
+                            <strong>{{ leader.team.name }}</strong>
+                        </p>
+                        <small class="text-muted">
+                            {{ leader.wins }}-{{ leader.losses }}
+                            ({{ "%.1f"|format(leader.win_percentage * 100) }}%)
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <i class="bi bi-graph-up"></i>
+                            Highest Scoring
+                        </h6>
+                        {% set top_scorer = standings|sort(attribute='points_for', reverse=true)|first %}
+                        <p class="mb-1">
+                            <strong>{{ top_scorer.team.name }}</strong>
+                        </p>
+                        <small class="text-muted">
+                            {{ top_scorer.points_for }} points scored
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    No games have been completed yet. Standings will appear after teams have played games.
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Last Updated -->
+    <div class="row mt-3">
+        <div class="col-12">
+            <small class="text-muted">
+                <i class="bi bi-clock"></i>
+                Last updated: {{ moment().format('MMMM Do YYYY, h:mm a') if moment else 'Now' }}
+            </small>
+        </div>
+    </div>
+</div>
+
+{% block extra_css %}
+<style>
+    .table th {
+        border-top: none;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+
+    .table td {
+        vertical-align: middle;
+    }
+
+    .table tbody tr:hover {
+        background-color: rgba(var(--bs-primary-rgb), 0.05);
+    }
+</style>
+{% endblock %}
+{% endblock %}

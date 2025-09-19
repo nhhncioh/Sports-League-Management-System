@@ -1,0 +1,645 @@
+{% extends "base.html" %}
+
+{% block title %}Step 4: Registration - Create Season - Admin - {{ super() }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .wizard-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .wizard-progress {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+
+    .progress-step {
+        flex: 1;
+        text-align: center;
+        position: relative;
+        padding: 0 10px;
+    }
+
+    .progress-step:not(:last-child):after {
+        content: '';
+        position: absolute;
+        top: 20px;
+        right: -50%;
+        width: 100%;
+        height: 2px;
+        background: #dee2e6;
+        z-index: 1;
+    }
+
+    .progress-step.completed:not(:last-child):after,
+    .progress-step.active:not(:last-child):after {
+        background: #28a745;
+    }
+
+    .step-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #dee2e6;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 8px;
+        position: relative;
+        z-index: 2;
+        font-weight: 600;
+    }
+
+    .progress-step.completed .step-circle {
+        background: #28a745;
+        color: white;
+    }
+
+    .progress-step.active .step-circle {
+        background: #007bff;
+        color: white;
+    }
+
+    .step-label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #6c757d;
+    }
+
+    .progress-step.completed .step-label,
+    .progress-step.active .step-label {
+        color: #495057;
+        font-weight: 600;
+    }
+
+    .wizard-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+
+    .wizard-header {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+    }
+
+    .wizard-body {
+        padding: 40px;
+    }
+
+    .wizard-footer {
+        background: #f8f9fa;
+        padding: 20px 40px;
+        border-top: 1px solid #dee2e6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .btn-wizard {
+        min-width: 120px;
+        padding: 12px 24px;
+        font-weight: 600;
+        border-radius: 8px;
+    }
+
+    .registration-section {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 25px;
+        margin-bottom: 25px;
+    }
+
+    .section-title {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+    }
+
+    .section-title i {
+        margin-right: 10px;
+        color: #007bff;
+    }
+
+    .registration-mode-card {
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 15px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .registration-mode-card:hover {
+        border-color: #007bff;
+        box-shadow: 0 2px 4px rgba(0,123,255,0.1);
+    }
+
+    .registration-mode-card.active {
+        border-color: #007bff;
+        background: #f8f9ff;
+    }
+
+    .mode-icon {
+        font-size: 1.5rem;
+        color: #007bff;
+        margin-bottom: 10px;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 8px;
+    }
+
+    .form-control,
+    .form-select {
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        padding: 12px 16px;
+        font-size: 1rem;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+    .input-group-text {
+        background: #f8f9fa;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+    }
+
+    .conditional-section {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 15px;
+        border: 1px solid #dee2e6;
+    }
+
+    .form-check {
+        margin-bottom: 1rem;
+    }
+
+    .form-check-input {
+        transform: scale(1.2);
+        margin-right: 10px;
+    }
+
+    .waiver-preview {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 15px;
+        font-family: 'Courier New', monospace;
+        font-size: 0.875rem;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    .date-range-group {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        border: 1px solid #dee2e6;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="wizard-container">
+        <!-- Progress Bar -->
+        <div class="wizard-progress">
+            <div class="d-flex">
+                <div class="progress-step completed">
+                    <div class="step-circle"><i class="bi bi-check"></i></div>
+                    <div class="step-label">Season Info</div>
+                </div>
+                <div class="progress-step completed">
+                    <div class="step-circle"><i class="bi bi-check"></i></div>
+                    <div class="step-label">Teams</div>
+                </div>
+                <div class="progress-step completed">
+                    <div class="step-circle"><i class="bi bi-check"></i></div>
+                    <div class="step-label">Venues</div>
+                </div>
+                <div class="progress-step active">
+                    <div class="step-circle">4</div>
+                    <div class="step-label">Registration</div>
+                </div>
+                <div class="progress-step">
+                    <div class="step-circle">5</div>
+                    <div class="step-label">Schedule</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4 Form -->
+        <div class="wizard-card">
+            <div class="wizard-header">
+                <h1><i class="bi bi-person-plus"></i> Step 4: Registration Settings</h1>
+                <p class="mb-0">Configure how players can register for this season</p>
+            </div>
+
+            <form method="POST" action="{{ url_for('admin.season_wizard_step', step=4) }}">
+                {{ csrf_token() }}
+
+                <div class="wizard-body">
+                    <!-- Registration Mode Section -->
+                    <div class="registration-section">
+                        <h5 class="section-title">
+                            <i class="bi bi-gear"></i> Registration Mode
+                        </h5>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="registration-mode-card" data-mode="open" onclick="selectRegistrationMode('open')">
+                                    <div class="text-center">
+                                        <div class="mode-icon">
+                                            <i class="bi bi-unlock"></i>
+                                        </div>
+                                        <h6>Open Registration</h6>
+                                        <p class="text-muted mb-0 small">Anyone can register directly</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="registration-mode-card" data-mode="approval" onclick="selectRegistrationMode('approval')">
+                                    <div class="text-center">
+                                        <div class="mode-icon">
+                                            <i class="bi bi-shield-check"></i>
+                                        </div>
+                                        <h6>Approval Required</h6>
+                                        <p class="text-muted mb-0 small">Admin must approve requests</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="registration-mode-card" data-mode="closed" onclick="selectRegistrationMode('closed')">
+                                    <div class="text-center">
+                                        <div class="mode-icon">
+                                            <i class="bi bi-lock"></i>
+                                        </div>
+                                        <h6>Closed/Invite Only</h6>
+                                        <p class="text-muted mb-0 small">Admin adds players manually</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <input type="hidden" id="registration_mode" name="registration_mode"
+                               value="{{ wizard_data.data.step4.registration_mode if wizard_data and wizard_data.data and wizard_data.data.step4 else 'open' }}">
+                    </div>
+
+                    <!-- Registration Period Section -->
+                    <div class="registration-section">
+                        <h5 class="section-title">
+                            <i class="bi bi-calendar-range"></i> Registration Period
+                        </h5>
+
+                        <div class="form-check mb-3">
+                            <input type="checkbox" class="form-check-input" id="enable_registration_period"
+                                   name="enable_registration_period"
+                                   {{ 'checked' if wizard_data and wizard_data.data and wizard_data.data.step4 and wizard_data.data.step4.enable_registration_period }}
+                                   onchange="toggleRegistrationPeriod()">
+                            <label for="enable_registration_period" class="form-check-label">
+                                Set specific registration start and end dates
+                            </label>
+                        </div>
+
+                        <div id="registration-period-fields" class="date-range-group" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="registration_start" class="form-label">Registration Opens</label>
+                                        <input type="datetime-local" class="form-control" id="registration_start"
+                                               name="registration_start"
+                                               value="{{ wizard_data.data.step4.registration_start if wizard_data and wizard_data.data and wizard_data.data.step4 else '' }}">
+                                        <div class="form-text">When can players start registering?</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="registration_end" class="form-label">Registration Closes</label>
+                                        <input type="datetime-local" class="form-control" id="registration_end"
+                                               name="registration_end"
+                                               value="{{ wizard_data.data.step4.registration_end if wizard_data and wizard_data.data and wizard_data.data.step4 else '' }}">
+                                        <div class="form-text">Last chance to register</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Registration Fee Section -->
+                    <div class="registration-section">
+                        <h5 class="section-title">
+                            <i class="bi bi-currency-dollar"></i> Registration Fee
+                        </h5>
+
+                        <div class="form-check mb-3">
+                            <input type="checkbox" class="form-check-input" id="enable_registration_fee"
+                                   name="enable_registration_fee"
+                                   {{ 'checked' if wizard_data and wizard_data.data and wizard_data.data.step4 and wizard_data.data.step4.enable_registration_fee }}
+                                   onchange="toggleRegistrationFee()">
+                            <label for="enable_registration_fee" class="form-check-label">
+                                Charge a registration fee
+                            </label>
+                        </div>
+
+                        <div id="registration-fee-fields" class="conditional-section" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="registration_fee" class="form-label">Fee Amount</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">$</span>
+                                            <input type="number" class="form-control" id="registration_fee"
+                                                   name="registration_fee" min="0" step="0.01"
+                                                   placeholder="0.00"
+                                                   value="{{ wizard_data.data.step4.registration_fee if wizard_data and wizard_data.data and wizard_data.data.step4 else '' }}">
+                                        </div>
+                                        <div class="form-text">Amount to charge each player</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="fee_description" class="form-label">Fee Description</label>
+                                        <input type="text" class="form-control" id="fee_description"
+                                               name="fee_description"
+                                               placeholder="e.g., Season registration fee"
+                                               value="{{ wizard_data.data.step4.fee_description if wizard_data and wizard_data.data and wizard_data.data.step4 else '' }}">
+                                        <div class="form-text">What the fee covers</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="payment_methods" class="form-label">Accepted Payment Methods</label>
+                                        <select class="form-select" id="payment_methods" name="payment_methods">
+                                            <option value="manual" {{ 'selected' if wizard_data and wizard_data.data and wizard_data.data.step4 and wizard_data.data.step4.payment_methods == 'manual' }}>
+                                                Manual (Cash/Check)
+                                            </option>
+                                            <option value="online" {{ 'selected' if wizard_data and wizard_data.data and wizard_data.data.step4 and wizard_data.data.step4.payment_methods == 'online' }}>
+                                                Online Payment (Future)
+                                            </option>
+                                            <option value="both" {{ 'selected' if wizard_data and wizard_data.data and wizard_data.data.step4 and wizard_data.data.step4.payment_methods == 'both' }}>
+                                                Both Options
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="refund_policy" class="form-label">Refund Policy</label>
+                                        <select class="form-select" id="refund_policy" name="refund_policy">
+                                            <option value="none" {{ 'selected' if wizard_data and wizard_data.data and wizard_data.data.step4 and wizard_data.data.step4.refund_policy == 'none' }}>
+                                                No Refunds
+                                            </option>
+                                            <option value="partial" {{ 'selected' if wizard_data and wizard_data.data and wizard_data.data.step4 and wizard_data.data.step4.refund_policy == 'partial' }}>
+                                                Partial Refund
+                                            </option>
+                                            <option value="full" {{ 'selected' if wizard_data and wizard_data.data and wizard_data.data.step4 and wizard_data.data.step4.refund_policy == 'full' }}>
+                                                Full Refund Available
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Player Limits Section -->
+                    <div class="registration-section">
+                        <h5 class="section-title">
+                            <i class="bi bi-people"></i> Player Limits
+                        </h5>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="max_players" class="form-label">Maximum Players</label>
+                                    <input type="number" class="form-control" id="max_players"
+                                           name="max_players" min="1"
+                                           placeholder="No limit"
+                                           value="{{ wizard_data.data.step4.max_players if wizard_data and wizard_data.data and wizard_data.data.step4 else '' }}">
+                                    <div class="form-text">Leave blank for no limit</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="min_age" class="form-label">Minimum Age</label>
+                                    <input type="number" class="form-control" id="min_age"
+                                           name="min_age" min="1" max="100"
+                                           placeholder="No minimum"
+                                           value="{{ wizard_data.data.step4.min_age if wizard_data and wizard_data.data and wizard_data.data.step4 else '' }}">
+                                    <div class="form-text">Age requirement in years</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Waiver Section -->
+                    <div class="registration-section">
+                        <h5 class="section-title">
+                            <i class="bi bi-file-text"></i> Liability Waiver
+                        </h5>
+
+                        <div class="form-check mb-3">
+                            <input type="checkbox" class="form-check-input" id="require_waiver"
+                                   name="require_waiver"
+                                   {{ 'checked' if wizard_data and wizard_data.data and wizard_data.data.step4 and wizard_data.data.step4.require_waiver }}
+                                   onchange="toggleWaiver()">
+                            <label for="require_waiver" class="form-check-label">
+                                Require players to sign a liability waiver
+                            </label>
+                        </div>
+
+                        <div id="waiver-fields" class="conditional-section" style="display: none;">
+                            <div class="form-group">
+                                <label for="waiver_text" class="form-label">Waiver Text</label>
+                                <textarea class="form-control" id="waiver_text" name="waiver_text" rows="6"
+                                          placeholder="Enter your liability waiver text here...">{{ wizard_data.data.step4.waiver_text if wizard_data and wizard_data.data and wizard_data.data.step4 else '' }}</textarea>
+                                <div class="form-text">The legal text players must agree to</div>
+                            </div>
+
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="loadDefaultWaiver()">
+                                <i class="bi bi-file-plus"></i> Load Default Waiver
+                            </button>
+
+                            <div id="waiver-preview" class="waiver-preview" style="display: none;">
+                                <strong>Preview:</strong>
+                                <div id="waiver-preview-content"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-lightbulb"></i> Registration Tips:</h6>
+                        <ul class="mb-0">
+                            <li><strong>Open registration</strong> allows immediate player signup</li>
+                            <li><strong>Approval required</strong> gives you control over who joins</li>
+                            <li><strong>Closed registration</strong> is best for private leagues</li>
+                            <li>Consider setting registration periods to manage timing</li>
+                            <li>Always use a liability waiver for contact sports</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="wizard-footer">
+                    <a href="{{ url_for('admin.season_wizard_step', step=3) }}" class="btn btn-outline-secondary btn-wizard">
+                        <i class="bi bi-arrow-left"></i> Back
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-wizard">
+                        Next: Schedule <i class="bi bi-arrow-right"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+// Initialize form state
+document.addEventListener('DOMContentLoaded', function() {
+    const savedMode = document.getElementById('registration_mode').value;
+    selectRegistrationMode(savedMode);
+
+    // Initialize toggle sections
+    toggleRegistrationPeriod();
+    toggleRegistrationFee();
+    toggleWaiver();
+});
+
+function selectRegistrationMode(mode) {
+    // Update visual selection
+    document.querySelectorAll('.registration-mode-card').forEach(card => {
+        card.classList.remove('active');
+    });
+    document.querySelector(`.registration-mode-card[data-mode="${mode}"]`).classList.add('active');
+
+    // Update hidden input
+    document.getElementById('registration_mode').value = mode;
+}
+
+function toggleRegistrationPeriod() {
+    const checkbox = document.getElementById('enable_registration_period');
+    const fields = document.getElementById('registration-period-fields');
+
+    if (checkbox.checked) {
+        fields.style.display = 'block';
+        // Set default dates if empty
+        const now = new Date();
+        const startInput = document.getElementById('registration_start');
+        const endInput = document.getElementById('registration_end');
+
+        if (!startInput.value) {
+            startInput.value = now.toISOString().slice(0, 16);
+        }
+
+        if (!endInput.value) {
+            const endDate = new Date(now);
+            endDate.setDate(endDate.getDate() + 30);
+            endInput.value = endDate.toISOString().slice(0, 16);
+        }
+    } else {
+        fields.style.display = 'none';
+    }
+}
+
+function toggleRegistrationFee() {
+    const checkbox = document.getElementById('enable_registration_fee');
+    const fields = document.getElementById('registration-fee-fields');
+
+    fields.style.display = checkbox.checked ? 'block' : 'none';
+}
+
+function toggleWaiver() {
+    const checkbox = document.getElementById('require_waiver');
+    const fields = document.getElementById('waiver-fields');
+
+    fields.style.display = checkbox.checked ? 'block' : 'none';
+}
+
+function loadDefaultWaiver() {
+    const defaultWaiver = `RELEASE AND WAIVER OF LIABILITY
+
+I, the undersigned participant, acknowledge that I am voluntarily participating in sports activities organized by this league. I understand that participation in sports activities involves inherent risks including, but not limited to, serious injury or death.
+
+In consideration for being permitted to participate, I hereby:
+
+1. RELEASE AND DISCHARGE the league, its organizers, officials, volunteers, and facility owners from any and all liability for injury, illness, death, or property damage arising from my participation.
+
+2. ASSUME ALL RISKS associated with participation in league activities, whether known or unknown.
+
+3. AGREE TO INDEMNIFY AND HOLD HARMLESS the league from any claims brought by myself or others on my behalf.
+
+4. CONSENT TO MEDICAL TREATMENT in case of emergency.
+
+I have read this waiver and understand its contents. I sign this voluntarily and with full knowledge of its significance.
+
+Date: _______________
+
+Participant Signature: _________________________________
+
+Participant Name (Print): _______________________________
+
+If participant is under 18:
+Parent/Guardian Signature: ____________________________
+
+Parent/Guardian Name (Print): __________________________`;
+
+    document.getElementById('waiver_text').value = defaultWaiver;
+    updateWaiverPreview();
+}
+
+function updateWaiverPreview() {
+    const waiverText = document.getElementById('waiver_text').value;
+    const preview = document.getElementById('waiver-preview');
+    const content = document.getElementById('waiver-preview-content');
+
+    if (waiverText.trim()) {
+        content.innerHTML = waiverText.replace(/\n/g, '<br>');
+        preview.style.display = 'block';
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+// Update waiver preview on text change
+document.getElementById('waiver_text').addEventListener('input', updateWaiverPreview);
+
+// Validate registration dates
+document.getElementById('registration_end').addEventListener('change', function() {
+    const startDate = new Date(document.getElementById('registration_start').value);
+    const endDate = new Date(this.value);
+
+    if (startDate && endDate && endDate <= startDate) {
+        alert('Registration end date must be after start date');
+        this.value = '';
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

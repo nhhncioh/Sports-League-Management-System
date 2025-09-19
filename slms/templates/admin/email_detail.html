@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+
+{% block title %}Email Detail - {{ email.subject }} - Admin - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin.admin_dashboard') }}">Admin</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin.email_management') }}">Email Management</a></li>
+                    <li class="breadcrumb-item active">Email Detail</li>
+                </ol>
+            </nav>
+
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1>Email Detail</h1>
+                    <p class="text-muted">{{ email.subject }}</p>
+                </div>
+                <div>
+                    {% if email.status.value == 'failed' and email.retry_count < email.max_retries %}
+                        <form method="POST" action="{{ url_for('admin.retry_email', email_id=email.id) }}"
+                              style="display: inline;">
+                            <button type="submit" class="btn btn-warning"
+                                    onclick="return confirm('Retry sending this email?')">
+                                <i class="bi bi-arrow-clockwise"></i> Retry Email
+                            </button>
+                        </form>
+                    {% endif %}
+                    <a href="{{ url_for('admin.email_management') }}" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-left"></i> Back to List
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Email Details -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i>
+                        Email Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-3">
+                            <strong>Status:</strong>
+                        </div>
+                        <div class="col-sm-9">
+                            <span class="badge
+                                {% if email.status.value == 'sent' %}bg-success
+                                {% elif email.status.value == 'failed' %}bg-danger
+                                {% elif email.status.value == 'sending' %}bg-warning
+                                {% elif email.status.value == 'queued' %}bg-info
+                                {% else %}bg-secondary{% endif %}">
+                                {{ email.status.value.replace('_', ' ').title() }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-sm-3">
+                            <strong>Type:</strong>
+                        </div>
+                        <div class="col-sm-9">
+                            <span class="badge bg-secondary">
+                                {{ email.email_type.value.replace('_', ' ').title() }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-sm-3">
+                            <strong>Recipient:</strong>
+                        </div>
+                        <div class="col-sm-9">
+                            {% if email.to_name %}
+                                {{ email.to_name }} &lt;{{ email.to_email }}&gt;
+                            {% else %}
+                                {{ email.to_email }}
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-sm-3">
+                            <strong>From:</strong>
+                        </div>
+                        <div class="col-sm-9">
+                            {% if email.from_name %}
+                                {{ email.from_name }} &lt;{{ email.from_email }}&gt;
+                            {% else %}
+                                {{ email.from_email }}
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-sm-3">
+                            <strong>Subject:</strong>
+                        </div>
+                        <div class="col-sm-9">
+                            {{ email.subject }}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-sm-3">
+                            <strong>Template:</strong>
+                        </div>
+                        <div class="col-sm-9">
+                            <code>{{ email.template_key }}</code>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-sm-3">
+                            <strong>Created:</strong>
+                        </div>
+                        <div class="col-sm-9">
+                            {{ email.created_at.strftime('%Y-%m-%d %H:%M:%S UTC') }}
+                        </div>
+                    </div>
+
+                    {% if email.sent_at %}
+                    <div class="row mb-3">
+                        <div class="col-sm-3">
+                            <strong>Sent:</strong>
+                        </div>
+                        <div class="col-sm-9">
+                            {{ email.sent_at.strftime('%Y-%m-%d %H:%M:%S UTC') }}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="row mb-3">
+                        <div class="col-sm-3">
+                            <strong>Retry Count:</strong>
+                        </div>
+                        <div class="col-sm-9">
+                            {{ email.retry_count }} / {{ email.max_retries }}
+                        </div>
+                    </div>
+
+                    {% if email.error_message %}
+                    <div class="row mb-3">
+                        <div class="col-sm-3">
+                            <strong>Error:</strong>
+                        </div>
+                        <div class="col-sm-9">
+                            <div class="alert alert-danger">
+                                <small>{{ email.error_message }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Related Entities -->
+            {% if email.user_id or email.game_id or email.registration_id %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-link"></i>
+                        Related Entities
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if email.user_id %}
+                        <div class="mb-2">
+                            <strong>User:</strong>
+                            {% if email.user %}
+                                {{ email.user.username or email.user.email }}
+                            {% else %}
+                                <span class="text-muted">{{ email.user_id }}</span>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+
+                    {% if email.game_id %}
+                        <div class="mb-2">
+                            <strong>Game:</strong>
+                            {% if email.game %}
+                                {{ email.game.home_team.name if email.game.home_team else 'N/A' }} vs
+                                {{ email.game.away_team.name if email.game.away_team else 'N/A' }}
+                            {% else %}
+                                <span class="text-muted">{{ email.game_id }}</span>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+
+                    {% if email.registration_id %}
+                        <div class="mb-2">
+                            <strong>Registration:</strong>
+                            {% if email.registration %}
+                                {{ email.registration.player_name or email.registration.team_name }}
+                            {% else %}
+                                <span class="text-muted">{{ email.registration_id }}</span>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Template Context -->
+            {% if email.context %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-code"></i>
+                        Template Context
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <pre class="bg-light p-3 rounded"><code>{{ email.context | tojson(indent=2) }}</code></pre>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Email Content Preview -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-envelope-open"></i>
+                        Email Preview
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if email.html_content %}
+                        <div class="border rounded" style="height: 600px; overflow-y: auto;">
+                            <iframe srcdoc="{{ email.html_content | replace('\"', '&quot;') }}"
+                                    style="width: 100%; height: 100%; border: none;">
+                            </iframe>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5 text-muted">
+                            <i class="bi bi-file-earmark-x" style="font-size: 3rem;"></i>
+                            <h5 class="mt-3">No Content Available</h5>
+                            <p>Email content could not be rendered or was not saved.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Raw HTML Toggle -->
+            {% if email.html_content %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-file-code"></i>
+                        Raw HTML
+                        <button class="btn btn-sm btn-outline-secondary float-end"
+                                onclick="toggleRawHtml()">
+                            Toggle View
+                        </button>
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div id="rawHtml" style="display: none;">
+                        <pre class="bg-light p-3 rounded" style="max-height: 400px; overflow-y: auto;"><code>{{ email.html_content | e }}</code></pre>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+function toggleRawHtml() {
+    const rawHtml = document.getElementById('rawHtml');
+    if (rawHtml.style.display === 'none') {
+        rawHtml.style.display = 'block';
+    } else {
+        rawHtml.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}
+{% endblock %}

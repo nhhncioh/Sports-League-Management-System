@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+
+{% block title %}{{ team.name }} - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('public.landing') }}">Home</a></li>
+                    <li class="breadcrumb-item active">{{ team.name }}</li>
+                </ol>
+            </nav>
+
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="mb-2">{{ team.name }}</h1>
+                    {% if team.seasons %}
+                        <p class="text-muted">
+                            Currently in: {{ team.seasons|map(attribute='name')|join(', ') }}
+                        </p>
+                    {% endif %}
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <!-- Team logo or placeholder -->
+                    <div class="team-logo bg-light rounded p-3 d-inline-block">
+                        <i class="bi bi-shield" style="font-size: 3rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Team Info & Roster -->
+        <div class="col-lg-8">
+            <!-- Roster -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-people"></i>
+                        Roster
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if roster %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Position</th>
+                                        <th>Jersey</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for player in roster %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ player.name }}</strong>
+                                            </td>
+                                            <td>{{ player.position or '-' }}</td>
+                                            <td>
+                                                {% if player.jersey_number %}
+                                                    <span class="badge bg-secondary">#{{ player.jersey_number }}</span>
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="p-3 text-center text-muted">
+                            <i class="bi bi-person-x"></i>
+                            No players registered yet.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Recent Games -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clock-history"></i>
+                        Recent Results
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if recent_games %}
+                        <div class="list-group list-group-flush">
+                            {% for game in recent_games %}
+                                <div class="list-group-item">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-3">
+                                            {% if game.start_time %}
+                                                <small class="text-muted">
+                                                    {{ game.start_time.strftime('%b %d, %Y') }}
+                                                </small>
+                                            {% endif %}
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <div class="d-flex align-items-center justify-content-center">
+                                                <div class="text-end me-3">
+                                                    {% if game.home_team.id == team.id %}
+                                                        <strong>{{ game.home_team.name }}</strong>
+                                                    {% else %}
+                                                        {{ game.home_team.name }}
+                                                    {% endif %}
+                                                </div>
+
+                                                <div class="mx-3">
+                                                    {% if game.status in ['final', 'forfeit'] %}
+                                                        <span class="badge bg-light text-dark">
+                                                            {{ game.home_score or 0 }} - {{ game.away_score or 0 }}
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="text-muted">vs</span>
+                                                    {% endif %}
+                                                </div>
+
+                                                <div class="text-start ms-3">
+                                                    {% if game.away_team.id == team.id %}
+                                                        <strong>{{ game.away_team.name }}</strong>
+                                                    {% else %}
+                                                        {{ game.away_team.name }}
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-3 text-end">
+                                            {% if game.status in ['final', 'forfeit'] %}
+                                                {% set team_won =
+                                                    (game.home_team.id == team.id and (game.home_score or 0) > (game.away_score or 0)) or
+                                                    (game.away_team.id == team.id and (game.away_score or 0) > (game.home_score or 0))
+                                                %}
+                                                <span class="badge {% if team_won %}bg-success{% else %}bg-danger{% endif %}">
+                                                    {% if team_won %}W{% else %}L{% endif %}
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">{{ game.status.title() }}</span>
+                                            {% endif %}
+
+                                            <a href="{{ url_for('portal.game_detail', game_id=game.id) }}"
+                                               class="btn btn-sm btn-outline-primary ms-2">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="p-3 text-center text-muted">
+                            <i class="bi bi-calendar-x"></i>
+                            No recent games.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Team Stats -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-graph-up"></i>
+                        Season Stats
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if team_stats %}
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="border-end">
+                                    <h4 class="text-success mb-1">{{ team_stats.wins }}</h4>
+                                    <small class="text-muted">Wins</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="border-end">
+                                    <h4 class="text-danger mb-1">{{ team_stats.losses }}</h4>
+                                    <small class="text-muted">Losses</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <h4 class="text-primary mb-1">{{ "%.1f"|format(team_stats.win_percentage * 100) }}%</h4>
+                                <small class="text-muted">Win %</small>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <div class="border-end">
+                                    <h5 class="mb-1">{{ team_stats.points_for }}</h5>
+                                    <small class="text-muted">Points For</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <h5 class="mb-1">{{ team_stats.points_against }}</h5>
+                                <small class="text-muted">Points Against</small>
+                            </div>
+                        </div>
+
+                        <div class="text-center mt-3">
+                            {% set diff = team_stats.point_differential %}
+                            <h5 class="{% if diff > 0 %}text-success{% elif diff < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                {% if diff > 0 %}+{% endif %}{{ diff }}
+                            </h5>
+                            <small class="text-muted">Point Differential</small>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">
+                            No stats available yet.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Upcoming Games -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-calendar-plus"></i>
+                        Upcoming Games
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    {% if upcoming_games %}
+                        <div class="list-group list-group-flush">
+                            {% for game in upcoming_games %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <div class="fw-bold">
+                                                {% if game.home_team.id == team.id %}
+                                                    vs {{ game.away_team.name }}
+                                                {% else %}
+                                                    @ {{ game.home_team.name }}
+                                                {% endif %}
+                                            </div>
+                                            {% if game.start_time %}
+                                                <small class="text-muted">
+                                                    {{ game.start_time.strftime('%b %d, %I:%M %p') }}
+                                                </small>
+                                            {% endif %}
+                                        </div>
+                                        <a href="{{ url_for('portal.game_detail', game_id=game.id) }}"
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="p-3 text-center text-muted">
+                            <i class="bi bi-calendar-x"></i>
+                            No upcoming games.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

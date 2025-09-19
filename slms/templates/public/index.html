@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}{{ super() }} - Home{% endblock %}
+
+{% block content %}
+{% set ns = namespace(first_season=None) %}
+{% if leagues %}
+    {% for league in leagues %}
+        {% if league.seasons and league.seasons|length > 0 and not ns.first_season %}
+            {% set ns.first_season = league.seasons[0] %}
+        {% endif %}
+    {% endfor %}
+{% endif %}
+
+<section class="page-hero mb-5">
+    <div class="row align-items-center g-4">
+        <div class="col-lg-7">
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <span class="badge rounded-pill text-bg-light text-uppercase">Welcome</span>
+                <span class="text-muted small">Powered by {{ g.org.name if g.org else 'your sports community' }}</span>
+            </div>
+            <h1 class="display-5 fw-semibold mb-3">
+                Stay ahead of every fixture, roster move, and scoreboard update.
+            </h1>
+            <p class="lead text-muted mb-4">
+                Explore leagues, monitor live scores, and manage registrations all in one polished dashboard built to support teams, officials, and fans alike.
+            </p>
+            <div class="d-flex flex-wrap gap-3 mb-4">
+                <a class="btn btn-primary px-4" href="{{ url_for('portal.index') }}">Open Management Portal</a>
+                {% if ns.first_season %}
+                    <a class="btn btn-outline-primary px-4" href="{{ url_for('portal.season_schedule', season_id=ns.first_season.id) }}">Upcoming Schedule</a>
+                {% endif %}
+            </div>
+            <ul class="hero-list">
+                <li><i class="bi bi-lightning-charge"></i> Real-time standings and score tracking</li>
+                <li><i class="bi bi-people"></i> Roster, waiver, and registration oversight</li>
+                <li><i class="bi bi-calendar-week"></i> Smart scheduling tools with conflict checks</li>
+            </ul>
+        </div>
+        <div class="col-lg-5">
+            <div class="hero-metrics">
+                <div class="stat-card surface">
+                    <span class="stat-label text-muted">Active Leagues</span>
+                    <span class="stat-value text-primary">{{ leagues|length if leagues else 0 }}</span>
+                    <p class="mb-0 text-muted small">All divisions linked to current season data.</p>
+                </div>
+                <div class="stat-card surface">
+                    <span class="stat-label text-muted">Teams Registered</span>
+                    <span class="stat-value text-primary">{{ team_count if team_count is defined else 24 }}</span>
+                    <p class="mb-0 text-muted small">Includes youth, amateur, and competitive tiers.</p>
+                </div>
+                <div class="stat-card surface highlight">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="stat-label text-muted">Next Tip-Off</span>
+                        <span class="badge rounded-pill text-bg-primary">Featured</span>
+                    </div>
+                    {% if recent_games and recent_games|length > 0 %}
+                        {% set next_game = recent_games[0] %}
+                        <h3 class="h6 mb-1">{{ next_game.home_team.name if next_game.home_team else 'TBD' }} vs {{ next_game.away_team.name if next_game.away_team else 'TBD' }}</h3>
+                        <p class="mb-0 text-muted small">{{ next_game.start_time.strftime('%b %d, %Y at %I:%M %p') if next_game.start_time else 'Awaiting schedule' }}</p>
+                    {% else %}
+                        <h3 class="h6 mb-1">No results recorded</h3>
+                        <p class="mb-0 text-muted small">Games will populate as soon as stats are entered.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section pt-0">
+    <div class="section-header">
+        <h2 class="section-title">Leagues & Seasons</h2>
+        <p class="section-subtitle">Quickly drill into schedules, standings, and registration insights across the organization.</p>
+    </div>
+
+    {% if leagues %}
+        <div class="row g-4">
+            {% for league in leagues %}
+                <div class="col-lg-6 col-xl-4">
+                    <div class="info-card card-lift h-100">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div>
+                                <span class="badge rounded-pill league-badge">{{ league.sport.value if league.sport else 'League' }}</span>
+                                <h3 class="h5 mt-3 mb-1">{{ league.name }}</h3>
+                            </div>
+                            <span class="badge text-bg-light">{{ league.seasons|length if league.seasons else 0 }} seasons</span>
+                        </div>
+                        <p class="text-muted small">{{ league.description if league.description else 'Track individual and team performance with automated stats.' }}</p>
+                        {% if league.seasons %}
+                            <ul class="list-unstyled mt-3 mb-0">
+                                {% for season in league.seasons %}
+                                    <li class="season-tile">
+                                        <div>
+                                            <p class="season-name mb-0">{{ season.name }}</p>
+                                            <small class="text-muted">{{ season.start_date.strftime('%b %d') if season.start_date else 'TBD' }} to {{ season.end_date.strftime('%b %d, %Y') if season.end_date else 'TBD' }}</small>
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <a class="btn btn-sm btn-outline-primary" href="{{ url_for('portal.season_standings', season_id=season.id) }}">Standings</a>
+                                            <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('portal.season_schedule', season_id=season.id) }}">Schedule</a>
+                                        </div>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <div class="empty-state small">
+                                <i class="bi bi-calendar2-week"></i>
+                                <p class="mb-0">Season details coming soon.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <i class="bi bi-flag"></i>
+            <h3 class="h5">No leagues available</h3>
+            <p class="mb-0 text-muted">Use the management portal to create your first competition.</p>
+        </div>
+    {% endif %}
+</section>
+
+{% if recent_games %}
+<section class="section pt-0">
+    <div class="section-header">
+        <h2 class="section-title">Recent Games</h2>
+        <p class="section-subtitle">Scores update instantly when officials submit results.</p>
+    </div>
+    <div class="row g-4">
+        {% for game in recent_games %}
+            {% set status_value = game.status.value if game.status and game.status.value else game.status %}
+            {% set status_key = status_value|lower if status_value else 'scheduled' %}
+            <div class="col-md-6 col-xl-4">
+                <article class="match-card h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="badge rounded-pill text-bg-light">{{ game.season.name if game.season else 'Season TBD' }}</span>
+                        <span class="status-dot status-{{ status_key }}"></span>
+                    </div>
+                    <div class="matchup">
+                        <div class="team-side">
+                            <div class="team-logo">
+                                {% if game.home_team and game.home_team.logo_url %}
+                                    <img src="{{ game.home_team.logo_url }}" alt="{{ game.home_team.name }} logo">
+                                {% else %}
+                                    <span>{{ (game.home_team.name[:2] if game.home_team and game.home_team.name else 'NA')|upper }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="team-info">
+                                <p class="team-name mb-0">{{ game.home_team.name if game.home_team else 'TBD' }}</p>
+                                <small>Home</small>
+                            </div>
+                        </div>
+                        <div class="scoreband m-0 flex-shrink-0">
+                            {% if game.home_score is not none and game.away_score is not none %}
+                                <span class="score-chip">{{ game.home_score }} - {{ game.away_score }}</span>
+                            {% else %}
+                                <span class="text-muted fw-semibold">VS</span>
+                            {% endif %}
+                        </div>
+                        <div class="team-side text-end">
+                            <div class="team-info">
+                                <p class="team-name mb-0">{{ game.away_team.name if game.away_team else 'TBD' }}</p>
+                                <small>Away</small>
+                            </div>
+                            <div class="team-logo">
+                                {% if game.away_team and game.away_team.logo_url %}
+                                    <img src="{{ game.away_team.logo_url }}" alt="{{ game.away_team.name }} logo">
+                                {% else %}
+                                    <span>{{ (game.away_team.name[:2] if game.away_team and game.away_team.name else 'NA')|upper }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-muted small mb-3">{{ game.start_time.strftime('%b %d, %Y - %I:%M %p') if game.start_time else 'To be scheduled' }}</p>
+                    <a class="btn btn-sm btn-outline-primary stretched-link" href="{{ url_for('portal.game_detail', game_id=game.id) }}">View game center</a>
+                </article>
+            </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<section class="section pt-0">
+    <div class="cta-panel">
+        <div>
+            <h2 class="h4 mb-2">Enhance your league operations</h2>
+            <p class="mb-0 text-muted">Centralize communication, automate scoring workflows, and keep every stakeholder aligned.</p>
+        </div>
+        <a class="btn btn-primary btn-lg px-4" href="{{ url_for('portal.index') }}">Go to Portal</a>
+    </div>
+</section>
+{% endblock %}

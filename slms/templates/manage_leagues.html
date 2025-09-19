@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+{% block title %}Manage Leagues - Admin Panel{% endblock %}
+{% block content %}
+<div class="container py-4 manage-leagues">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+            <h1 class="h3 mb-1">Manage Leagues</h1>
+            <p class="text-muted mb-0">Brand each league with unique colours, imagery, and logos.</p>
+        </div>
+        <button type="button" class="btn btn-outline-secondary" onclick="resetLeagueForm()">
+            <i class="bi bi-plus-circle"></i>
+            New League
+        </button>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-5">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h2 class="h5 mb-3" id="form-title">Add League</h2>
+                    <form action="{{ url_for('admin.manage_leagues') }}" method="POST" id="leagueForm" class="league-form">
+                        <input type="hidden" id="league_id" name="league_id">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">League name</label>
+                            <input type="text" class="form-control" id="name" name="name" required placeholder="Premier League">
+                        </div>
+                        <div class="mb-4">
+                            <label for="country" class="form-label">Country / Region</label>
+                            <input type="text" class="form-control" id="country" name="country" required placeholder="England">
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            {% set color_defaults = {
+                                'primary_color': '#1D4ED8',
+                                'secondary_color': '#F97316',
+                                'accent_color': '#10B981',
+                                'text_color': '#0F172A'
+                            } %}
+                            {% for field, label in [
+                                ('primary_color', 'Primary colour'),
+                                ('secondary_color', 'Secondary colour'),
+                                ('accent_color', 'Accent colour'),
+                                ('text_color', 'Text colour')
+                            ] %}
+                            <div class="col-sm-6">
+                                <label class="form-label" for="{{ field }}">{{ label }}</label>
+                                <div class="input-group color-input-group">
+                                    <span class="input-group-text p-0">
+                                        <input type="color" class="form-control form-control-color border-0" id="{{ field }}_picker" value="{{ color_defaults[field] }}" title="Pick {{ label|lower }}">
+                                    </span>
+                                    <input type="text" class="form-control" id="{{ field }}" name="{{ field }}" placeholder="{{ color_defaults[field] }}" pattern="^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$" data-default="{{ color_defaults[field] }}">
+                                    <button class="btn btn-outline-secondary" type="button" data-clear-color="{{ field }}">
+                                        <i class="bi bi-x"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="logo_url" class="form-label">Logo URL</label>
+                            <input type="url" class="form-control" id="logo_url" name="logo_url" placeholder="https://example.com/logo.png">
+                        </div>
+                        <div class="mb-4">
+                            <label for="hero_image_url" class="form-label">Hero image URL</label>
+                            <input type="url" class="form-control" id="hero_image_url" name="hero_image_url" placeholder="https://example.com/cover.jpg">
+                            <small class="text-muted">Optional large banner used on public landing pages.</small>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" name="add" class="btn btn-primary" id="submit-button">
+                                <i class="bi bi-save"></i>
+                                Save League
+                            </button>
+                            <button type="submit" name="edit" class="btn btn-primary d-none" id="update-button">
+                                <i class="bi bi-save"></i>
+                                Update League
+                            </button>
+                            <button type="button" class="btn btn-light" onclick="resetLeagueForm()">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0 mt-4">
+                <div class="card-body league-preview" id="league-preview-card">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="preview-logo" id="preview-logo" data-placeholder="LG">LG</div>
+                        <div>
+                            <h3 class="h5 mb-1" id="preview-name">League name</h3>
+                            <span class="text-muted" id="preview-country">Country</span>
+                        </div>
+                    </div>
+                    <div class="preview-hero" id="preview-hero"></div>
+                    <div class="d-flex flex-wrap gap-2 mt-3" id="preview-tags">
+                        <span class="badge rounded-pill bg-light text-dark">Custom colours applied</span>
+                        <span class="badge rounded-pill bg-light text-dark">Logo ready</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Existing Leagues</h2>
+                    {% if leagues %}
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col">League</th>
+                                    <th scope="col">Brand colours</th>
+                                    <th scope="col">Hero image</th>
+                                    <th scope="col" class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for league in leagues %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-3">
+                                            {% if league.logo_url %}
+                                                <img src="{{ league.logo_url }}" alt="{{ league.name }} logo" class="league-logo-thumb" onerror="this.classList.add('d-none'); this.nextElementSibling.classList.remove('d-none');">
+                                                <span class="league-logo-thumb placeholder d-none">{{ league.name[:2]|upper }}</span>
+                                            {% else %}
+                                                <span class="league-logo-thumb placeholder">{{ league.name[:2]|upper }}</span>
+                                            {% endif %}
+                                            <div>
+                                                <div class="fw-semibold">{{ league.name }}</div>
+                                                <small class="text-muted">{{ league.country }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex gap-2">
+                                            {% for key in ['primary_color', 'secondary_color', 'accent_color', 'text_color'] %}
+                                                {% set color = league[key] %}
+                                                <span class="color-pill" style="background: {{ color or '#d1d5db' }}" title="{{ key|replace('_',' ')|title }}{% if color %}: {{ color }}{% else %} not set{% endif %}"></span>
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if league.hero_image_url %}
+                                            <span class="badge bg-success-subtle text-success"><i class="bi bi-image"></i> Provided</span>
+                                        {% else %}
+                                            <span class="badge bg-light text-muted">Not set</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button type="button" class="btn btn-outline-primary" data-league='{{ league|tojson }}' onclick="editLeague(this)">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal" data-id="{{ league.id }}" data-action="{{ url_for('admin.manage_leagues') }}">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                        <div class="alert alert-info mb-0">
+                            No leagues created yet. Add your first league using the form on the left.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'delete_modal.html' %}
+
+<script>
+    const defaultColors = {
+        primary_color: '#1D4ED8',
+        secondary_color: '#F97316',
+        accent_color: '#10B981',
+        text_color: '#0F172A'
+    };
+
+    function synchroniseColorField(field) {
+        const picker = document.getElementById(field + '_picker');
+        const input = document.getElementById(field);
+        if (!picker || !input) return;
+        const value = (input.value || '').trim();
+        if (value && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value)) {
+            picker.value = value;
+        } else {
+            picker.value = defaultColors[field];
+        }
+    }
+
+    function updatePreview() {
+        const name = document.getElementById('name').value || 'League name';
+        const country = document.getElementById('country').value || 'Country';
+        const previewName = document.getElementById('preview-name');
+        const previewCountry = document.getElementById('preview-country');
+        const previewLogo = document.getElementById('preview-logo');
+        const previewHero = document.getElementById('preview-hero');
+        const previewTags = document.getElementById('preview-tags');
+
+        const colors = {};
+        ['primary_color', 'secondary_color', 'accent_color', 'text_color'].forEach(field => {
+            const value = (document.getElementById(field).value || '').trim();
+            colors[field] = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value) ? value : null;
+        });
+
+        previewName.textContent = name;
+        previewCountry.textContent = country;
+
+        const logoUrl = document.getElementById('logo_url').value.trim();
+        if (logoUrl) {
+            previewLogo.style.backgroundImage = `url(${logoUrl})`;
+            previewLogo.textContent = '';
+            previewLogo.classList.add('has-image');
+        } else {
+            previewLogo.style.backgroundImage = 'none';
+            previewLogo.textContent = name.slice(0, 2).toUpperCase() || 'LG';
+            previewLogo.classList.remove('has-image');
+        }
+
+        const primary = colors.primary_color || defaultColors.primary_color;
+        const accent = colors.accent_color || defaultColors.accent_color;
+        const text = colors.text_color || defaultColors.text_color;
+
+        document.getElementById('league-preview-card').style.background = primary;
+        document.getElementById('league-preview-card').style.color = text;
+        previewLogo.style.borderColor = accent;
+
+        const heroUrl = document.getElementById('hero_image_url').value.trim();
+        if (heroUrl) {
+            previewHero.style.backgroundImage = `linear-gradient(180deg, rgba(15, 23, 42, 0.15), rgba(15, 23, 42, 0.7)), url(${heroUrl})`;
+            previewHero.classList.remove('placeholder');
+        } else {
+            previewHero.style.backgroundImage = 'none';
+            previewHero.classList.add('placeholder');
+        }
+
+        previewTags.innerHTML = '';
+        if (logoUrl) {
+            previewTags.insertAdjacentHTML('beforeend', '<span class="badge rounded-pill bg-light text-dark"><i class="bi bi-patch-check"></i> Logo attached</span>');
+        }
+        if (heroUrl) {
+            previewTags.insertAdjacentHTML('beforeend', '<span class="badge rounded-pill bg-light text-dark"><i class="bi bi-image"></i> Hero ready</span>');
+        }
+        const colorSummary = Object.values(colors).some(Boolean) ? 'Brand palette set' : 'Using default colours';
+        previewTags.insertAdjacentHTML('beforeend', `<span class="badge rounded-pill bg-light text-dark">${colorSummary}</span>`);
+    }
+
+    function editLeague(button) {
+        const data = JSON.parse(button.getAttribute('data-league'));
+        document.getElementById('league_id').value = data.id || '';
+        document.getElementById('name').value = data.name || '';
+        document.getElementById('country').value = data.country || '';
+        ['primary_color', 'secondary_color', 'accent_color', 'text_color'].forEach(field => {
+            document.getElementById(field).value = data[field] || '';
+            synchroniseColorField(field);
+        });
+        document.getElementById('logo_url').value = data.logo_url || '';
+        document.getElementById('hero_image_url').value = data.hero_image_url || '';
+        document.getElementById('submit-button').classList.add('d-none');
+        document.getElementById('update-button').classList.remove('d-none');
+        document.getElementById('form-title').textContent = 'Edit League';
+        updatePreview();
+    }
+
+    function resetLeagueForm() {
+        document.getElementById('leagueForm').reset();
+        document.getElementById('league_id').value = '';
+        document.getElementById('submit-button').classList.remove('d-none');
+        document.getElementById('update-button').classList.add('d-none');
+        document.getElementById('form-title').textContent = 'Add League';
+        ['primary_color', 'secondary_color', 'accent_color', 'text_color'].forEach(field => {
+            document.getElementById(field).value = '';
+            synchroniseColorField(field);
+        });
+        updatePreview();
+    }
+
+    document.querySelectorAll('[data-clear-color]').forEach(button => {
+        button.addEventListener('click', () => {
+            const field = button.getAttribute('data-clear-color');
+            const input = document.getElementById(field);
+            const picker = document.getElementById(field + '_picker');
+            input.value = '';
+            picker.value = defaultColors[field];
+            updatePreview();
+        });
+    });
+
+    document.querySelectorAll('.color-input-group input[type="color"]').forEach(picker => {
+        picker.addEventListener('input', (event) => {
+            const field = event.target.id.replace('_picker', '');
+            const input = document.getElementById(field);
+            input.value = event.target.value.toUpperCase();
+            updatePreview();
+        });
+    });
+
+    document.querySelectorAll('.league-form input').forEach(input => {
+        input.addEventListener('input', updatePreview);
+    });
+
+    $('#deleteModal').on('show.bs.modal', function (event) {
+        const button = $(event.relatedTarget);
+        const id = button.data('id');
+        const action = button.data('action');
+        document.getElementById('deleteItemId').value = id;
+        document.getElementById('deleteForm').action = action;
+    });
+
+    ['primary_color', 'secondary_color', 'accent_color', 'text_color'].forEach(synchroniseColorField);
+    updatePreview();
+</script>
+{% endblock %}

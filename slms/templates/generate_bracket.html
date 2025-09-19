@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Generate Bracket{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h1 class="mb-4">Generate Tournament Bracket</h1>
+  <form method="POST" action="{{ url_for('admin.generate_bracket') }}">
+    <div class="form-row">
+      <div class="form-group col-md-6">
+        <label for="tournament_id">Tournament</label>
+        <select class="form-control" id="tournament_id" name="tournament_id" required>
+          {% for t in tournaments %}
+            <option value="{{ t[0] }}" data-league="{{ t[2] or '' }}" data-season="{{ t[3] or '' }}">{{ t[1] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group col-md-6">
+        <label for="start_date">First Round Date</label>
+        <input type="date" class="form-control" id="start_date" name="start_date" required>
+      </div>
+    </div>
+    <p class="text-muted">Provide seeds for participating teams (lower = higher seed). Only seeded teams are included.</p>
+    <div class="table-responsive" style="max-height: 400px; overflow:auto; border: 1px solid #eee">
+      <table class="table table-sm mb-0">
+        <thead>
+          <tr>
+            <th>Seed</th>
+            <th>Team</th>
+            <th>League</th>
+          </tr>
+        </thead>
+        <tbody id="teamsBody">
+          {% for tm in teams %}
+          <tr data-league="{{ tm[2] }}">
+            <td style="width:120px"><input class="form-control form-control-sm" type="number" min="1" name="seed_{{ tm[0] }}" placeholder=""></td>
+            <td>{{ tm[1] }}</td>
+            <td>{{ tm[2] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="mt-3">
+      <button type="submit" class="btn btn-primary">Generate First Round</button>
+      <a href="{{ url_for('admin.manage_tournament_matches') }}" class="btn btn-secondary">Manage Tournament Matches</a>
+    </div>
+  </form>
+</div>
+<script>
+  (function(){
+    const tSel = document.getElementById('tournament_id');
+    const tbody = document.getElementById('teamsBody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    function filter(){
+      const opt = tSel.options[tSel.selectedIndex];
+      const league = opt.getAttribute('data-league');
+      rows.forEach(r => {
+        const rl = r.getAttribute('data-league');
+        r.style.display = !league || rl === league ? '' : 'none';
+      });
+    }
+    tSel.addEventListener('change', filter);
+    filter();
+    document.getElementById('start_date').valueAsDate = new Date();
+  })();
+</script>
+{% endblock %}
+

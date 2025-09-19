@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+
+{% block title %}Email Management - Admin - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin.admin_dashboard') }}">Admin</a></li>
+                    <li class="breadcrumb-item active">Email Management</li>
+                </ol>
+            </nav>
+
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1>Email Management</h1>
+                    <p class="text-muted">Monitor email delivery and queue status</p>
+                </div>
+                <div>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#testEmailModal">
+                        <i class="bi bi-envelope-check"></i> Send Test Email
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Queue Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="text-primary">{{ queue_stats.email_queue.length if queue_stats else 0 }}</h3>
+                    <small class="text-muted">Emails Queued</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="text-warning">{{ queue_stats.email_queue.scheduled_count if queue_stats else 0 }}</h3>
+                    <small class="text-muted">Scheduled Emails</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="text-danger">{{ queue_stats.email_queue.failed_count if queue_stats else 0 }}</h3>
+                    <small class="text-muted">Failed Emails</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="text-success">{{ emails.total if emails else 0 }}</h3>
+                    <small class="text-muted">Total Emails</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters and Email List -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-envelope"></i>
+                        Email History
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Filters -->
+                    <form method="GET" class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label for="status" class="form-label">Status</label>
+                            <select name="status" id="status" class="form-select">
+                                <option value="all" {{ 'selected' if status_filter == 'all' else '' }}>All Statuses</option>
+                                {% for status in email_statuses %}
+                                    <option value="{{ status.value }}" {{ 'selected' if status_filter == status.value else '' }}>
+                                        {{ status.value.replace('_', ' ').title() }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="type" class="form-label">Type</label>
+                            <select name="type" id="type" class="form-select">
+                                <option value="all" {{ 'selected' if type_filter == 'all' else '' }}>All Types</option>
+                                {% for email_type in email_types %}
+                                    <option value="{{ email_type.value }}" {{ 'selected' if type_filter == email_type.value else '' }}>
+                                        {{ email_type.value.replace('_', ' ').title() }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">&nbsp;</label>
+                            <div>
+                                <button type="submit" class="btn btn-outline-primary">
+                                    <i class="bi bi-funnel"></i> Filter
+                                </button>
+                                <a href="{{ url_for('admin.email_management') }}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle"></i> Clear
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Email List -->
+                    {% if emails and emails.items %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Recipient</th>
+                                        <th>Subject</th>
+                                        <th>Type</th>
+                                        <th>Status</th>
+                                        <th>Sent At</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for email in emails.items %}
+                                        <tr>
+                                            <td>
+                                                <div>
+                                                    <strong>{{ email.to_name or email.to_email }}</strong>
+                                                    {% if email.to_name %}
+                                                        <br><small class="text-muted">{{ email.to_email }}</small>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <a href="{{ url_for('admin.email_detail', email_id=email.id) }}"
+                                                   class="text-decoration-none">
+                                                    {{ email.subject[:50] }}{% if email.subject|length > 50 %}...{% endif %}
+                                                </a>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary">
+                                                    {{ email.email_type.value.replace('_', ' ').title() }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge
+                                                    {% if email.status.value == 'sent' %}bg-success
+                                                    {% elif email.status.value == 'failed' %}bg-danger
+                                                    {% elif email.status.value == 'sending' %}bg-warning
+                                                    {% elif email.status.value == 'queued' %}bg-info
+                                                    {% else %}bg-secondary{% endif %}">
+                                                    {{ email.status.value.replace('_', ' ').title() }}
+                                                </span>
+                                                {% if email.retry_count > 0 %}
+                                                    <small class="text-muted">({{ email.retry_count }} retries)</small>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if email.sent_at %}
+                                                    {{ email.sent_at.strftime('%Y-%m-%d %H:%M') }}
+                                                {% else %}
+                                                    <span class="text-muted">Not sent</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <a href="{{ url_for('admin.email_detail', email_id=email.id) }}"
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                                {% if email.status.value == 'failed' and email.retry_count < email.max_retries %}
+                                                    <form method="POST" action="{{ url_for('admin.retry_email', email_id=email.id) }}"
+                                                          style="display: inline;">
+                                                        <button type="submit" class="btn btn-sm btn-outline-warning"
+                                                                onclick="return confirm('Retry sending this email?')">
+                                                            <i class="bi bi-arrow-clockwise"></i>
+                                                        </button>
+                                                    </form>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        {% if emails.pages > 1 %}
+                            <nav aria-label="Email pagination">
+                                <ul class="pagination justify-content-center">
+                                    {% if emails.has_prev %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('admin.email_management', page=emails.prev_num, status=status_filter, type=type_filter) }}">Previous</a>
+                                        </li>
+                                    {% endif %}
+
+                                    {% for page_num in emails.iter_pages() %}
+                                        {% if page_num %}
+                                            {% if page_num != emails.page %}
+                                                <li class="page-item">
+                                                    <a class="page-link" href="{{ url_for('admin.email_management', page=page_num, status=status_filter, type=type_filter) }}">{{ page_num }}</a>
+                                                </li>
+                                            {% else %}
+                                                <li class="page-item active">
+                                                    <span class="page-link">{{ page_num }}</span>
+                                                </li>
+                                            {% endif %}
+                                        {% else %}
+                                            <li class="page-item disabled">
+                                                <span class="page-link">…</span>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+
+                                    {% if emails.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('admin.email_management', page=emails.next_num, status=status_filter, type=type_filter) }}">Next</a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-envelope-x" style="font-size: 3rem; color: #6c757d;"></i>
+                            <h5 class="mt-3 text-muted">No emails found</h5>
+                            <p class="text-muted">No emails match your current filters.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Queue Jobs -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-clock-history"></i>
+                        Recent Queue Jobs
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    {% if recent_jobs %}
+                        <div class="list-group list-group-flush">
+                            {% for job in recent_jobs %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <strong>{{ job.func_name.split('.')[-1] if job.func_name else 'Unknown' }}</strong>
+                                            <br>
+                                            <small class="text-muted">
+                                                {% if job.args and job.args|length > 0 %}
+                                                    {{ job.args[0][:30] }}{% if job.args[0]|length > 30 %}...{% endif %}
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                        <div class="text-end">
+                                            <span class="badge
+                                                {% if job.status == 'finished' %}bg-success
+                                                {% elif job.status == 'failed' %}bg-danger
+                                                {% else %}bg-secondary{% endif %}">
+                                                {{ job.status }}
+                                            </span>
+                                            <br>
+                                            <small class="text-muted">
+                                                {{ job.created_at.strftime('%H:%M') if job.created_at else '' }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                    {% if job.status == 'failed' and job.exc_info %}
+                                        <small class="text-danger">{{ job.exc_info[:100] }}...</small>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="p-3 text-center text-muted">
+                            <i class="bi bi-inbox"></i>
+                            <p class="mb-0">No recent jobs</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Test Email Modal -->
+<div class="modal fade" id="testEmailModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Send Test Email</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('admin.send_test_email') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="to_email" class="form-label">Recipient Email *</label>
+                        <input type="email" class="form-control" id="to_email" name="to_email" required>
+                        <div class="form-text">Enter an email address to test SMTP configuration</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Send Test Email</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+// Auto-refresh queue stats every 30 seconds
+setInterval(function() {
+    fetch('{{ url_for("admin.email_queue_stats") }}')
+        .then(response => response.json())
+        .then(data => {
+            // Update queue stats if needed
+            // This could be enhanced to update the stats cards dynamically
+        })
+        .catch(error => console.log('Stats refresh failed:', error));
+}, 30000);
+</script>
+{% endblock %}
+{% endblock %}

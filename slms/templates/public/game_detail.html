@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+
+{% block title %}{{ game.home_team.name }} vs {{ game.away_team.name }} - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('public.landing') }}">Home</a></li>
+                    {% if game.season %}
+                        <li class="breadcrumb-item">
+                            <a href="{{ url_for('portal.season_schedule', season_id=game.season.id) }}">
+                                {{ game.season.name }}
+                            </a>
+                        </li>
+                    {% endif %}
+                    <li class="breadcrumb-item active">Game Details</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Game Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <!-- Status and Date -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <span class="badge game-status-badge
+                                {% if game.status.value == 'final' %}bg-success
+                                {% elif game.status.value == 'in_progress' %}bg-danger
+                                {% elif game.status.value == 'scheduled' %}bg-secondary
+                                {% elif game.status.value == 'canceled' %}bg-warning
+                                {% else %}bg-light text-dark{% endif %}">
+                                {% if game.status.value == 'in_progress' %}
+                                    <i class="bi bi-broadcast"></i> LIVE
+                                {% elif game.status.value == 'final' %}
+                                    <i class="bi bi-check-circle"></i> FINAL
+                                {% elif game.status.value == 'scheduled' %}
+                                    <i class="bi bi-clock"></i> SCHEDULED
+                                {% elif game.status.value == 'canceled' %}
+                                    <i class="bi bi-x-circle"></i> CANCELLED
+                                {% else %}
+                                    {{ game.status.value.replace('_', ' ').title() }}
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            {% if game.start_time %}
+                                <span class="text-muted">
+                                    <i class="bi bi-calendar-event"></i>
+                                    {{ game.start_time.strftime('%A, %B %d, %Y at %I:%M %p') }}
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Teams and Score -->
+                    <div class="row align-items-center text-center">
+                        <!-- Home Team -->
+                        <div class="col-md-4">
+                            <a href="{{ url_for('portal.team_detail', team_id=game.home_team.id) }}"
+                               class="text-decoration-none text-dark">
+                                <div class="team-display">
+                                    <div class="team-logo bg-light rounded-circle p-3 d-inline-block mb-2">
+                                        <i class="bi bi-shield" style="font-size: 2rem;"></i>
+                                    </div>
+                                    <h4 class="mb-1">{{ game.home_team.name }}</h4>
+                                    <small class="text-muted">HOME</small>
+                                </div>
+                            </a>
+                        </div>
+
+                        <!-- Score -->
+                        <div class="col-md-4">
+                            {% if game.status.value in ['final', 'canceled'] %}
+                                <div class="score-display">
+                                    <h1 class="display-3 mb-0">
+                                        <span class="{% if (game.home_score or 0) > (game.away_score or 0) %}text-success{% endif %}">
+                                            {{ game.home_score or 0 }}
+                                        </span>
+                                        <span class="text-muted">-</span>
+                                        <span class="{% if (game.away_score or 0) > (game.home_score or 0) %}text-success{% endif %}">
+                                            {{ game.away_score or 0 }}
+                                        </span>
+                                    </h1>
+                                    {% if game.status.value == 'canceled' %}
+                                        <small class="text-muted d-block">CANCELLED</small>
+                                    {% endif %}
+                                </div>
+                            {% elif game.status.value == 'in_progress' %}
+                                <div class="score-display">
+                                    <h1 class="display-3 mb-0">
+                                        {{ game.home_score or 0 }}
+                                        <span class="text-muted">-</span>
+                                        {{ game.away_score or 0 }}
+                                    </h1>
+                                    <div class="live-indicator">
+                                        <span class="badge bg-danger pulse-animation">
+                                            <i class="bi bi-broadcast"></i> LIVE
+                                        </span>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="score-display">
+                                    <h2 class="text-muted mb-0">VS</h2>
+                                    {% if game.start_time %}
+                                        <small class="text-muted">
+                                            {{ game.start_time.strftime('%I:%M %p') }}
+                                        </small>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Away Team -->
+                        <div class="col-md-4">
+                            <a href="{{ url_for('portal.team_detail', team_id=game.away_team.id) }}"
+                               class="text-decoration-none text-dark">
+                                <div class="team-display">
+                                    <div class="team-logo bg-light rounded-circle p-3 d-inline-block mb-2">
+                                        <i class="bi bi-shield" style="font-size: 2rem;"></i>
+                                    </div>
+                                    <h4 class="mb-1">{{ game.away_team.name }}</h4>
+                                    <small class="text-muted">AWAY</small>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Game Info -->
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            {% if game.venue %}
+                                <div class="mb-2">
+                                    <i class="bi bi-geo-alt text-muted"></i>
+                                    <strong>Venue:</strong> {{ game.venue }}
+                                </div>
+                            {% endif %}
+                            {% if game.season %}
+                                <div class="mb-2">
+                                    <i class="bi bi-trophy text-muted"></i>
+                                    <strong>Season:</strong>
+                                    <a href="{{ url_for('portal.season_standings', season_id=game.season.id) }}">
+                                        {{ game.season.name }}
+                                    </a>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            {% if game.week %}
+                                <div class="mb-2">
+                                    <i class="bi bi-calendar-week text-muted"></i>
+                                    <strong>Week:</strong> {{ game.week }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Game Details -->
+        <div class="col-lg-8">
+            <!-- Score Summary -->
+            {% if game.status.value in ['final', 'canceled', 'in_progress'] and (game.home_score is not none or game.away_score is not none) %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-bar-chart"></i>
+                            Score Summary
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-borderless mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Team</th>
+                                        <th class="text-center">Final Score</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="{% if (game.home_score or 0) > (game.away_score or 0) %}table-success{% endif %}">
+                                        <td>
+                                            <strong>{{ game.home_team.name }}</strong>
+                                            <small class="text-muted">(Home)</small>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="h4">{{ game.home_score or 0 }}</span>
+                                        </td>
+                                    </tr>
+                                    <tr class="{% if (game.away_score or 0) > (game.home_score or 0) %}table-success{% endif %}">
+                                        <td>
+                                            <strong>{{ game.away_team.name }}</strong>
+                                            <small class="text-muted">(Away)</small>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="h4">{{ game.away_score or 0 }}</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Game Notes -->
+            {% if game.notes %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-chat-left-text"></i>
+                            Game Notes
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-0">{{ game.notes }}</p>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Additional Stats (if available) -->
+            {% if game.stats %}
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-graph-up"></i>
+                            Game Statistics
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Custom stats display based on sport -->
+                        {% for stat_name, stat_value in game.stats.items() %}
+                            <div class="row mb-2">
+                                <div class="col-6">{{ stat_name }}</div>
+                                <div class="col-6">{{ stat_value }}</div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Quick Actions -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        {% if game.season %}
+                            <a href="{{ url_for('portal.season_schedule', season_id=game.season.id) }}"
+                               class="btn btn-outline-primary">
+                                <i class="bi bi-calendar-event"></i>
+                                View Schedule
+                            </a>
+                            <a href="{{ url_for('portal.season_standings', season_id=game.season.id) }}"
+                               class="btn btn-outline-secondary">
+                                <i class="bi bi-list-ol"></i>
+                                View Standings
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Related Games -->
+            {% if related_games %}
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="bi bi-clock-history"></i>
+                            Recent Matchups
+                        </h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="list-group list-group-flush">
+                            {% for related_game in related_games %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <div class="fw-bold">
+                                                {{ related_game.home_team.name }} vs {{ related_game.away_team.name }}
+                                            </div>
+                                            {% if related_game.start_time %}
+                                                <small class="text-muted">
+                                                    {{ related_game.start_time.strftime('%b %d, %Y') }}
+                                                </small>
+                                            {% endif %}
+                                        </div>
+                                        {% if related_game.status.value in ['final', 'canceled'] %}
+                                            <span class="badge bg-light text-dark">
+                                                {{ related_game.home_score or 0 }}-{{ related_game.away_score or 0 }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% block extra_css %}
+<style>
+    .team-display {
+        transition: transform 0.2s;
+    }
+
+    .team-display:hover {
+        transform: translateY(-2px);
+    }
+
+    .live-indicator {
+        animation: pulse 2s infinite;
+    }
+
+    .pulse-animation {
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+
+    .game-status-badge {
+        font-size: 0.875rem;
+        font-weight: 600;
+        padding: 0.5rem 1rem;
+        border-radius: 1rem;
+    }
+
+    .score-display h1 {
+        font-weight: 700;
+    }
+</style>
+{% endblock %}
+{% endblock %}

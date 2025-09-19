@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+
+{% block title %}Schedule Preview - {{ season.name }} - Admin - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin.admin_dashboard') }}">Admin</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin.manage_seasons') }}">Seasons</a></li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('admin.generate_schedule_wizard', season_id=season.id) }}">
+                            Generate Schedule
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active">Preview</li>
+                </ol>
+            </nav>
+
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1>Schedule Preview</h1>
+                    <p class="text-muted">{{ season.name }} - {{ season.league.name }}</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('admin.generate_schedule_wizard', season_id=season.id) }}"
+                       class="btn btn-outline-secondary me-2">
+                        <i class="bi bi-arrow-left"></i> Back to Wizard
+                    </a>
+                    <form method="POST" action="{{ url_for('admin.confirm_schedule', season_id=season.id) }}"
+                          style="display: inline;">
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-circle"></i> Confirm & Save Schedule
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="text-primary">{{ scheduled_games|length }}</h3>
+                    <small class="text-muted">Total Games</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="text-info">{{ scheduled_games|map(attribute='venue')|map(attribute='id')|unique|list|length }}</h3>
+                    <small class="text-muted">Venues Used</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    {% set date_range = scheduled_games|map(attribute='datetime')|map(attribute='date')|unique|list %}
+                    <h3 class="text-warning">{{ date_range|length }}</h3>
+                    <small class="text-muted">Game Days</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    {% set weeks = ((date_range|max - date_range|min).days / 7) if date_range|length > 1 else 0 %}
+                    <h3 class="text-success">{{ "%.0f"|format(weeks) }}</h3>
+                    <small class="text-muted">Week Duration</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Schedule Grid -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-calendar-week"></i>
+                        Generated Schedule
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if scheduled_games %}
+                        <!-- Group games by date -->
+                        {% set games_by_date = {} %}
+                        {% for game in scheduled_games %}
+                            {% set date_key = game.datetime.date() %}
+                            {% if date_key not in games_by_date %}
+                                {% set _ = games_by_date.update({date_key: []}) %}
+                            {% endif %}
+                            {% set _ = games_by_date[date_key].append(game) %}
+                        {% endfor %}
+
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Date & Time</th>
+                                        <th>Home Team</th>
+                                        <th>Away Team</th>
+                                        <th>Venue</th>
+                                        <th>Week</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for date in games_by_date.keys()|sort %}
+                                        {% for game in games_by_date[date]|sort(attribute='datetime') %}
+                                            <tr>
+                                                <td>
+                                                    <strong>{{ game.datetime.strftime('%a, %b %d') }}</strong>
+                                                    <br>
+                                                    <small class="text-muted">{{ game.datetime.strftime('%I:%M %p') }}</small>
+                                                </td>
+                                                <td>
+                                                    <strong>{{ game.home_team.name }}</strong>
+                                                </td>
+                                                <td>
+                                                    <strong>{{ game.away_team.name }}</strong>
+                                                </td>
+                                                <td>
+                                                    {{ game.venue.name }}
+                                                    {% if game.venue.address %}
+                                                        <br><small class="text-muted">{{ game.venue.address }}</small>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <small class="text-muted">
+                                                        Week {{ ((game.datetime.date() - games_by_date.keys()|sort|first).days // 7) + 1 }}
+                                                    </small>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="p-5 text-center text-muted">
+                            <i class="bi bi-calendar-x" style="font-size: 3rem;"></i>
+                            <h5 class="mt-3">No games generated</h5>
+                            <p>Try adjusting your constraints or date range.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Team Balance Analysis -->
+    {% if scheduled_games %}
+        <div class="row mt-4">
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="bi bi-bar-chart"></i>
+                            Games per Team
+                        </h6>
+                    </div>
+                    <div class="card-body p-0">
+                        {% set team_game_counts = {} %}
+                        {% for game in scheduled_games %}
+                            {% set home_id = game.home_team.id %}
+                            {% set away_id = game.away_team.id %}
+                            {% set _ = team_game_counts.update({home_id: team_game_counts.get(home_id, 0) + 1}) %}
+                            {% set _ = team_game_counts.update({away_id: team_game_counts.get(away_id, 0) + 1}) %}
+                        {% endfor %}
+
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Team</th>
+                                        <th class="text-center">Total Games</th>
+                                        <th class="text-center">Home Games</th>
+                                        <th class="text-center">Away Games</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for team in season.teams %}
+                                        {% set home_games = scheduled_games|selectattr('home_team.id', 'equalto', team.id)|list|length %}
+                                        {% set away_games = scheduled_games|selectattr('away_team.id', 'equalto', team.id)|list|length %}
+                                        <tr>
+                                            <td><strong>{{ team.name }}</strong></td>
+                                            <td class="text-center">{{ home_games + away_games }}</td>
+                                            <td class="text-center">{{ home_games }}</td>
+                                            <td class="text-center">{{ away_games }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="bi bi-building"></i>
+                            Games per Venue
+                        </h6>
+                    </div>
+                    <div class="card-body p-0">
+                        {% set venue_game_counts = {} %}
+                        {% for game in scheduled_games %}
+                            {% set venue_id = game.venue.id %}
+                            {% set _ = venue_game_counts.update({venue_id: venue_game_counts.get(venue_id, 0) + 1}) %}
+                        {% endfor %}
+
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Venue</th>
+                                        <th class="text-center">Games Scheduled</th>
+                                        <th class="text-center">Utilization</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for venue_id, count in venue_game_counts.items() %}
+                                        {% set venue = scheduled_games|selectattr('venue.id', 'equalto', venue_id)|first|attr('venue') %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ venue.name }}</strong>
+                                                {% if venue.address %}
+                                                    <br><small class="text-muted">{{ venue.address }}</small>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center">{{ count }}</td>
+                                            <td class="text-center">
+                                                {% set percentage = (count / scheduled_games|length * 100) %}
+                                                <span class="badge bg-secondary">{{ "%.0f"|format(percentage) }}%</span>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Confirmation Actions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-success mb-1">
+                                <i class="bi bi-check-circle"></i>
+                                Schedule Generation Successful
+                            </h6>
+                            <p class="mb-0 text-muted">
+                                Review the schedule above and confirm to save {{ scheduled_games|length }} games to the database.
+                            </p>
+                        </div>
+                        <div>
+                            <a href="{{ url_for('admin.generate_schedule_wizard', season_id=season.id) }}"
+                               class="btn btn-outline-secondary me-2">
+                                <i class="bi bi-arrow-left"></i> Modify Settings
+                            </a>
+                            <form method="POST" action="{{ url_for('admin.confirm_schedule', season_id=season.id) }}"
+                                  style="display: inline;">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="bi bi-check-circle"></i> Confirm & Save Schedule
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -19,4 +19,4 @@ COPY . .
 EXPOSE 5000
 
 # Command to run the application
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "main:app"] 
+CMD ["python", "-c", "from slms import create_app; app = create_app(); app.run(host='0.0.0.0', port=5000, debug=False)"] 

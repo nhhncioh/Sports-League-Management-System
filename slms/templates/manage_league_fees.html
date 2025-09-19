@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% block title %}League Fees & Installments{% endblock %}
+{% block content %}
+<div class="container py-4 manage-league-fees">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+            <h1 class="h3 mb-1">League Fees & Installments</h1>
+            <p class="text-muted mb-0">Configure entry fees and track installment progress for each league.</p>
+        </div>
+        {% if leagues %}
+        <form method="get" class="d-flex align-items-center gap-2">
+            <label for="league_id" class="form-label mb-0">League</label>
+            <select class="form-select" id="league_id" name="league_id" onchange="this.form.submit()">
+                {% for league in leagues %}
+                    <option value="{{ league.id }}" {% if selected_league_id and league.id == selected_league_id|int %}selected{% endif %}>{{ league.name }}</option>
+                {% endfor %}
+            </select>
+        </form>
+        {% endif %}
+    </div>
+
+    {% if not leagues %}
+        <div class="alert alert-info">No leagues found. Add a league first to manage fees.</div>
+    {% else %}
+    <div class="row g-4">
+        <div class="col-xl-4 col-lg-5">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Fee Plan</h2>
+                    <form method="post" class="fee-plan-form">
+                        <input type="hidden" name="action" value="update_plan">
+                        <input type="hidden" name="league_id" value="{{ selected_league_id }}">
+
+                        <div class="mb-3">
+                            <label class="form-label" for="total_fee">Total fee ({{ plan.currency if plan else 'USD' }})</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="text" class="form-control" id="total_fee" name="total_fee" value="{{ plan.total_fee_display if plan else '' }}" placeholder="0.00">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="deposit">Deposit</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="text" class="form-control" id="deposit" name="deposit" value="{{ plan.deposit_display if plan and plan.deposit_display is not none else '' }}" placeholder="Optional">
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-sm-6">
+                                <label class="form-label" for="currency">Currency</label>
+                                <input type="text" class="form-control" id="currency" name="currency" value="{{ plan.currency if plan else 'USD' }}" maxlength="3" placeholder="USD">
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="form-label" for="installment_count">Installments (target)</label>
+                                <input type="number" class="form-control" id="installment_count" name="installment_count" min="0" value="{{ plan.installment_count if plan else 0 }}">
+                            </div>
+                        </div>
+
+                        <div class="form-check form-switch my-3">
+                            <input class="form-check-input" type="checkbox" role="switch" id="installments_enabled" name="installments_enabled" {% if plan and plan.installments_enabled %}checked{% endif %}>
+                            <label class="form-check-label" for="installments_enabled">Enable installment tracking</label>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="notes">Admin notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Internal notes about payment expectations">{{ plan.notes if plan else '' }}</textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-save"></i> Save Plan
+                        </button>
+                    </form>
+
+                    <div class="mt-4 p-3 rounded bg-light-subtle">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted">Total installments</span>
+                            <strong>{{ totals.installment_total_display or '0.00' }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted">Total fee</span>
+                            <strong>{{ totals.total_fee_display or '0.00' }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted">Deposit</span>
+                            <strong>{{ totals.deposit_display or '-' }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-8 col-lg-7">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <h2 class="h5 mb-0">Installment Plan</h2>
+                        <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#add-installment-form">
+                            <i class="bi bi-plus-circle"></i> Add installment
+                        </button>
+                    </div>
+
+                    <div class="collapse" id="add-installment-form">
+                        <form method="post" class="row g-3 align-items-end">
+                            <input type="hidden" name="action" value="add_installment">
+                            <input type="hidden" name="league_id" value="{{ selected_league_id }}">
+                            <div class="col-md-3">
+                                <label class="form-label" for="installment_label">Label</label>
+                                <input type="text" class="form-control" id="installment_label" name="label" placeholder="Installment name" required>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label" for="installment_amount">Amount</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="text" class="form-control" id="installment_amount" name="amount" placeholder="0.00" required>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" for="installment_due">Due date</label>
+                                <input type="date" class="form-control" id="installment_due" name="due_date">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label" for="installment_status">Status</label>
+                                <select class="form-select" id="installment_status" name="status">
+                                    {% for option in ['pending','scheduled','open','closed'] %}
+                                        <option value="{{ option }}">{{ option|capitalize }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label" for="installment_notes">Notes</label>
+                                <textarea class="form-control" id="installment_notes" name="installment_notes" rows="2"></textarea>
+                            </div>
+                            <div class="col-md-12">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-save"></i> Add installment
+                                </button>
+                            </div>
+                        </form>
+                        <hr class="my-4">
+                    </div>
+
+                    {% if installments %}
+                        <div class="table-responsive">
+                            <table class="table align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col">Label</th>
+                                        <th scope="col">Due</th>
+                                        <th scope="col">Amount</th>
+                                        <th scope="col">Status</th>
+                                        <th scope="col">Notes</th>
+                                        <th scope="col" class="text-end">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for installment in installments %}
+                                    <tr>
+                                        <th scope="row">{{ installment.label }}</th>
+                                        <td>{{ installment.due_date or '-' }}</td>
+                                        <td>${{ installment.amount_display }}</td>
+                                        <td><span class="badge bg-light text-muted text-capitalize">{{ installment.status }}</span></td>
+                                        <td>{{ installment.notes or '-' }}</td>
+                                        <td class="text-end">
+                                            <form method="post" class="d-inline">
+                                                <input type="hidden" name="action" value="delete_installment">
+                                                <input type="hidden" name="league_id" value="{{ selected_league_id }}">
+                                                <input type="hidden" name="installment_id" value="{{ installment.installment_id }}">
+                                                <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Remove this installment?');">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info mb-0">No installments defined yet.</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if installments and teams %}
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Installment Status by Team</h2>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle text-center installment-matrix">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col" class="text-start">Team</th>
+                                    {% for installment in installments %}
+                                        <th scope="col">
+                                            <div class="fw-semibold">{{ installment.label }}</div>
+                                            <small class="text-muted">{{ installment.due_date or '-' }}</small>
+                                            <div class="text-muted">${{ installment.amount_display }}</div>
+                                        </th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for team in teams %}
+                                <tr>
+                                    <th scope="row" class="text-start">{{ team.name }}</th>
+                                    {% for installment in installments %}
+                                        {% set status_record = status_by_team.get(team.team_id, {}).get(installment.installment_id) %}
+                                        <td>
+                                            <form method="post" class="installment-status-form">
+                                                <input type="hidden" name="action" value="update_status">
+                                                <input type="hidden" name="league_id" value="{{ selected_league_id }}">
+                                                <input type="hidden" name="team_id" value="{{ team.team_id }}">
+                                                <input type="hidden" name="installment_id" value="{{ installment.installment_id }}">
+                                                <select name="status" class="form-select form-select-sm mb-2">
+                                                    {% for option in ['pending','scheduled','paid','partial','waived','delinquent'] %}
+                                                        <option value="{{ option }}" {% if status_record and status_record.status == option %}selected{% endif %}>{{ option|capitalize }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                                <div class="input-group input-group-sm mb-2">
+                                                    <span class="input-group-text">$</span>
+                                                    <input type="text" class="form-control" name="amount_paid" value="{{ status_record.amount_paid_display if status_record and status_record.amount_paid_display is not none else '' }}" placeholder="0.00">
+                                                </div>
+                                                <input type="date" class="form-control form-control-sm mb-2" name="paid_at" value="{{ status_record.paid_at if status_record else '' }}">
+                                                <input type="text" class="form-control form-control-sm mb-2" name="status_notes" value="{{ status_record.notes if status_record else '' }}" placeholder="Notes">
+                                                <button type="submit" class="btn btn-outline-primary btn-sm w-100">Save</button>
+                                            </form>
+                                        </td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% elif installments %}
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <div class="alert alert-info mb-0">No teams assigned to this league yet. Add teams to begin tracking installment progress.</div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

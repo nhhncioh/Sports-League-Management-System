@@ -1,0 +1,693 @@
+{% extends "base.html" %}
+
+{% block title %}Step 3: Venues - Create Season - Admin - {{ super() }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .wizard-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .wizard-progress {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+
+    .progress-step {
+        flex: 1;
+        text-align: center;
+        position: relative;
+        padding: 0 10px;
+    }
+
+    .progress-step:not(:last-child):after {
+        content: '';
+        position: absolute;
+        top: 20px;
+        right: -50%;
+        width: 100%;
+        height: 2px;
+        background: #dee2e6;
+        z-index: 1;
+    }
+
+    .progress-step.completed:not(:last-child):after,
+    .progress-step.active:not(:last-child):after {
+        background: #28a745;
+    }
+
+    .step-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #dee2e6;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 8px;
+        position: relative;
+        z-index: 2;
+        font-weight: 600;
+    }
+
+    .progress-step.completed .step-circle {
+        background: #28a745;
+        color: white;
+    }
+
+    .progress-step.active .step-circle {
+        background: #007bff;
+        color: white;
+    }
+
+    .step-label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #6c757d;
+    }
+
+    .progress-step.completed .step-label,
+    .progress-step.active .step-label {
+        color: #495057;
+        font-weight: 600;
+    }
+
+    .wizard-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+
+    .wizard-header {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+    }
+
+    .wizard-body {
+        padding: 40px;
+    }
+
+    .wizard-footer {
+        background: #f8f9fa;
+        padding: 20px 40px;
+        border-top: 1px solid #dee2e6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .btn-wizard {
+        min-width: 120px;
+        padding: 12px 24px;
+        font-weight: 600;
+        border-radius: 8px;
+    }
+
+    .venue-row {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 15px;
+        border: 1px solid #e9ecef;
+    }
+
+    .venue-row .form-control,
+    .venue-row .form-select {
+        border-radius: 6px;
+        border: 1px solid #dee2e6;
+    }
+
+    .availability-grid {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        border: 1px solid #dee2e6;
+        margin-top: 15px;
+    }
+
+    .day-header {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 10px;
+        text-align: center;
+        padding: 8px;
+        background: #f8f9fa;
+        border-radius: 6px;
+    }
+
+    .time-slot {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+        padding: 5px;
+    }
+
+    .time-slot input[type="checkbox"] {
+        margin-right: 10px;
+        transform: scale(1.2);
+    }
+
+    .time-slot label {
+        margin: 0;
+        flex: 1;
+        cursor: pointer;
+    }
+
+    .quick-select-btn {
+        padding: 4px 8px;
+        font-size: 0.75rem;
+        border-radius: 4px;
+        margin-left: 5px;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 8px;
+    }
+
+    .form-control,
+    .form-select {
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        padding: 12px 16px;
+        font-size: 1rem;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+    .btn-outline-danger {
+        border-width: 1px;
+    }
+
+    .venue-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .venue-title {
+        font-weight: 600;
+        color: #495057;
+        margin: 0;
+    }
+
+    .toggle-availability {
+        font-size: 0.875rem;
+        padding: 6px 12px;
+    }
+
+    .availability-section {
+        display: none;
+    }
+
+    .availability-section.show {
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="wizard-container">
+        <!-- Progress Bar -->
+        <div class="wizard-progress">
+            <div class="d-flex">
+                <div class="progress-step completed">
+                    <div class="step-circle"><i class="bi bi-check"></i></div>
+                    <div class="step-label">Season Info</div>
+                </div>
+                <div class="progress-step completed">
+                    <div class="step-circle"><i class="bi bi-check"></i></div>
+                    <div class="step-label">Teams</div>
+                </div>
+                <div class="progress-step active">
+                    <div class="step-circle">3</div>
+                    <div class="step-label">Venues</div>
+                </div>
+                <div class="progress-step">
+                    <div class="step-circle">4</div>
+                    <div class="step-label">Registration</div>
+                </div>
+                <div class="progress-step">
+                    <div class="step-circle">5</div>
+                    <div class="step-label">Schedule</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3 Form -->
+        <div class="wizard-card">
+            <div class="wizard-header">
+                <h1><i class="bi bi-geo-alt"></i> Step 3: Venues & Availability</h1>
+                <p class="mb-0">Set up game venues and their availability schedules</p>
+            </div>
+
+            <form method="POST" action="{{ url_for('admin.season_wizard_step', step=3) }}">
+                {{ csrf_token() }}
+
+                <div class="wizard-body">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4>Game Venues</h4>
+                        <button type="button" class="btn btn-outline-primary" onclick="addVenueRow()">
+                            <i class="bi bi-plus"></i> Add Venue
+                        </button>
+                    </div>
+
+                    <div id="venues-container">
+                        {% if wizard_data and wizard_data.data and wizard_data.data.step3 and wizard_data.data.step3.venues %}
+                            {% for venue in wizard_data.data.step3.venues %}
+                            <div class="venue-row">
+                                <div class="venue-header">
+                                    <h6 class="venue-title">Venue {{ loop.index }}</h6>
+                                    <div>
+                                        <button type="button" class="btn btn-outline-info btn-sm toggle-availability"
+                                                onclick="toggleAvailability(this)">
+                                            <i class="bi bi-calendar"></i> Set Availability
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger btn-sm ms-2"
+                                                onclick="removeVenueRow(this)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="form-label">Venue Name *</label>
+                                            <input type="text" class="form-control" name="venue_names[]"
+                                                   placeholder="e.g., Central Stadium" value="{{ venue.name }}" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="form-label">Address</label>
+                                            <input type="text" class="form-control" name="venue_addresses[]"
+                                                   placeholder="123 Main St, City, State" value="{{ venue.address or '' }}">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label class="form-label">Capacity</label>
+                                            <input type="number" class="form-control" name="venue_capacities[]"
+                                                   placeholder="e.g., 5000" min="1" value="{{ venue.capacity or '' }}">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label class="form-label">Surface Type</label>
+                                            <select class="form-select" name="venue_surfaces[]">
+                                                <option value="">Select surface type</option>
+                                                <option value="grass" {{ 'selected' if venue.surface == 'grass' }}>Grass</option>
+                                                <option value="artificial" {{ 'selected' if venue.surface == 'artificial' }}>Artificial Turf</option>
+                                                <option value="indoor" {{ 'selected' if venue.surface == 'indoor' }}>Indoor Court</option>
+                                                <option value="clay" {{ 'selected' if venue.surface == 'clay' }}>Clay</option>
+                                                <option value="other" {{ 'selected' if venue.surface == 'other' }}>Other</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label class="form-label">Rental Cost (per game)</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">$</span>
+                                                <input type="number" class="form-control" name="venue_costs[]"
+                                                       placeholder="0.00" min="0" step="0.01" value="{{ venue.cost or '' }}">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Availability Section -->
+                                <div class="availability-section">
+                                    <h6 class="mt-3 mb-3">
+                                        <i class="bi bi-calendar-week"></i> Weekly Availability
+                                        <small class="text-muted">(Leave unchecked if venue is always available)</small>
+                                    </h6>
+
+                                    <div class="row">
+                                        {% for day_name, day_code in [('Monday', 'mon'), ('Tuesday', 'tue'), ('Wednesday', 'wed'), ('Thursday', 'thu'), ('Friday', 'fri'), ('Saturday', 'sat'), ('Sunday', 'sun')] %}
+                                        <div class="col-md-6 col-lg-4 mb-3">
+                                            <div class="availability-grid">
+                                                <div class="day-header">
+                                                    {{ day_name }}
+                                                    <button type="button" class="btn btn-outline-primary quick-select-btn"
+                                                            onclick="selectAllDay(this, '{{ day_code }}')">All</button>
+                                                    <button type="button" class="btn btn-outline-secondary quick-select-btn"
+                                                            onclick="clearAllDay(this, '{{ day_code }}')">None</button>
+                                                </div>
+
+                                                {% for hour in range(6, 23) %}
+                                                <div class="time-slot">
+                                                    <input type="checkbox"
+                                                           id="venue_{{ loop.index0 }}_{{ day_code }}_{{ hour }}"
+                                                           name="venue_availability[{{ loop.index0 }}][{{ day_code }}][]"
+                                                           value="{{ hour }}"
+                                                           {% if venue.availability and venue.availability.get(day_code) and hour|string in venue.availability[day_code] %}checked{% endif %}>
+                                                    <label for="venue_{{ loop.index0 }}_{{ day_code }}_{{ hour }}">
+                                                        {{ "%02d:00"|format(hour) }} - {{ "%02d:00"|format(hour + 1) }}
+                                                    </label>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <!-- Default venue -->
+                            <div class="venue-row">
+                                <div class="venue-header">
+                                    <h6 class="venue-title">Venue 1</h6>
+                                    <div>
+                                        <button type="button" class="btn btn-outline-info btn-sm toggle-availability"
+                                                onclick="toggleAvailability(this)">
+                                            <i class="bi bi-calendar"></i> Set Availability
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger btn-sm ms-2"
+                                                onclick="removeVenueRow(this)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="form-label">Venue Name *</label>
+                                            <input type="text" class="form-control" name="venue_names[]"
+                                                   placeholder="e.g., Central Stadium" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="form-label">Address</label>
+                                            <input type="text" class="form-control" name="venue_addresses[]"
+                                                   placeholder="123 Main St, City, State">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label class="form-label">Capacity</label>
+                                            <input type="number" class="form-control" name="venue_capacities[]"
+                                                   placeholder="e.g., 5000" min="1">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label class="form-label">Surface Type</label>
+                                            <select class="form-select" name="venue_surfaces[]">
+                                                <option value="">Select surface type</option>
+                                                <option value="grass">Grass</option>
+                                                <option value="artificial">Artificial Turf</option>
+                                                <option value="indoor">Indoor Court</option>
+                                                <option value="clay">Clay</option>
+                                                <option value="other">Other</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label class="form-label">Rental Cost (per game)</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">$</span>
+                                                <input type="number" class="form-control" name="venue_costs[]"
+                                                       placeholder="0.00" min="0" step="0.01">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Availability Section -->
+                                <div class="availability-section">
+                                    <h6 class="mt-3 mb-3">
+                                        <i class="bi bi-calendar-week"></i> Weekly Availability
+                                        <small class="text-muted">(Leave unchecked if venue is always available)</small>
+                                    </h6>
+
+                                    <div class="row">
+                                        {% for day_name, day_code in [('Monday', 'mon'), ('Tuesday', 'tue'), ('Wednesday', 'wed'), ('Thursday', 'thu'), ('Friday', 'fri'), ('Saturday', 'sat'), ('Sunday', 'sun')] %}
+                                        <div class="col-md-6 col-lg-4 mb-3">
+                                            <div class="availability-grid">
+                                                <div class="day-header">
+                                                    {{ day_name }}
+                                                    <button type="button" class="btn btn-outline-primary quick-select-btn"
+                                                            onclick="selectAllDay(this, '{{ day_code }}')">All</button>
+                                                    <button type="button" class="btn btn-outline-secondary quick-select-btn"
+                                                            onclick="clearAllDay(this, '{{ day_code }}')">None</button>
+                                                </div>
+
+                                                {% for hour in range(6, 23) %}
+                                                <div class="time-slot">
+                                                    <input type="checkbox"
+                                                           id="venue_0_{{ day_code }}_{{ hour }}"
+                                                           name="venue_availability[0][{{ day_code }}][]"
+                                                           value="{{ hour }}">
+                                                    <label for="venue_0_{{ day_code }}_{{ hour }}">
+                                                        {{ "%02d:00"|format(hour) }} - {{ "%02d:00"|format(hour + 1) }}
+                                                    </label>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="alert alert-info mt-4">
+                        <h6><i class="bi bi-lightbulb"></i> Venue Tips:</h6>
+                        <ul class="mb-0">
+                            <li>You need at least one venue to schedule games</li>
+                            <li>Availability settings help ensure games are scheduled at appropriate times</li>
+                            <li>If no availability is set, the venue is considered available 24/7</li>
+                            <li>Consider travel time between venues when setting up multiple locations</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="wizard-footer">
+                    <a href="{{ url_for('admin.season_wizard_step', step=2) }}" class="btn btn-outline-secondary btn-wizard">
+                        <i class="bi bi-arrow-left"></i> Back
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-wizard">
+                        Next: Registration <i class="bi bi-arrow-right"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+let venueCounter = document.querySelectorAll('.venue-row').length;
+
+function addVenueRow() {
+    const container = document.getElementById('venues-container');
+    const venueRow = document.createElement('div');
+    venueRow.className = 'venue-row';
+
+    venueRow.innerHTML = `
+        <div class="venue-header">
+            <h6 class="venue-title">Venue ${venueCounter + 1}</h6>
+            <div>
+                <button type="button" class="btn btn-outline-info btn-sm toggle-availability"
+                        onclick="toggleAvailability(this)">
+                    <i class="bi bi-calendar"></i> Set Availability
+                </button>
+                <button type="button" class="btn btn-outline-danger btn-sm ms-2"
+                        onclick="removeVenueRow(this)">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label class="form-label">Venue Name *</label>
+                    <input type="text" class="form-control" name="venue_names[]"
+                           placeholder="e.g., Central Stadium" required>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label class="form-label">Address</label>
+                    <input type="text" class="form-control" name="venue_addresses[]"
+                           placeholder="123 Main St, City, State">
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label class="form-label">Capacity</label>
+                    <input type="number" class="form-control" name="venue_capacities[]"
+                           placeholder="e.g., 5000" min="1">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label class="form-label">Surface Type</label>
+                    <select class="form-select" name="venue_surfaces[]">
+                        <option value="">Select surface type</option>
+                        <option value="grass">Grass</option>
+                        <option value="artificial">Artificial Turf</option>
+                        <option value="indoor">Indoor Court</option>
+                        <option value="clay">Clay</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label class="form-label">Rental Cost (per game)</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control" name="venue_costs[]"
+                               placeholder="0.00" min="0" step="0.01">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="availability-section">
+            <h6 class="mt-3 mb-3">
+                <i class="bi bi-calendar-week"></i> Weekly Availability
+                <small class="text-muted">(Leave unchecked if venue is always available)</small>
+            </h6>
+
+            <div class="row">
+                ${generateAvailabilityGrid(venueCounter)}
+            </div>
+        </div>
+    `;
+
+    container.appendChild(venueRow);
+    venueCounter++;
+}
+
+function generateAvailabilityGrid(venueIndex) {
+    const days = [
+        ['Monday', 'mon'], ['Tuesday', 'tue'], ['Wednesday', 'wed'],
+        ['Thursday', 'thu'], ['Friday', 'fri'], ['Saturday', 'sat'], ['Sunday', 'sun']
+    ];
+
+    let html = '';
+    days.forEach(([dayName, dayCode]) => {
+        html += `
+            <div class="col-md-6 col-lg-4 mb-3">
+                <div class="availability-grid">
+                    <div class="day-header">
+                        ${dayName}
+                        <button type="button" class="btn btn-outline-primary quick-select-btn"
+                                onclick="selectAllDay(this, '${dayCode}')">All</button>
+                        <button type="button" class="btn btn-outline-secondary quick-select-btn"
+                                onclick="clearAllDay(this, '${dayCode}')">None</button>
+                    </div>
+        `;
+
+        for (let hour = 6; hour < 23; hour++) {
+            const hourStr = hour.toString().padStart(2, '0');
+            const nextHourStr = (hour + 1).toString().padStart(2, '0');
+            html += `
+                <div class="time-slot">
+                    <input type="checkbox"
+                           id="venue_${venueIndex}_${dayCode}_${hour}"
+                           name="venue_availability[${venueIndex}][${dayCode}][]"
+                           value="${hour}">
+                    <label for="venue_${venueIndex}_${dayCode}_${hour}">
+                        ${hourStr}:00 - ${nextHourStr}:00
+                    </label>
+                </div>
+            `;
+        }
+
+        html += `
+                </div>
+            </div>
+        `;
+    });
+
+    return html;
+}
+
+function removeVenueRow(button) {
+    const container = document.getElementById('venues-container');
+    if (container.children.length > 1) {
+        button.closest('.venue-row').remove();
+        updateVenueTitles();
+    } else {
+        alert('You need at least one venue!');
+    }
+}
+
+function updateVenueTitles() {
+    const venues = document.querySelectorAll('.venue-row');
+    venues.forEach((venue, index) => {
+        const title = venue.querySelector('.venue-title');
+        title.textContent = `Venue ${index + 1}`;
+    });
+}
+
+function toggleAvailability(button) {
+    const venueRow = button.closest('.venue-row');
+    const availabilitySection = venueRow.querySelector('.availability-section');
+    const icon = button.querySelector('i');
+
+    if (availabilitySection.classList.contains('show')) {
+        availabilitySection.classList.remove('show');
+        button.innerHTML = '<i class="bi bi-calendar"></i> Set Availability';
+        button.classList.remove('btn-success');
+        button.classList.add('btn-outline-info');
+    } else {
+        availabilitySection.classList.add('show');
+        button.innerHTML = '<i class="bi bi-calendar-check"></i> Hide Availability';
+        button.classList.remove('btn-outline-info');
+        button.classList.add('btn-success');
+    }
+}
+
+function selectAllDay(button, dayCode) {
+    const venueRow = button.closest('.venue-row');
+    const checkboxes = venueRow.querySelectorAll(`input[name*="[${dayCode}]"]`);
+    checkboxes.forEach(cb => cb.checked = true);
+}
+
+function clearAllDay(button, dayCode) {
+    const venueRow = button.closest('.venue-row');
+    const checkboxes = venueRow.querySelectorAll(`input[name*="[${dayCode}]"]`);
+    checkboxes.forEach(cb => cb.checked = false);
+}
+</script>
+{% endblock %}
+{% endblock %}

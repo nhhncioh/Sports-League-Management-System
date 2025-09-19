@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Tournament Matches{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h1 class="mb-4">Tournament Matches</h1>
+  <div class="row">
+    <div class="col-md-5">
+      <h4>Assign Match to Tournament</h4>
+      <form method="POST" action="{{ url_for('admin.manage_tournament_matches') }}">
+        <input type="hidden" id="tournament_match_id" name="tournament_match_id">
+        <input type="hidden" id="action" name="action" value="add">
+        <div class="form-group">
+          <label for="tournament_id">Tournament</label>
+          <select class="form-control" id="tournament_id" name="tournament_id" required>
+            {% for t in tournaments %}
+              <option value="{{ t[0] }}">{{ t[1] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="match_id">Match</label>
+          <select class="form-control" id="match_id" name="match_id" required>
+            {% for m in matches %}
+              <option value="{{ m[0] }}">{{ m[1] }} — {{ m[2] }} vs {{ m[3] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group col-md-6">
+            <label for="round_name">Round</label>
+            <input class="form-control" type="text" id="round_name" name="round_name" placeholder="Quarterfinals">
+          </div>
+          <div class="form-group col-md-3">
+            <label for="leg_number">Leg</label>
+            <input class="form-control" type="number" id="leg_number" name="leg_number" placeholder="1">
+          </div>
+          <div class="form-group col-md-3">
+            <label for="bracket_position">Position</label>
+            <input class="form-control" type="number" id="bracket_position" name="bracket_position" placeholder="1">
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Save</button>
+        <button type="button" class="btn btn-secondary" onclick="resetForm()">Reset</button>
+      </form>
+    </div>
+    <div class="col-md-7">
+      <h4>Assignments</h4>
+      <table class="table table-striped table-sm">
+        <thead>
+          <tr>
+            <th>Tournament</th>
+            <th>Date</th>
+            <th>Match</th>
+            <th>Round</th>
+            <th>Leg</th>
+            <th>Pos</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+            <tr>
+              <td>{{ r[1] }}</td>
+              <td>{{ r[2] }}</td>
+              <td>{{ r[3] }} vs {{ r[4] }}</td>
+              <td>{{ r[5] or '-' }}</td>
+              <td>{{ r[6] or '-' }}</td>
+              <td>{{ r[7] or '-' }}</td>
+              <td>
+                <button class="btn btn-sm btn-success" onclick="editRow({
+                  id: '{{ r[0] }}',
+                  tournament_id: '{{ r[8] }}',
+                  match_id: '{{ r[9] }}',
+                  round_name: '{{ r[5] or '' }}',
+                  leg_number: '{{ r[6] or '' }}',
+                  bracket_position: '{{ r[7] or '' }}'
+                })">Edit</button>
+                <form class="d-inline" method="POST" action="{{ url_for('admin.manage_tournament_matches') }}" onsubmit="return confirm('Delete this assignment?');">
+                  <input type="hidden" name="action" value="delete">
+                  <input type="hidden" name="deleteEntityId" value="{{ r[0] }}">
+                  <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<script>
+  function editRow(r){
+    document.getElementById('action').value = 'edit';
+    document.getElementById('tournament_match_id').value = r.id || '';
+    document.getElementById('tournament_id').value = r.tournament_id || '';
+    document.getElementById('match_id').value = r.match_id || '';
+    document.getElementById('round_name').value = r.round_name || '';
+    document.getElementById('leg_number').value = r.leg_number || '';
+    document.getElementById('bracket_position').value = r.bracket_position || '';
+  }
+  function resetForm(){
+    document.getElementById('action').value = 'add';
+    document.getElementById('tournament_match_id').value = '';
+    document.getElementById('tournament_id').selectedIndex = 0;
+    document.getElementById('match_id').selectedIndex = 0;
+    document.getElementById('round_name').value = '';
+    document.getElementById('leg_number').value = '';
+    document.getElementById('bracket_position').value = '';
+  }
+</script>
+{% endblock %}
+

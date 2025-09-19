@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+
+{% block title %}Generate Schedule - {{ season.name }} - Admin - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin.admin_dashboard') }}">Admin</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin.manage_seasons') }}">Seasons</a></li>
+                    <li class="breadcrumb-item active">Generate Schedule</li>
+                </ol>
+            </nav>
+
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1>Generate Schedule</h1>
+                    <p class="text-muted">{{ season.name }} - {{ season.league.name }}</p>
+                </div>
+                <div>
+                    <form method="POST" style="display: inline;">
+                        <button type="submit" name="action" value="clear" class="btn btn-outline-danger"
+                                onclick="return confirm('Clear all scheduled games for this season?')">
+                            <i class="bi bi-trash"></i> Clear Schedule
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Season Info -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i>
+                <strong>Teams:</strong> {{ season.teams|length }} teams registered
+                {% if season.teams|length < 2 %}
+                    <span class="text-danger">- Need at least 2 teams to generate schedule</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if season.teams|length >= 2 %}
+        <!-- Schedule Generation Form -->
+        <form method="POST" novalidate>
+            <div class="row">
+                <!-- Main Configuration -->
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="bi bi-calendar-plus"></i>
+                                Schedule Configuration
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Date Range -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label for="start_date" class="form-label">Start Date *</label>
+                                    <input type="date" class="form-control" name="start_date" id="start_date" required
+                                           value="{{ request.form.get('start_date', '') }}">
+                                    <div class="form-text">First possible game date</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="end_date" class="form-label">End Date *</label>
+                                    <input type="date" class="form-control" name="end_date" id="end_date" required
+                                           value="{{ request.form.get('end_date', '') }}">
+                                    <div class="form-text">Last possible game date</div>
+                                </div>
+                            </div>
+
+                            <!-- Preferred Weekdays -->
+                            <div class="mb-4">
+                                <label class="form-label">Preferred Weekdays *</label>
+                                <div class="row">
+                                    {% set weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] %}
+                                    {% for day, name in weekdays|enumerate %}
+                                        <div class="col-md-3 col-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox"
+                                                       name="weekday_{{ day }}" id="weekday_{{ day }}"
+                                                       value="1" {{ 'checked' if request.form.get('weekday_' ~ day) else '' }}>
+                                                <label class="form-check-label" for="weekday_{{ day }}">
+                                                    {{ name }}
+                                                </label>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="form-text">Select which days of the week games can be scheduled</div>
+                            </div>
+
+                            <!-- Start Times -->
+                            <div class="mb-4">
+                                <label for="start_times" class="form-label">Preferred Start Times *</label>
+                                <input type="text" class="form-control" name="start_times" id="start_times"
+                                       placeholder="18:00, 19:00, 20:00" required
+                                       value="{{ request.form.get('start_times', '') }}">
+                                <div class="form-text">Comma-separated times in HH:MM format (e.g., 18:00, 19:00)</div>
+                            </div>
+
+                            <!-- Venues -->
+                            <div class="mb-4">
+                                <label class="form-label">Select Venues *</label>
+                                {% if venues %}
+                                    <div class="row">
+                                        {% for venue in venues %}
+                                            <div class="col-md-6 col-lg-4">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox"
+                                                           name="venue_ids" value="{{ venue.id }}"
+                                                           id="venue_{{ venue.id }}"
+                                                           {{ 'checked' if venue.id in request.form.getlist('venue_ids') else '' }}>
+                                                    <label class="form-check-label" for="venue_{{ venue.id }}">
+                                                        <strong>{{ venue.name }}</strong>
+                                                        {% if venue.open_time and venue.close_time %}
+                                                            <br><small class="text-muted">
+                                                                {{ venue.open_time }} - {{ venue.close_time }}
+                                                            </small>
+                                                        {% endif %}
+                                                        {% if venue.address %}
+                                                            <br><small class="text-muted">{{ venue.address }}</small>
+                                                        {% endif %}
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <div class="alert alert-warning">
+                                        <i class="bi bi-exclamation-triangle"></i>
+                                        No venues available. Please create venues first.
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Rounds -->
+                            <div class="mb-4">
+                                <label for="rounds" class="form-label">Competition Format</label>
+                                <select class="form-select" name="rounds" id="rounds">
+                                    <option value="1" {{ 'selected' if request.form.get('rounds') == '1' else '' }}>
+                                        Single Round-Robin (each team plays every other team once)
+                                    </option>
+                                    <option value="2" {{ 'selected' if request.form.get('rounds') == '2' else '' }}>
+                                        Double Round-Robin (each team plays every other team twice)
+                                    </option>
+                                </select>
+                                <div class="form-text">
+                                    Single: {{ (season.teams|length * (season.teams|length - 1)) // 2 }} games total<br>
+                                    Double: {{ season.teams|length * (season.teams|length - 1) }} games total
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar Info -->
+                <div class="col-lg-4">
+                    <!-- Teams -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="bi bi-people"></i>
+                                Teams ({{ season.teams|length }})
+                            </h6>
+                        </div>
+                        <div class="card-body p-0">
+                            {% if season.teams %}
+                                <div class="list-group list-group-flush">
+                                    {% for team in season.teams %}
+                                        <div class="list-group-item">
+                                            <strong>{{ team.name }}</strong>
+                                            {% if team.coach_name %}
+                                                <br><small class="text-muted">Coach: {{ team.coach_name }}</small>
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="p-3 text-center text-muted">
+                                    No teams registered
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Constraints Info -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="bi bi-shield-check"></i>
+                                Automatic Constraints
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-unstyled mb-0">
+                                <li class="mb-2">
+                                    <i class="bi bi-check-circle text-success"></i>
+                                    Teams can't play twice on same day
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-check-circle text-success"></i>
+                                    Minimum 2-day gap between games per team
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-check-circle text-success"></i>
+                                    Respects venue operating hours
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-check-circle text-success"></i>
+                                    Avoids venue and team blackout dates
+                                </li>
+                                <li class="mb-0">
+                                    <i class="bi bi-check-circle text-success"></i>
+                                    Balanced home/away distribution
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            {% if venues %}
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">Ready to generate schedule?</h6>
+                                        <small class="text-muted">
+                                            Preview first to review the schedule before saving
+                                        </small>
+                                    </div>
+                                    <div>
+                                        <button type="submit" name="action" value="preview" class="btn btn-outline-primary me-2">
+                                            <i class="bi bi-eye"></i> Preview Schedule
+                                        </button>
+                                        <button type="submit" name="action" value="generate" class="btn btn-primary">
+                                            <i class="bi bi-lightning"></i> Generate & Save
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </form>
+    {% endif %}
+</div>
+
+{% block extra_js %}
+<script>
+    // Auto-populate example times based on typical schedules
+    document.addEventListener('DOMContentLoaded', function() {
+        const startTimesInput = document.getElementById('start_times');
+        if (!startTimesInput.value) {
+            startTimesInput.value = '18:00, 19:00, 20:00';
+        }
+
+        // Auto-select weekdays (Tuesday/Thursday is common for leagues)
+        const commonDays = [1, 3]; // Tuesday, Thursday
+        commonDays.forEach(day => {
+            const checkbox = document.getElementById(`weekday_${day}`);
+            if (checkbox && !checkbox.checked) {
+                checkbox.checked = true;
+            }
+        });
+
+        // Set default date range (next month to 3 months from now)
+        const startDate = document.getElementById('start_date');
+        const endDate = document.getElementById('end_date');
+
+        if (!startDate.value) {
+            const nextMonth = new Date();
+            nextMonth.setMonth(nextMonth.getMonth() + 1);
+            startDate.value = nextMonth.toISOString().split('T')[0];
+        }
+
+        if (!endDate.value) {
+            const threeMonths = new Date();
+            threeMonths.setMonth(threeMonths.getMonth() + 4);
+            endDate.value = threeMonths.toISOString().split('T')[0];
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}

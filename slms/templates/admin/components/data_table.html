@@ -1,0 +1,377 @@
+{% macro render_data_table(table_id, title, columns, data_url, create_url=None, export_urls=None, filters=None) %}
+<div class="data-table-container">
+    <!-- Table Header -->
+    <div class="card">
+        <div class="card-header bg-gradient-primary text-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-table"></i> {{ title }}
+                    <span id="{{ table_id }}-count" class="badge bg-light text-dark ms-2">Loading...</span>
+                </h5>
+                <div class="table-actions">
+                    {% if create_url %}
+                    <a href="{{ create_url }}" class="btn btn-light btn-sm me-2">
+                        <i class="bi bi-plus"></i> Add New
+                    </a>
+                    {% endif %}
+                    {% if export_urls %}
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-outline-light btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="bi bi-download"></i> Export
+                        </button>
+                        <ul class="dropdown-menu">
+                            {% for format, url in export_urls.items() %}
+                            <li><a class="dropdown-item" href="{{ url }}">{{ format.upper() }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters and Search -->
+        <div class="card-body border-bottom">
+            <div class="row align-items-end">
+                <!-- Search -->
+                <div class="col-md-4">
+                    <label for="{{ table_id }}-search" class="form-label small">Search</label>
+                    <div class="input-group">
+                        <input type="text"
+                               class="form-control"
+                               id="{{ table_id }}-search"
+                               placeholder="Search {{ title.lower() }}..."
+                               hx-get="{{ data_url }}"
+                               hx-target="#{{ table_id }}-tbody"
+                               hx-trigger="keyup changed delay:300ms"
+                               hx-include="#{{ table_id }}-filters input, #{{ table_id }}-filters select"
+                               name="search">
+                        <button class="btn btn-outline-secondary" type="button" onclick="clearSearch('{{ table_id }}')">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Custom Filters -->
+                {% if filters %}
+                <div class="col-md-6" id="{{ table_id }}-filters">
+                    <div class="row">
+                        {% for filter in filters %}
+                        <div class="col-md-4">
+                            <label for="{{ table_id }}-{{ filter.name }}" class="form-label small">{{ filter.label }}</label>
+                            {% if filter.type == 'select' %}
+                            <select class="form-select form-select-sm"
+                                    id="{{ table_id }}-{{ filter.name }}"
+                                    name="{{ filter.name }}"
+                                    hx-get="{{ data_url }}"
+                                    hx-target="#{{ table_id }}-tbody"
+                                    hx-trigger="change"
+                                    hx-include="#{{ table_id }}-filters input, #{{ table_id }}-filters select, #{{ table_id }}-search">
+                                <option value="">All {{ filter.label }}</option>
+                                {% for option in filter.options %}
+                                <option value="{{ option.value }}">{{ option.label }}</option>
+                                {% endfor %}
+                            </select>
+                            {% elif filter.type == 'date' %}
+                            <input type="date"
+                                   class="form-control form-control-sm"
+                                   id="{{ table_id }}-{{ filter.name }}"
+                                   name="{{ filter.name }}"
+                                   hx-get="{{ data_url }}"
+                                   hx-target="#{{ table_id }}-tbody"
+                                   hx-trigger="change"
+                                   hx-include="#{{ table_id }}-filters input, #{{ table_id }}-filters select, #{{ table_id }}-search">
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Per Page and Reset -->
+                <div class="col-md-2">
+                    <label for="{{ table_id }}-per-page" class="form-label small">Per Page</label>
+                    <select class="form-select form-select-sm"
+                            id="{{ table_id }}-per-page"
+                            name="per_page"
+                            hx-get="{{ data_url }}"
+                            hx-target="#{{ table_id }}-tbody"
+                            hx-trigger="change"
+                            hx-include="#{{ table_id }}-filters input, #{{ table_id }}-filters select, #{{ table_id }}-search">
+                        <option value="10">10</option>
+                        <option value="25" selected>25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mt-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetFilters('{{ table_id }}', '{{ data_url }}')">
+                    <i class="bi bi-arrow-clockwise"></i> Reset Filters
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="{{ table_id }}-loading" class="htmx-indicator position-absolute w-100 h-100 d-flex align-items-center justify-content-center bg-white bg-opacity-75" style="z-index: 1000;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-responsive position-relative">
+            <table class="table table-hover mb-0" id="{{ table_id }}">
+                <thead class="table-light">
+                    <tr>
+                        {% for column in columns %}
+                        <th scope="col"
+                            {% if column.sortable %}
+                            class="sortable-header"
+                            hx-get="{{ data_url }}"
+                            hx-target="#{{ table_id }}-tbody"
+                            hx-trigger="click"
+                            hx-include="#{{ table_id }}-filters input, #{{ table_id }}-filters select, #{{ table_id }}-search, #{{ table_id }}-per-page"
+                            onclick="toggleSort('{{ table_id }}', '{{ column.key }}', '{{ data_url }}')"
+                            style="cursor: pointer;"
+                            {% endif %}>
+                            {{ column.label }}
+                            {% if column.sortable %}
+                            <i class="bi bi-arrow-down-up sort-icon ms-1" id="{{ table_id }}-sort-{{ column.key }}"></i>
+                            {% endif %}
+                        </th>
+                        {% endfor %}
+                        <th scope="col" width="120">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="{{ table_id }}-tbody"
+                       hx-get="{{ data_url }}"
+                       hx-trigger="load"
+                       hx-target="this"
+                       hx-indicator="#{{ table_id }}-loading">
+                    <!-- Table rows will be loaded here -->
+                    <tr>
+                        <td colspan="{{ columns|length + 1 }}" class="text-center p-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="card-footer">
+            <div class="d-flex justify-content-between align-items-center">
+                <div id="{{ table_id }}-info" class="text-muted small">
+                    Loading...
+                </div>
+                <nav id="{{ table_id }}-pagination">
+                    <!-- Pagination will be loaded here -->
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.data-table-container {
+    margin-bottom: 2rem;
+}
+
+.sortable-header:hover {
+    background-color: #e9ecef !important;
+}
+
+.sort-icon {
+    opacity: 0.5;
+    transition: all 0.2s ease;
+}
+
+.sort-icon.asc {
+    opacity: 1;
+    transform: rotate(180deg);
+}
+
+.sort-icon.desc {
+    opacity: 1;
+    transform: rotate(0deg);
+}
+
+.htmx-indicator {
+    display: none;
+}
+
+.htmx-request .htmx-indicator {
+    display: flex;
+}
+
+.htmx-request .table {
+    opacity: 0.5;
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+}
+
+.table-actions .btn {
+    font-size: 0.875rem;
+}
+
+.action-btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    margin: 0 0.125rem;
+}
+
+.badge-status {
+    font-size: 0.7rem;
+    padding: 0.35em 0.65em;
+}
+
+.row-actions {
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .table-actions {
+        margin-top: 0.5rem;
+    }
+
+    .table-actions .btn {
+        width: 100%;
+        margin-bottom: 0.25rem;
+    }
+
+    .col-md-4, .col-md-6, .col-md-2 {
+        margin-bottom: 0.75rem;
+    }
+}
+</style>
+
+<script>
+// Global table state
+window.tableStates = window.tableStates || {};
+
+function clearSearch(tableId) {
+    document.getElementById(tableId + '-search').value = '';
+    document.getElementById(tableId + '-search').dispatchEvent(new Event('keyup'));
+}
+
+function resetFilters(tableId, dataUrl) {
+    // Clear search
+    document.getElementById(tableId + '-search').value = '';
+
+    // Clear all filters
+    const filters = document.querySelectorAll('#' + tableId + '-filters input, #' + tableId + '-filters select');
+    filters.forEach(filter => {
+        filter.value = '';
+    });
+
+    // Reset per page
+    document.getElementById(tableId + '-per-page').value = '25';
+
+    // Clear sort state
+    if (window.tableStates[tableId]) {
+        delete window.tableStates[tableId].sort;
+        delete window.tableStates[tableId].sortDir;
+    }
+
+    // Reset sort icons
+    document.querySelectorAll('#' + tableId + ' .sort-icon').forEach(icon => {
+        icon.className = 'bi bi-arrow-down-up sort-icon ms-1';
+    });
+
+    // Reload table
+    htmx.ajax('GET', dataUrl, {target: '#' + tableId + '-tbody'});
+}
+
+function toggleSort(tableId, column, dataUrl) {
+    // Initialize table state if not exists
+    if (!window.tableStates[tableId]) {
+        window.tableStates[tableId] = {};
+    }
+
+    const state = window.tableStates[tableId];
+
+    // Toggle sort direction
+    if (state.sort === column) {
+        state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+        state.sort = column;
+        state.sortDir = 'asc';
+    }
+
+    // Update sort icons
+    document.querySelectorAll('#' + tableId + ' .sort-icon').forEach(icon => {
+        icon.className = 'bi bi-arrow-down-up sort-icon ms-1';
+    });
+
+    const sortIcon = document.getElementById(tableId + '-sort-' + column);
+    if (sortIcon) {
+        sortIcon.className = 'bi bi-arrow-down-up sort-icon ms-1 ' + state.sortDir;
+    }
+
+    // Add sort parameters and reload
+    const form = document.createElement('form');
+    form.style.display = 'none';
+
+    // Add sort inputs
+    const sortInput = document.createElement('input');
+    sortInput.name = 'sort';
+    sortInput.value = column;
+    form.appendChild(sortInput);
+
+    const sortDirInput = document.createElement('input');
+    sortDirInput.name = 'sort_dir';
+    sortDirInput.value = state.sortDir;
+    form.appendChild(sortDirInput);
+
+    document.body.appendChild(form);
+
+    // Trigger HTMX request with sort parameters
+    htmx.ajax('GET', dataUrl + '?sort=' + column + '&sort_dir=' + state.sortDir, {
+        target: '#' + tableId + '-tbody',
+        source: '#' + tableId + '-filters, #' + tableId + '-search, #' + tableId + '-per-page'
+    });
+
+    document.body.removeChild(form);
+}
+
+// Handle pagination clicks
+document.addEventListener('click', function(e) {
+    if (e.target.matches('.pagination-link')) {
+        e.preventDefault();
+        const url = e.target.getAttribute('href');
+        const tableId = e.target.getAttribute('data-table');
+        htmx.ajax('GET', url, {
+            target: '#' + tableId + '-tbody',
+            source: '#' + tableId + '-filters, #' + tableId + '-search, #' + tableId + '-per-page'
+        });
+    }
+});
+
+// Update count and pagination info on successful requests
+document.addEventListener('htmx:afterSwap', function(e) {
+    if (e.detail.target.id.endsWith('-tbody')) {
+        const tableId = e.detail.target.id.replace('-tbody', '');
+
+        // Update count from response headers or data attributes
+        const countElement = document.getElementById(tableId + '-count');
+        const infoElement = document.getElementById(tableId + '-info');
+        const paginationElement = document.getElementById(tableId + '-pagination');
+
+        // These would be populated by the server response
+        const count = e.detail.target.getAttribute('data-count') || '0';
+        const info = e.detail.target.getAttribute('data-info') || '';
+        const pagination = e.detail.target.getAttribute('data-pagination') || '';
+
+        if (countElement) countElement.textContent = count;
+        if (infoElement) infoElement.textContent = info;
+        if (paginationElement) paginationElement.innerHTML = pagination;
+    }
+});
+</script>
+{% endmacro %}

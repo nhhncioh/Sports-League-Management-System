@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Generate Fixtures{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h1 class="mb-4">Generate League Fixtures</h1>
+  <form method="POST" action="{{ url_for('admin.generate_fixtures') }}">
+    <div class="form-row">
+      <div class="form-group col-md-4">
+        <label for="league_id">League</label>
+        <select class="form-control" id="league_id" name="league_id" required>
+          {% for l in leagues %}
+            <option value="{{ l[0] }}">{{ l[1] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group col-md-4">
+        <label for="season_id">Season</label>
+        <select class="form-control" id="season_id" name="season_id" required>
+          {% for s in seasons %}
+            <option value="{{ s[0] }}" data-league="{{ s[2] }}">{{ s[1] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group col-md-4">
+        <label for="start_date">Start Date</label>
+        <input class="form-control" type="date" id="start_date" name="start_date" required>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group col-md-4">
+        <label for="interval_days">Interval (days)</label>
+        <input class="form-control" type="number" id="interval_days" name="interval_days" value="7" min="1">
+      </div>
+      <div class="form-group col-md-4">
+        <div class="form-check mt-4">
+          <input class="form-check-input" type="checkbox" id="double_round" name="double_round">
+          <label class="form-check-label" for="double_round">Double round-robin (home/away)</label>
+        </div>
+      </div>
+      <div class="form-group col-md-4">
+        <div class="form-check mt-4">
+          <input class="form-check-input" type="checkbox" id="shuffle" name="shuffle">
+          <label class="form-check-label" for="shuffle">Shuffle team order</label>
+        </div>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary">Generate</button>
+  </form>
+  <hr>
+  <p>Note: generation skips existing exact home/away pairings for the selected season.</p>
+</div>
+<script>
+  // Optional: constrain seasons dropdown by league
+  (function(){
+    const leagueSel = document.getElementById('league_id');
+    const seasonSel = document.getElementById('season_id');
+    function filterSeasons(){
+      const lid = leagueSel.value;
+      for (const opt of seasonSel.options) {
+        if (!opt.value) continue;
+        const match = !opt.dataset.league || opt.dataset.league === lid;
+        opt.hidden = !match;
+      }
+      // Select first visible
+      for (const opt of seasonSel.options) { if (!opt.hidden) { seasonSel.value = opt.value; break; } }
+    }
+    leagueSel.addEventListener('change', filterSeasons);
+    filterSeasons();
+  })();
+  // Default start date to today
+  document.getElementById('start_date').valueAsDate = new Date();
+</script>
+{% endblock %}
+

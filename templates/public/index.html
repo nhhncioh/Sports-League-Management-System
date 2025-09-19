@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ g.org.name }} - Sports League Management</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body class="bg-surface text-body">
+    {% set ns = namespace(first_season=None) %}
+    {% if leagues %}
+        {% for league in leagues %}
+            {% if league.seasons and league.seasons|length > 0 and not ns.first_season %}
+                {% set ns.first_season = league.seasons[0] %}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+
+    <header class="hero-shell">
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary glass-nav">
+            <div class="container">
+                <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+                    {% if g.org and g.org.logo_url %}
+                        <span class="brand-avatar" style="background-image: url('{{ g.org.logo_url }}');"></span>
+                    {% else %}
+                        <span class="brand-avatar placeholder">SL</span>
+                    {% endif %}
+                    <span class="fw-semibold">{{ g.org.name }}</span>
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="mainNav">
+                    <ul class="navbar-nav ms-auto align-items-lg-center">
+                        <li class="nav-item"><a class="nav-link active" href="/">Home</a></li>
+                        {% if leagues %}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Leagues</a>
+                                <ul class="dropdown-menu dropdown-menu-end shadow">
+                                    {% for league in leagues %}
+                                        <li><span class="dropdown-item-text text-muted small text-uppercase">{{ league.name }}</span></li>
+                                        {% for season in league.seasons %}
+                                            <li>
+                                                <a class="dropdown-item" href="/seasons/{{ season.id }}/schedule">
+                                                    {{ season.name }} Schedule
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item" href="/seasons/{{ season.id }}/standings">
+                                                    {{ season.name }} Standings
+                                                </a>
+                                            </li>
+                                        {% endfor %}
+                                        <li><hr class="dropdown-divider"></li>
+                                    {% endfor %}
+                                </ul>
+                            </li>
+                        {% endif %}
+                        <li class="nav-item ms-lg-3">
+                            <a class="btn btn-light btn-sm px-3" href="/portal">League Portal</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container py-5 py-lg-6">
+            <div class="row align-items-center g-4">
+                <div class="col-lg-7">
+                    <h1 class="display-4 fw-semibold text-white mb-3">
+                        Your command center for every game, team, and season.
+                    </h1>
+                    <p class="lead text-light opacity-75 mb-4">
+                        Streamline scheduling, track live scores, and keep your community connected with a modern experience designed for competitive sports organizations.
+                    </p>
+                    <div class="d-flex flex-wrap gap-3">
+                        <a class="btn btn-light btn-lg px-4" href="/portal">
+                            Enter Management Portal
+                        </a>
+                        {% if ns.first_season %}
+                        <a class="btn btn-outline-light btn-lg px-4" href="/seasons/{{ ns.first_season.id }}/standings" role="button">
+                            View Standings
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <div class="dashboard-preview shadow-lg">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="badge rounded-pill text-bg-light text-uppercase">At a glance</span>
+                            <span class="text-white-50 small">Updated regularly</span>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="stat-card">
+                                    <span class="stat-label">Active Leagues</span>
+                                    <span class="stat-value">{{ leagues|length if leagues else 0 }}</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-card">
+                                    <span class="stat-label">Registered Teams</span>
+                                    <span class="stat-value">{{ recent_team_count if recent_team_count is defined else 32 }}</span>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="stat-card highlighted">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <span class="stat-label">Upcoming Match</span>
+                                            {% if upcoming_game %}
+                                                <p class="mb-0 text-white fw-semibold">{{ upcoming_game.home_team.name if upcoming_game.home_team else 'TBD' }} vs {{ upcoming_game.away_team.name if upcoming_game.away_team else 'TBD' }}</p>
+                                                <small class="text-white-50">{{ upcoming_game.start_time.strftime('%b %d - %I:%M %p') if upcoming_game.start_time else 'Date to be announced' }}</small>
+                                            {% else %}
+                                                <p class="mb-0 text-white fw-semibold">No games scheduled</p>
+                                                <small class="text-white-50">Check back soon</small>
+                                            {% endif %}
+                                        </div>
+                                        <i class="bi bi-lightning-charge text-white opacity-75 fs-1"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="pb-6">
+        <section class="section container">
+            <div class="section-header">
+                <h2 class="section-title">League Snapshot</h2>
+                <p class="section-subtitle">Stay on top of standings, schedules, and registration opportunities across every division.</p>
+            </div>
+            <div class="row g-4">
+                {% if leagues %}
+                    {% for league in leagues %}
+                        <div class="col-md-6 col-xl-4">
+                            <article class="info-card h-100">
+                                <div class="card-header border-0 bg-transparent px-0">
+                                    <span class="badge rounded-pill league-badge">{{ league.sport.value if league.sport else 'League' }}</span>
+                                    <h3 class="h5 mt-2 mb-1">{{ league.name }}</h3>
+                                    <p class="text-muted small mb-0">{{ league.description if league.description else 'Manage rosters, fixtures, and playoff brackets in one place.' }}</p>
+                                </div>
+                                {% if league.seasons %}
+                                    <ul class="list-unstyled mt-3 mb-0">
+                                        {% for season in league.seasons %}
+                                            <li class="season-tile">
+                                                <div>
+                                                    <p class="season-name mb-0">{{ season.name }}</p>
+                                                    <small class="text-muted">{{ season.start_date.strftime('%b %d') if season.start_date else 'TBD' }} to {{ season.end_date.strftime('%b %d, %Y') if season.end_date else 'TBD' }}</small>
+                                                </div>
+                                                <div class="d-flex gap-2">
+                                                    <a class="btn btn-sm btn-outline-primary" href="/seasons/{{ season.id }}/standings">Standings</a>
+                                                    <a class="btn btn-sm btn-outline-secondary" href="/seasons/{{ season.id }}/schedule">Schedule</a>
+                                                </div>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    <div class="empty-state">
+                                        <i class="bi bi-calendar2-week"></i>
+                                        <p class="mb-0">Season details coming soon.</p>
+                                    </div>
+                                {% endif %}
+                            </article>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="col-12">
+                        <div class="empty-state">
+                            <i class="bi bi-flag"></i>
+                            <h3 class="h5">No active leagues yet</h3>
+                            <p class="mb-0 text-muted">Start building your first competition from the management portal.</p>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="section section-alt">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">Teams On The Rise</h2>
+                    <p class="section-subtitle">Highlighting standout squads from recent action.</p>
+                </div>
+                <div class="team-grid">
+                    {% set featured_teams = featured_teams if featured_teams is defined else [
+                        {'name': 'Thunder Bolts', 'tagline': 'Lockdown defense and explosive offense'},
+                        {'name': 'Fire Hawks', 'tagline': 'Dominant on fast breaks'},
+                        {'name': 'Ice Wolves', 'tagline': 'Disciplined tactics, relentless pace'},
+                        {'name': 'Lightning Sharks', 'tagline': 'High-voltage scoring runs'},
+                        {'name': 'Storm Eagles', 'tagline': 'Elite aerial prowess'},
+                        {'name': 'Blazing Tigers', 'tagline': 'Clutch performers under pressure'}
+                    ] %}
+                    {% for team in featured_teams %}
+                        <article class="team-card">
+                            <div class="team-avatar">
+                                <span>{{ team.name[:2] }}</span>
+                            </div>
+                            <div>
+                                <h3 class="h6 mb-1">{{ team.name }}</h3>
+                                <p class="mb-0 text-muted small">{{ team.tagline }}</p>
+                            </div>
+                            <i class="bi bi-chevron-right text-muted"></i>
+                        </article>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+
+        {% if recent_games %}
+        <section class="section container">
+            <div class="section-header">
+                <h2 class="section-title">Latest Results</h2>
+                <p class="section-subtitle">Track momentum and see how the standings are shifting.</p>
+            </div>
+            <div class="table-responsive shadow-sm rounded-4 overflow-hidden">
+                <table class="table table-modern mb-0 align-middle">
+                    <thead>
+                        <tr>
+                            <th scope="col">Game</th>
+                            <th scope="col" class="text-center">Score</th>
+                            <th scope="col">Season</th>
+                            <th scope="col" class="text-end">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for game in recent_games %}
+                        {% set status_value = game.status.value if game.status and game.status.value else game.status %}
+                        {% set status_key = status_value|lower if status_value else 'scheduled' %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="fixture-badge"><i class="bi bi-calendar-week"></i></div>
+                                    <div>
+                                        <p class="mb-0 fw-medium">{{ game.home_team.name if game.home_team else 'TBD' }} vs {{ game.away_team.name if game.away_team else 'TBD' }}</p>
+                                        <small class="text-muted">{{ game.start_time.strftime('%b %d, %Y - %I:%M %p') if game.start_time else 'To be scheduled' }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                {% if game.home_score is not none and game.away_score is not none %}
+                                    <span class="score-chip">{{ game.home_score }} - {{ game.away_score }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge text-bg-light">{{ game.season.name if game.season else 'TBD' }}</span>
+                            </td>
+                            <td class="text-end">
+                                <span class="status-dot status-{{ status_key }}"></span>
+                                <span class="text-capitalize">{{ status_key.replace('_',' ') }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        {% endif %}
+
+        <section class="section container">
+            <div class="cta-panel">
+                <div>
+                    <h2 class="h4 mb-2">Ready to elevate your program?</h2>
+                    <p class="mb-0 text-muted">Customize seasons, manage officials, and deliver polished communications with ease.</p>
+                </div>
+                <a class="btn btn-primary btn-lg px-4" href="/portal">Launch Management Portal</a>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer-modern">
+        <div class="container d-flex flex-column flex-lg-row justify-content-between align-items-center gap-3">
+            <div>
+                <span class="text-muted">&copy; {{ g.org.name if g.org else 'Sports League Management System' }}</span>
+            </div>
+            <div class="d-flex gap-3">
+                <a class="text-muted" href="/about">About</a>
+                <a class="text-muted" href="/portal">Portal</a>
+                <a class="text-muted" href="/contact">Contact</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

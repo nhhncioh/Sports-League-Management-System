@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+
+{% block title %}Step 1: Season Info - Create Season - Admin - {{ super() }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .wizard-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .wizard-progress {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+
+    .progress-step {
+        flex: 1;
+        text-align: center;
+        position: relative;
+        padding: 0 10px;
+    }
+
+    .progress-step:not(:last-child):after {
+        content: '';
+        position: absolute;
+        top: 20px;
+        right: -50%;
+        width: 100%;
+        height: 2px;
+        background: #dee2e6;
+        z-index: 1;
+    }
+
+    .progress-step.completed:not(:last-child):after,
+    .progress-step.active:not(:last-child):after {
+        background: #28a745;
+    }
+
+    .step-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #dee2e6;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 8px;
+        position: relative;
+        z-index: 2;
+        font-weight: 600;
+    }
+
+    .progress-step.completed .step-circle {
+        background: #28a745;
+        color: white;
+    }
+
+    .progress-step.active .step-circle {
+        background: #007bff;
+        color: white;
+    }
+
+    .step-label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #6c757d;
+    }
+
+    .progress-step.completed .step-label,
+    .progress-step.active .step-label {
+        color: #495057;
+        font-weight: 600;
+    }
+
+    .wizard-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+
+    .wizard-header {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+    }
+
+    .wizard-body {
+        padding: 40px;
+    }
+
+    .wizard-footer {
+        background: #f8f9fa;
+        padding: 20px 40px;
+        border-top: 1px solid #dee2e6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .btn-wizard {
+        min-width: 120px;
+        padding: 12px 24px;
+        font-weight: 600;
+        border-radius: 8px;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 8px;
+    }
+
+    .form-control {
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        padding: 12px 16px;
+        font-size: 1rem;
+    }
+
+    .form-control:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+    .input-group-text {
+        background: #f8f9fa;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="wizard-container">
+        <!-- Progress Bar -->
+        <div class="wizard-progress">
+            <div class="d-flex">
+                <div class="progress-step active">
+                    <div class="step-circle">1</div>
+                    <div class="step-label">Season Info</div>
+                </div>
+                <div class="progress-step">
+                    <div class="step-circle">2</div>
+                    <div class="step-label">Teams</div>
+                </div>
+                <div class="progress-step">
+                    <div class="step-circle">3</div>
+                    <div class="step-label">Venues</div>
+                </div>
+                <div class="progress-step">
+                    <div class="step-circle">4</div>
+                    <div class="step-label">Registration</div>
+                </div>
+                <div class="progress-step">
+                    <div class="step-circle">5</div>
+                    <div class="step-label">Schedule</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 1 Form -->
+        <div class="wizard-card">
+            <div class="wizard-header">
+                <h1><i class="bi bi-info-circle"></i> Step 1: Season Information</h1>
+                <p class="mb-0">Let's start with the basic details about your season</p>
+            </div>
+
+            <form method="POST" action="{{ url_for('admin.season_wizard_step', step=1) }}">
+                {{ csrf_token() }}
+
+                <div class="wizard-body">
+                    <div class="row">
+                        <div class="col-lg-8 mx-auto">
+                            <!-- Season Name -->
+                            <div class="form-group">
+                                <label for="name" class="form-label">
+                                    Season Name *
+                                </label>
+                                <input type="text" class="form-control" id="name" name="name"
+                                       placeholder="e.g., Fall 2024 Championship"
+                                       value="{{ wizard_data.data.step1.name if wizard_data and wizard_data.data and wizard_data.data.step1 else '' }}"
+                                       required>
+                                <div class="form-text">Give your season a descriptive name</div>
+                            </div>
+
+                            <!-- Date Range -->
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="start_date" class="form-label">
+                                            Season Start Date *
+                                        </label>
+                                        <input type="date" class="form-control" id="start_date" name="start_date"
+                                               value="{{ wizard_data.data.step1.start_date if wizard_data and wizard_data.data and wizard_data.data.step1 else '' }}"
+                                               required>
+                                        <div class="form-text">When does the season begin?</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="end_date" class="form-label">
+                                            Season End Date *
+                                        </label>
+                                        <input type="date" class="form-control" id="end_date" name="end_date"
+                                               value="{{ wizard_data.data.step1.end_date if wizard_data and wizard_data.data and wizard_data.data.step1 else '' }}"
+                                               required>
+                                        <div class="form-text">When does the season end?</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Game Length -->
+                            <div class="form-group">
+                                <label for="default_game_length" class="form-label">
+                                    Default Game Length (minutes)
+                                </label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="default_game_length"
+                                           name="default_game_length" min="30" max="300" step="15"
+                                           value="{{ wizard_data.data.step1.default_game_length if wizard_data and wizard_data.data and wizard_data.data.step1 else '90' }}">
+                                    <span class="input-group-text">minutes</span>
+                                </div>
+                                <div class="form-text">How long is each game? (e.g., 90 for soccer, 60 for basketball)</div>
+                            </div>
+
+                            <!-- Description -->
+                            <div class="form-group">
+                                <label for="description" class="form-label">
+                                    Season Description
+                                </label>
+                                <textarea class="form-control" id="description" name="description" rows="3"
+                                          placeholder="Optional description of the season...">{{ wizard_data.data.step1.description if wizard_data and wizard_data.data and wizard_data.data.step1 else '' }}</textarea>
+                                <div class="form-text">Add any additional details about this season</div>
+                            </div>
+
+                            <!-- League Selection (if applicable) -->
+                            <div class="form-group">
+                                <label for="league_id" class="form-label">
+                                    League
+                                </label>
+                                <select class="form-select" id="league_id" name="league_id">
+                                    <option value="">Select a league (optional)</option>
+                                    <!-- League options would be populated here -->
+                                </select>
+                                <div class="form-text">Associate this season with a specific league</div>
+                            </div>
+
+                            <!-- Tips -->
+                            <div class="alert alert-info">
+                                <h6><i class="bi bi-lightbulb"></i> Pro Tips:</h6>
+                                <ul class="mb-0">
+                                    <li>Choose dates that give you enough time for all games</li>
+                                    <li>Consider holidays and venue availability</li>
+                                    <li>Standard game lengths: Soccer (90 min), Basketball (48 min), Hockey (60 min)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="wizard-footer">
+                    <a href="{{ url_for('admin.create_season_wizard') }}" class="btn btn-outline-secondary btn-wizard">
+                        <i class="bi bi-arrow-left"></i> Back
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-wizard">
+                        Next: Teams <i class="bi bi-arrow-right"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+// Auto-set end date based on start date
+document.getElementById('start_date').addEventListener('change', function() {
+    const startDate = new Date(this.value);
+    const endDateInput = document.getElementById('end_date');
+
+    if (!endDateInput.value && startDate) {
+        // Set end date to 3 months after start date
+        const endDate = new Date(startDate);
+        endDate.setMonth(endDate.getMonth() + 3);
+        endDateInput.value = endDate.toISOString().split('T')[0];
+    }
+});
+
+// Validate date range
+document.getElementById('end_date').addEventListener('change', function() {
+    const startDate = new Date(document.getElementById('start_date').value);
+    const endDate = new Date(this.value);
+
+    if (startDate && endDate && endDate <= startDate) {
+        alert('End date must be after start date');
+        this.value = '';
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

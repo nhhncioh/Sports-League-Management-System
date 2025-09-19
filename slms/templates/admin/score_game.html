@@ -1,0 +1,431 @@
+{% extends "base.html" %}
+
+{% block title %}Score Game - {{ game.home_team.name }} vs {{ game.away_team.name }} - Admin - {{ super() }}{% endblock %}
+
+{% block extra_head %}
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<style>
+    /* Mobile-first responsive design */
+    .score-container {
+        max-width: 500px;
+        margin: 0 auto;
+        padding: 15px;
+    }
+
+    .team-score {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .team-name {
+        font-size: 1.2rem;
+        font-weight: bold;
+        margin-bottom: 10px;
+        color: #495057;
+    }
+
+    .score-display {
+        font-size: 3rem;
+        font-weight: bold;
+        text-align: center;
+        color: #007bff;
+        margin: 15px 0;
+    }
+
+    .score-buttons {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .score-btn {
+        min-width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        font-size: 1.2rem;
+        font-weight: bold;
+        border: none;
+        color: white;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .score-btn:active {
+        transform: scale(0.95);
+    }
+
+    .score-btn.plus-1 { background: #28a745; }
+    .score-btn.plus-1:hover { background: #218838; }
+
+    .score-btn.plus-2 { background: #fd7e14; }
+    .score-btn.plus-2:hover { background: #e07000; }
+
+    .score-btn.plus-3 { background: #dc3545; }
+    .score-btn.plus-3:hover { background: #c82333; }
+
+    .status-section {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin: 20px 0;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        margin-bottom: 15px;
+    }
+
+    .status-scheduled { background: #6c757d; color: white; }
+    .status-in_progress { background: #ffc107; color: #212529; }
+    .status-completed { background: #28a745; color: white; }
+    .status-cancelled { background: #dc3545; color: white; }
+
+    .status-buttons {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .status-btn {
+        flex: 1;
+        min-height: 50px;
+        border-radius: 10px;
+        font-weight: bold;
+        border: 2px solid transparent;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .status-btn:active {
+        transform: scale(0.98);
+    }
+
+    .notes-section textarea {
+        width: 100%;
+        min-height: 80px;
+        border-radius: 10px;
+        border: 2px solid #dee2e6;
+        padding: 15px;
+        font-size: 1rem;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 15px;
+        margin-top: 30px;
+    }
+
+    .action-buttons .btn {
+        flex: 1;
+        min-height: 50px;
+        font-weight: bold;
+        border-radius: 10px;
+    }
+
+    /* Loading state */
+    .loading {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+
+    /* Success/Error messages */
+    .message {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        padding: 10px 20px;
+        border-radius: 5px;
+        font-weight: bold;
+    }
+
+    .message.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .message.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="score-container">
+    <!-- Game Header -->
+    <div class="text-center mb-4">
+        <h2>{{ game.home_team.name }} vs {{ game.away_team.name }}</h2>
+        <small class="text-muted">
+            {{ game.start_time.strftime('%a, %b %d - %I:%M %p') if game.start_time }}
+            {% if game.venue %} • {{ game.venue.name }}{% endif %}
+        </small>
+    </div>
+
+    <!-- Home Team Score -->
+    <div class="team-score">
+        <div class="team-name">🏠 {{ game.home_team.name }}</div>
+        <div class="score-display" id="home-score">{{ game.home_score }}</div>
+        <div class="score-buttons">
+            <button class="score-btn plus-1" onclick="addScore('home', 1)">+1</button>
+            <button class="score-btn plus-2" onclick="addScore('home', 2)">+2</button>
+            <button class="score-btn plus-3" onclick="addScore('home', 3)">+3</button>
+        </div>
+    </div>
+
+    <!-- Away Team Score -->
+    <div class="team-score">
+        <div class="team-name">✈️ {{ game.away_team.name }}</div>
+        <div class="score-display" id="away-score">{{ game.away_score }}</div>
+        <div class="score-buttons">
+            <button class="score-btn plus-1" onclick="addScore('away', 1)">+1</button>
+            <button class="score-btn plus-2" onclick="addScore('away', 2)">+2</button>
+            <button class="score-btn plus-3" onclick="addScore('away', 3)">+3</button>
+        </div>
+    </div>
+
+    <!-- Game Status -->
+    <div class="status-section">
+        <h5>Game Status</h5>
+        <div class="status-badge status-{{ game.status.value }}" id="current-status">
+            {{ game.status.value.replace('_', ' ').title() }}
+        </div>
+
+        <div class="status-buttons">
+            <button class="btn btn-warning status-btn" onclick="setStatus('in_progress')">
+                Start Game
+            </button>
+            <button class="btn btn-success status-btn" onclick="setStatus('final')">
+                Final
+            </button>
+            <button class="btn btn-danger status-btn" onclick="setStatus('canceled')">
+                Cancel
+            </button>
+        </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="status-section">
+        <h5>Game Notes</h5>
+        <div class="notes-section">
+            <textarea id="game-notes" placeholder="Add any notes about the game...">{{ game.notes or '' }}</textarea>
+            <button class="btn btn-outline-primary mt-2" onclick="updateNotes()">
+                Save Notes
+            </button>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        <button class="btn btn-outline-secondary" onclick="resetScores()">
+            Reset Scores
+        </button>
+        <button class="btn btn-primary" onclick="quickFinalize()">
+            Quick Final
+        </button>
+    </div>
+
+    <!-- Back Link -->
+    <div class="text-center mt-4">
+        <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-outline-primary">
+            ← Back to Admin
+        </a>
+    </div>
+</div>
+
+<script>
+let isUpdating = false;
+
+// Show message to user
+function showMessage(text, type = 'success') {
+    const message = document.createElement('div');
+    message.className = `message ${type}`;
+    message.textContent = text;
+    document.body.appendChild(message);
+
+    setTimeout(() => {
+        message.remove();
+    }, 3000);
+}
+
+// Add points to team score
+async function addScore(team, points) {
+    if (isUpdating) return;
+
+    isUpdating = true;
+    const container = document.querySelector('.score-container');
+    container.classList.add('loading');
+
+    try {
+        const formData = new FormData();
+        formData.append('action', `${team}_score`);
+        formData.append('points', points);
+        addCSRFToken(formData);
+
+        const response = await fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            document.getElementById('home-score').textContent = data.home_score;
+            document.getElementById('away-score').textContent = data.away_score;
+            showMessage(`+${points} for ${team.toUpperCase()}!`);
+        } else {
+            showMessage(data.error || 'Error updating score', 'error');
+        }
+    } catch (error) {
+        showMessage('Error updating score', 'error');
+    } finally {
+        isUpdating = false;
+        container.classList.remove('loading');
+    }
+}
+
+// Set game status
+async function setStatus(status) {
+    if (isUpdating) return;
+
+    isUpdating = true;
+    const container = document.querySelector('.score-container');
+    container.classList.add('loading');
+
+    try {
+        const formData = new FormData();
+        formData.append('action', 'set_status');
+        formData.append('status', status);
+        addCSRFToken(formData);
+
+        const response = await fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            const statusElement = document.getElementById('current-status');
+            statusElement.textContent = status.replace('_', ' ').toUpperCase();
+            statusElement.className = `status-badge status-${status}`;
+            showMessage(`Game ${status.replace('_', ' ')}!`);
+        } else {
+            showMessage(data.error || 'Error updating status', 'error');
+        }
+    } catch (error) {
+        showMessage('Error updating status', 'error');
+    } finally {
+        isUpdating = false;
+        container.classList.remove('loading');
+    }
+}
+
+// Update notes
+async function updateNotes() {
+    if (isUpdating) return;
+
+    isUpdating = true;
+    const notes = document.getElementById('game-notes').value;
+
+    try {
+        const formData = new FormData();
+        formData.append('action', 'update_notes');
+        formData.append('notes', notes);
+        addCSRFToken(formData);
+
+        const response = await fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showMessage('Notes saved!');
+        } else {
+            showMessage(data.error || 'Error saving notes', 'error');
+        }
+    } catch (error) {
+        showMessage('Error saving notes', 'error');
+    } finally {
+        isUpdating = false;
+    }
+}
+
+// Reset scores to 0-0
+async function resetScores() {
+    if (!confirm('Reset both scores to 0-0?')) return;
+    if (isUpdating) return;
+
+    isUpdating = true;
+    const container = document.querySelector('.score-container');
+    container.classList.add('loading');
+
+    try {
+        const formData = new FormData();
+        formData.append('action', 'reset_scores');
+        addCSRFToken(formData);
+
+        const response = await fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            document.getElementById('home-score').textContent = '0';
+            document.getElementById('away-score').textContent = '0';
+            showMessage('Scores reset to 0-0');
+        } else {
+            showMessage(data.error || 'Error resetting scores', 'error');
+        }
+    } catch (error) {
+        showMessage('Error resetting scores', 'error');
+    } finally {
+        isUpdating = false;
+        container.classList.remove('loading');
+    }
+}
+
+// Quick finalize - set status to final in one tap
+async function quickFinalize() {
+    if (!confirm('Finalize this game? This will mark it as final.')) return;
+
+    await setStatus('final');
+}
+
+// Prevent accidental zoom on double-tap
+document.addEventListener('touchstart', function(e) {
+    if (e.touches.length > 1) {
+        e.preventDefault();
+    }
+});
+
+let lastTouchEnd = 0;
+document.addEventListener('touchend', function(e) {
+    const now = (new Date()).getTime();
+    if (now - lastTouchEnd <= 300) {
+        e.preventDefault();
+    }
+    lastTouchEnd = now;
+}, false);
+</script>
+{% endblock %}
