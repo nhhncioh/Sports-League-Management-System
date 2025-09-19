@@ -16,7 +16,7 @@
             --brand-primary: {{ g.org.primary_color if g.org and g.org.primary_color else (primary_color if primary_color else '#2563eb') }};
         }
     </style>
-        <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
 {% block extra_css %}{% endblock %}
 </head>
 {% set nav_layout = nav_layout|default('top') %}
@@ -33,7 +33,7 @@
               or (audience == 'admin' and user_is_admin) %}
             <li class="{{ item_class }}">
                 <a class="{{ link_class }}{% if item.broken %} disabled{% endif %}" href="{{ item.href if not item.broken else '#' }}" {% if item.open_in_new %}target="_blank" rel="noopener"{% endif %}>
-                    {% if item.icon %}<i class="{{ item.icon }} {{ icon_gap }}"></i>{% endif %}
+                    {% if item.icon %}{% set icon_classes = item.icon %}{% if icon_classes and icon_classes.startswith('bi-') and " " not in icon_classes %}{% set icon_classes = "bi " ~ icon_classes %}{% endif %}<i class="{{ icon_classes }} {{ icon_gap }}"></i>{% endif %}
                     {{ item.label }}
                     {% if item.broken %}<span class="visually-hidden">(link unavailable)</span>{% endif %}
                 </a>
