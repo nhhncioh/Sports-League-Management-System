@@ -25,69 +25,163 @@
     <div class="row g-4">
         <div class="col-xl-4 col-lg-5">
             <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-gradient-primary text-white border-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h2 class="h5 mb-0">
+                            <i class="ph ph-credit-card me-2"></i>League Fee Structure
+                        </h2>
+                        {% if plan %}
+                        <span class="badge bg-light text-primary">
+                            <i class="ph ph-check-circle me-1"></i>Configured
+                        </span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">
+                            <i class="ph ph-warning me-1"></i>Setup Required
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
                 <div class="card-body">
-                    <h2 class="h5 mb-3">Fee Plan</h2>
                     <form method="post" class="fee-plan-form">
                         <input type="hidden" name="action" value="update_plan">
                         <input type="hidden" name="league_id" value="{{ selected_league_id }}">
 
-                        <div class="mb-3">
-                            <label class="form-label" for="total_fee">Total fee ({{ plan.currency if plan else 'USD' }})</label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                <input type="text" class="form-control" id="total_fee" name="total_fee" value="{{ plan.total_fee_display if plan else '' }}" placeholder="0.00">
+                        <!-- Fee Structure Section -->
+                        <div class="mb-4">
+                            <h6 class="text-muted mb-3">
+                                <i class="ph ph-calculator me-1"></i>Financial Structure
+                            </h6>
+
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold" for="total_fee">
+                                        Total Registration Fee <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group">
+                                        <select class="form-select" id="currency" name="currency" style="max-width: 80px;">
+                                            <option value="USD" {% if not plan or plan.currency == 'USD' %}selected{% endif %}>$</option>
+                                            <option value="EUR" {% if plan and plan.currency == 'EUR' %}selected{% endif %}>€</option>
+                                            <option value="GBP" {% if plan and plan.currency == 'GBP' %}selected{% endif %}>£</option>
+                                            <option value="CAD" {% if plan and plan.currency == 'CAD' %}selected{% endif %}>C$</option>
+                                        </select>
+                                        <input type="number" class="form-control" id="total_fee" name="total_fee"
+                                               value="{{ (plan.total_fee_cents / 100) if plan and plan.total_fee_cents else '' }}"
+                                               placeholder="0.00" step="0.01" min="0" required>
+                                    </div>
+                                    <small class="text-muted">The complete fee each team must pay for league participation</small>
+                                </div>
+
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold" for="deposit">
+                                        Initial Deposit
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            {{ {'USD': '$', 'EUR': '€', 'GBP': '£', 'CAD': 'C$'}.get(plan.currency if plan else 'USD', '$') }}
+                                        </span>
+                                        <input type="number" class="form-control" id="deposit" name="deposit"
+                                               value="{{ (plan.deposit_cents / 100) if plan and plan.deposit_cents else '' }}"
+                                               placeholder="0.00" step="0.01" min="0">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                    <small class="text-muted">Amount due upon registration (leave empty if no deposit required)</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Payment Options Section -->
+                        <div class="mb-4">
+                            <h6 class="text-muted mb-3">
+                                <i class="ph ph-calendar-check me-1"></i>Payment Options
+                            </h6>
+
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" role="switch" id="installments_enabled"
+                                       name="installments_enabled" {% if plan and plan.installments_enabled %}checked{% endif %}>
+                                <label class="form-check-label fw-semibold" for="installments_enabled">
+                                    Enable Installment Payments
+                                </label>
+                                <div class="form-text">Allow teams to pay in multiple installments instead of full payment upfront</div>
+                            </div>
+
+                            <div class="row g-3" id="installment-options" style="{% if not plan or not plan.installments_enabled %}display: none;{% endif %}">
+                                <div class="col-sm-6">
+                                    <label class="form-label" for="installment_count">Target Installments</label>
+                                    <input type="number" class="form-control" id="installment_count" name="installment_count"
+                                           min="2" max="12" value="{{ plan.installment_count if plan else 3 }}">
+                                    <small class="text-muted">Suggested number of payments</small>
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="form-label" for="installment_target">Payment Strategy</label>
+                                    <select class="form-select" id="installment_target" name="installment_target">
+                                        <option value="equal">Equal installments</option>
+                                        <option value="progressive">Progressive amounts</option>
+                                        <option value="front_loaded">Front-loaded</option>
+                                    </select>
+                                    <small class="text-muted">How to structure payments</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Administrative Section -->
+                        <div class="mb-4">
+                            <h6 class="text-muted mb-3">
+                                <i class="ph ph-note me-1"></i>Administrative Details
+                            </h6>
+
+                            <div class="alert alert-info">
+                                <i class="ph ph-info me-2"></i>
+                                <strong>Note:</strong> Additional fields like late fees, grace periods, and payment deadlines will be available in future updates.
+                                For now, use the notes section to document these policies.
                             </div>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label" for="deposit">Deposit</label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                <input type="text" class="form-control" id="deposit" name="deposit" value="{{ plan.deposit_display if plan and plan.deposit_display is not none else '' }}" placeholder="Optional">
-                            </div>
+                            <label class="form-label" for="notes">Internal Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="2"
+                                      placeholder="Private administrative notes and reminders">{{ plan.notes if plan else '' }}</textarea>
                         </div>
 
-                        <div class="row g-3">
-                            <div class="col-sm-6">
-                                <label class="form-label" for="currency">Currency</label>
-                                <input type="text" class="form-control" id="currency" name="currency" value="{{ plan.currency if plan else 'USD' }}" maxlength="3" placeholder="USD">
-                            </div>
-                            <div class="col-sm-6">
-                                <label class="form-label" for="installment_count">Installments (target)</label>
-                                <input type="number" class="form-control" id="installment_count" name="installment_count" min="0" value="{{ plan.installment_count if plan else 0 }}">
-                            </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="ph ph-floppy-disk me-2"></i>Save Fee Structure
+                            </button>
+                            {% if plan %}
+                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="if(confirm('Reset fee structure? This will remove all installment data.')) { /* Add reset functionality */ }">
+                                <i class="ph ph-trash me-1"></i>Reset Structure
+                            </button>
+                            {% endif %}
                         </div>
-
-                        <div class="form-check form-switch my-3">
-                            <input class="form-check-input" type="checkbox" role="switch" id="installments_enabled" name="installments_enabled" {% if plan and plan.installments_enabled %}checked{% endif %}>
-                            <label class="form-check-label" for="installments_enabled">Enable installment tracking</label>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label" for="notes">Admin notes</label>
-                            <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Internal notes about payment expectations">{{ plan.notes if plan else '' }}</textarea>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="bi bi-save"></i> Save Plan
-                        </button>
                     </form>
+                </div>
 
-                    <div class="mt-4 p-3 rounded bg-light-subtle">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="text-muted">Total installments</span>
-                            <strong>{{ totals.installment_total_display or '0.00' }}</strong>
+                <!-- Fee Summary Panel -->
+                {% if plan %}
+                <div class="card-footer bg-light border-0">
+                    <div class="row g-2 text-center">
+                        <div class="col-4">
+                            <div class="fw-bold text-success">{{ plan.total_fee_display or '0.00' }}</div>
+                            <small class="text-muted">Total Fee</small>
                         </div>
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="text-muted">Total fee</span>
-                            <strong>{{ totals.total_fee_display or '0.00' }}</strong>
+                        <div class="col-4">
+                            <div class="fw-bold text-primary">{{ totals.installment_total_display or '0.00' }}</div>
+                            <small class="text-muted">In Installments</small>
                         </div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="text-muted">Deposit</span>
-                            <strong>{{ totals.deposit_display or '-' }}</strong>
+                        <div class="col-4">
+                            <div class="fw-bold text-warning">{{ totals.deposit_display or '0.00' }}</div>
+                            <small class="text-muted">Deposit</small>
                         </div>
                     </div>
+                    {% if plan.installments_enabled %}
+                    <div class="mt-2 text-center">
+                        <small class="text-muted">
+                            <i class="ph ph-info me-1"></i>
+                            {{ installments|length }}/{{ plan.installment_count }} installments configured
+                        </small>
+                    </div>
+                    {% endif %}
                 </div>
+                {% endif %}
             </div>
         </div>
 
@@ -97,7 +191,7 @@
                     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                         <h2 class="h5 mb-0">Installment Plan</h2>
                         <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#add-installment-form">
-                            <i class="bi bi-plus-circle"></i> Add installment
+                            <i class="ph ph-plus-circle"></i> Add installment
                         </button>
                     </div>
 
@@ -134,7 +228,7 @@
                             </div>
                             <div class="col-md-12">
                                 <button type="submit" class="btn btn-primary">
-                                    <i class="bi bi-save"></i> Add installment
+                                    <i class="ph ph-floppy-disk"></i> Add installment
                                 </button>
                             </div>
                         </form>
@@ -168,7 +262,7 @@
                                                 <input type="hidden" name="league_id" value="{{ selected_league_id }}">
                                                 <input type="hidden" name="installment_id" value="{{ installment.installment_id }}">
                                                 <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Remove this installment?');">
-                                                    <i class="bi bi-trash"></i>
+                                                    <i class="ph ph-trash"></i>
                                                 </button>
                                             </form>
                                         </td>
@@ -213,7 +307,7 @@
                                                 <input type="hidden" name="league_id" value="{{ selected_league_id }}">
                                                 <input type="hidden" name="team_id" value="{{ team.team_id }}">
                                                 <input type="hidden" name="installment_id" value="{{ installment.installment_id }}">
-                                                <select name="status" class="form-select form-select-sm mb-2">
+                                                <select name="status" class="form-select form-select-sm mb-2 status-select" data-status="{{ status_record.status if status_record else 'pending' }}">
                                                     {% for option in ['pending','scheduled','paid','partial','waived','delinquent'] %}
                                                         <option value="{{ option }}" {% if status_record and status_record.status == option %}selected{% endif %}>{{ option|capitalize }}</option>
                                                     {% endfor %}
@@ -242,8 +336,342 @@
                     </div>
                 </div>
             {% endif %}
+
+            <!-- Team Payment Summary Section -->
+            {% if installments and teams and plan %}
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-transparent border-bottom">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="h5 mb-0">
+                            <i class="ph ph-chart-bar me-2"></i>Team Payment Summary
+                        </h3>
+                        <small class="text-muted">Total fee per team: ${{ plan.total_fee_display }}</small>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% for team in teams %}
+                        {% set team_total_paid = 0 %}
+                        {% set team_total_owed = 0 %}
+                        {% set paid_count = 0 %}
+                        {% set total_installments = installments|length %}
+
+                        <!-- Calculate team totals -->
+                        {% for installment in installments %}
+                            {% set team_total_owed = team_total_owed + (installment.amount_cents or 0) %}
+                            {% set status_record = status_by_team.get(team.team_id, {}).get(installment.installment_id) %}
+                            {% if status_record %}
+                                {% if status_record.status == 'paid' %}
+                                    {% set team_total_paid = team_total_paid + (status_record.amount_paid_cents or installment.amount_cents or 0) %}
+                                    {% set paid_count = paid_count + 1 %}
+                                {% elif status_record.status == 'partial' %}
+                                    {% set team_total_paid = team_total_paid + (status_record.amount_paid_cents or 0) %}
+                                {% elif status_record.status == 'waived' %}
+                                    {% set paid_count = paid_count + 1 %}
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+
+                        {% set team_balance = team_total_owed - team_total_paid %}
+                        {% set payment_percentage = ((team_total_paid / team_total_owed) * 100) if team_total_owed > 0 else 0 %}
+                        {% set status_class = 'success' if team_balance <= 0 else ('warning' if team_total_paid > 0 else 'danger') %}
+
+                        <div class="col-xl-4 col-lg-6">
+                            <div class="card border-0 bg-light h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div>
+                                            <h6 class="card-title mb-1">{{ team.name }}</h6>
+                                            <small class="text-muted">{{ paid_count }}/{{ total_installments }} installments</small>
+                                        </div>
+                                        <span class="badge bg-{{ status_class }}">
+                                            {% if team_balance <= 0 %}Paid
+                                            {% elif team_total_paid > 0 %}Partial
+                                            {% else %}Pending
+                                            {% endif %}
+                                        </span>
+                                    </div>
+
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-6">
+                                            <div class="text-center">
+                                                <div class="h6 text-success mb-0">${{ "%.2f"|format(team_total_paid / 100) }}</div>
+                                                <small class="text-muted">Paid</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="text-center">
+                                                <div class="h6 text-{{ 'muted' if team_balance <= 0 else 'danger' }} mb-0">
+                                                    ${{ "%.2f"|format(team_balance / 100) }}
+                                                </div>
+                                                <small class="text-muted">Balance</small>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="progress mb-2" style="height: 8px;">
+                                        <div class="progress-bar bg-{{ status_class }}" role="progressbar"
+                                             style="width: {{ payment_percentage }}%"
+                                             aria-valuenow="{{ payment_percentage }}"
+                                             aria-valuemin="0"
+                                             aria-valuemax="100">
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <small class="text-muted">{{ "%.1f"|format(payment_percentage) }}% complete</small>
+                                        <small class="text-muted">${{ "%.2f"|format(team_total_owed / 100) }} total</small>
+                                    </div>
+
+                                    <!-- Payment status badges for each installment -->
+                                    <div class="mt-3">
+                                        <div class="d-flex flex-wrap gap-1">
+                                            {% for installment in installments %}
+                                                {% set status_record = status_by_team.get(team.team_id, {}).get(installment.installment_id) %}
+                                                {% set status = status_record.status if status_record else 'pending' %}
+                                                {% set badge_class = {
+                                                    'paid': 'success',
+                                                    'partial': 'warning',
+                                                    'waived': 'info',
+                                                    'scheduled': 'primary',
+                                                    'delinquent': 'danger',
+                                                    'pending': 'secondary'
+                                                }.get(status, 'secondary') %}
+                                                <span class="badge bg-{{ badge_class }} badge-sm"
+                                                      title="{{ installment.label }}: {{ status|capitalize }}">
+                                                    {{ loop.index }}
+                                                </span>
+                                            {% endfor %}
+                                        </div>
+                                        <small class="text-muted mt-1 d-block">Installment status</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Overall league payment statistics -->
+                    <hr class="my-4">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                {% set total_teams_paid = teams|selectattr('team_id', 'in', (status_by_team.keys() | list)) | list | length %}
+                                <div class="h4 text-success">{{ total_teams_paid }}</div>
+                                <small class="text-muted">Teams with payments</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h4 text-warning">{{ teams|length - total_teams_paid }}</div>
+                                <small class="text-muted">Pending teams</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                {% set total_expected = (teams|length) * (plan.total_fee_cents or 0) %}
+                                <div class="h4 text-primary">${{ "%.2f"|format(total_expected / 100) }}</div>
+                                <small class="text-muted">Total expected</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h4 text-info">{{ installments|length }}</div>
+                                <small class="text-muted">Installments</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
     {% endif %}
 </div>
+
+<style>
+/* Enhanced fee plan styling */
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #0d6efd 0%, #0056b3 100%) !important;
+}
+
+.fade-in {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card-header.bg-gradient-primary .badge {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Form section dividers */
+.mb-4 h6 {
+    position: relative;
+    padding-bottom: 0.5rem;
+}
+
+.mb-4 h6:after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(to right, #dee2e6, transparent);
+}
+
+/* Enhanced input styling */
+.form-control:focus,
+.form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.1);
+}
+
+.input-group .form-select {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+/* Enhanced status indicators */
+.status-select[data-status="paid"] {
+    border-color: #198754;
+    background-color: #f8f9fa;
+}
+.status-select[data-status="partial"] {
+    border-color: #fd7e14;
+    background-color: #fff3e0;
+}
+.status-select[data-status="delinquent"] {
+    border-color: #dc3545;
+    background-color: #ffebee;
+}
+.status-select[data-status="scheduled"] {
+    border-color: #0d6efd;
+    background-color: #e3f2fd;
+}
+.status-select[data-status="waived"] {
+    border-color: #20c997;
+    background-color: #e0f7fa;
+}
+
+/* Payment summary cards hover effect */
+.card.bg-light:hover {
+    transform: translateY(-2px);
+    transition: transform 0.2s ease-in-out;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+}
+
+/* Progress bar animation */
+.progress-bar {
+    transition: width 0.3s ease-in-out;
+}
+
+/* Badge improvements */
+.badge-sm {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.4rem;
+}
+
+/* Installment matrix improvements */
+.installment-matrix td {
+    vertical-align: middle;
+    padding: 0.75rem 0.5rem;
+}
+
+.installment-matrix .form-select-sm,
+.installment-matrix .form-control-sm {
+    font-size: 0.8rem;
+}
+
+/* Status-based row highlighting */
+.table tbody tr:has(.status-select[data-status="delinquent"]) {
+    background-color: rgba(220, 53, 69, 0.05);
+}
+
+.table tbody tr:has(.status-select[data-status="paid"]) {
+    background-color: rgba(25, 135, 84, 0.05);
+}
+</style>
+
+<script>
+// Update select styling based on selection
+document.addEventListener('DOMContentLoaded', function() {
+    const statusSelects = document.querySelectorAll('.status-select');
+
+    statusSelects.forEach(select => {
+        function updateSelectClass() {
+            const status = select.value;
+            select.setAttribute('data-status', status);
+        }
+
+        // Set initial class
+        updateSelectClass();
+
+        // Update on change
+        select.addEventListener('change', updateSelectClass);
+    });
+
+    // Enhanced fee plan functionality
+    const installmentsToggle = document.getElementById('installments_enabled');
+    const installmentOptions = document.getElementById('installment-options');
+
+    if (installmentsToggle && installmentOptions) {
+        installmentsToggle.addEventListener('change', function() {
+            if (this.checked) {
+                installmentOptions.style.display = 'block';
+                installmentOptions.classList.add('fade-in');
+            } else {
+                installmentOptions.style.display = 'none';
+                installmentOptions.classList.remove('fade-in');
+            }
+        });
+    }
+
+    // Currency symbol updates
+    const currencySelect = document.getElementById('currency');
+    const currencySymbols = document.querySelectorAll('.input-group-text');
+
+    if (currencySelect) {
+        currencySelect.addEventListener('change', function() {
+            const symbols = {
+                'USD': '$',
+                'EUR': '€',
+                'GBP': '£',
+                'CAD': 'C$'
+            };
+
+            const newSymbol = symbols[this.value] || '$';
+            currencySymbols.forEach(element => {
+                if (element.textContent.match(/[\$€£]/) || element.textContent === 'C$') {
+                    element.textContent = newSymbol;
+                }
+            });
+        });
+    }
+
+    // Form validation
+    const feeForm = document.querySelector('.fee-plan-form');
+    if (feeForm) {
+        feeForm.addEventListener('submit', function(e) {
+            const totalFee = document.getElementById('total_fee').value;
+            if (!totalFee || parseFloat(totalFee) <= 0) {
+                e.preventDefault();
+                alert('Please enter a valid total registration fee.');
+                document.getElementById('total_fee').focus();
+                return false;
+            }
+        });
+    }
+});
+</script>
+
 {% endblock %}

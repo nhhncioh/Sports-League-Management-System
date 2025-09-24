@@ -12,6 +12,7 @@
     {% endfor %}
 {% endif %}
 
+{% if config.show_hero != false %}
 <section class="page-hero mb-5">
     <div class="row align-items-center g-4">
         <div class="col-lg-7">
@@ -32,9 +33,9 @@
                 {% endif %}
             </div>
             <ul class="hero-list">
-                <li><i class="bi bi-lightning-charge"></i> Real-time standings and score tracking</li>
-                <li><i class="bi bi-people"></i> Roster, waiver, and registration oversight</li>
-                <li><i class="bi bi-calendar-week"></i> Smart scheduling tools with conflict checks</li>
+                <li><i class="ph ph-lightning"></i> Real-time standings and score tracking</li>
+                <li><i class="ph ph-users"></i> Roster, waiver, and registration oversight</li>
+                <li><i class="ph ph-calendar"></i> Smart scheduling tools with conflict checks</li>
             </ul>
         </div>
         <div class="col-lg-5">
@@ -67,7 +68,9 @@
         </div>
     </div>
 </section>
+{% endif %}
 
+{% if config.show_leagues != false %}
 <section class="section pt-0">
     <div class="section-header">
         <h2 class="section-title">Leagues & Seasons</h2>
@@ -104,7 +107,7 @@
                             </ul>
                         {% else %}
                             <div class="empty-state small">
-                                <i class="bi bi-calendar2-week"></i>
+                                <i class="ph ph-calendar-dots"></i>
                                 <p class="mb-0">Season details coming soon.</p>
                             </div>
                         {% endif %}
@@ -114,73 +117,290 @@
         </div>
     {% else %}
         <div class="empty-state">
-            <i class="bi bi-flag"></i>
+            <i class="ph ph-flag"></i>
             <h3 class="h5">No leagues available</h3>
             <p class="mb-0 text-muted">Use the management portal to create your first competition.</p>
         </div>
     {% endif %}
 </section>
+{% endif %}
 
-{% if recent_games %}
+{% if recent_games and config.show_recent_games != false %}
 <section class="section pt-0">
     <div class="section-header">
-        <h2 class="section-title">Recent Games</h2>
-        <p class="section-subtitle">Scores update instantly when officials submit results.</p>
+        <h2 class="section-title">{{ config.games_section_title or 'Recent Games' }}</h2>
+        <p class="section-subtitle">{{ config.games_section_subtitle or 'Scores update instantly when officials submit results.' }}</p>
     </div>
     <div class="row g-4">
-        {% for game in recent_games %}
+        {% for game in recent_games[:config.max_games_display or 6] %}
             {% set status_value = game.status.value if game.status and game.status.value else game.status %}
             {% set status_key = status_value|lower if status_value else 'scheduled' %}
             <div class="col-md-6 col-xl-4">
-                <article class="match-card h-100">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <span class="badge rounded-pill text-bg-light">{{ game.season.name if game.season else 'Season TBD' }}</span>
-                        <span class="status-dot status-{{ status_key }}"></span>
-                    </div>
-                    <div class="matchup">
-                        <div class="team-side">
-                            <div class="team-logo">
-                                {% if game.home_team and game.home_team.logo_url %}
-                                    <img src="{{ game.home_team.logo_url }}" alt="{{ game.home_team.name }} logo">
-                                {% else %}
-                                    <span>{{ (game.home_team.name[:2] if game.home_team and game.home_team.name else 'NA')|upper }}</span>
+                <div class="card game-card h-100 border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <!-- Header with season and status -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="badge bg-light text-dark">{{ game.season.name if game.season else 'Season TBD' }}</span>
+                            <span class="badge
+                                {% if status_key == 'completed' %}bg-success
+                                {% elif status_key == 'live' %}bg-warning text-dark
+                                {% elif status_key == 'cancelled' %}bg-danger
+                                {% else %}bg-secondary{% endif %}">
+                                {{ status_value|title if status_value else 'Scheduled' }}
+                            </span>
+                        </div>
+
+                        <!-- Team Matchup -->
+                        <div class="game-matchup mb-4">
+                            <!-- Home Team -->
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="team-avatar me-3">
+                                    {% if game.home_team and game.home_team.logo_url %}
+                                        <img src="{{ game.home_team.logo_url }}" alt="{{ game.home_team.name }}" class="rounded">
+                                    {% else %}
+                                        <div class="team-initial bg-primary text-white rounded d-flex align-items-center justify-content-center">
+                                            {{ (game.home_team.name[:2] if game.home_team and game.home_team.name else 'TBD')|upper }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-0 fw-semibold">{{ game.home_team.name if game.home_team else 'TBD' }}</h6>
+                                    <small class="text-muted">Home</small>
+                                </div>
+                                {% if game.home_score is not none %}
+                                    <div class="score-display">
+                                        <span class="h5 mb-0 fw-bold">{{ game.home_score }}</span>
+                                    </div>
                                 {% endif %}
                             </div>
-                            <div class="team-info">
-                                <p class="team-name mb-0">{{ game.home_team.name if game.home_team else 'TBD' }}</p>
-                                <small>Home</small>
+
+                            <!-- VS Divider -->
+                            <div class="text-center mb-3">
+                                <small class="text-muted fw-semibold px-3 py-1 bg-light rounded">VS</small>
+                            </div>
+
+                            <!-- Away Team -->
+                            <div class="d-flex align-items-center">
+                                <div class="team-avatar me-3">
+                                    {% if game.away_team and game.away_team.logo_url %}
+                                        <img src="{{ game.away_team.logo_url }}" alt="{{ game.away_team.name }}" class="rounded">
+                                    {% else %}
+                                        <div class="team-initial bg-secondary text-white rounded d-flex align-items-center justify-content-center">
+                                            {{ (game.away_team.name[:2] if game.away_team and game.away_team.name else 'TBD')|upper }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-0 fw-semibold">{{ game.away_team.name if game.away_team else 'TBD' }}</h6>
+                                    <small class="text-muted">Away</small>
+                                </div>
+                                {% if game.away_score is not none %}
+                                    <div class="score-display">
+                                        <span class="h5 mb-0 fw-bold">{{ game.away_score }}</span>
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
-                        <div class="scoreband m-0 flex-shrink-0">
-                            {% if game.home_score is not none and game.away_score is not none %}
-                                <span class="score-chip">{{ game.home_score }} - {{ game.away_score }}</span>
-                            {% else %}
-                                <span class="text-muted fw-semibold">VS</span>
+
+                        <!-- Game Info -->
+                        <div class="game-info border-top pt-3">
+                            <div class="d-flex align-items-center text-muted small mb-2">
+                                <i class="ph ph-calendar me-2"></i>
+                                {{ game.start_time.strftime('%b %d, %Y') if game.start_time else 'Date TBD' }}
+                            </div>
+                            <div class="d-flex align-items-center text-muted small mb-3">
+                                <i class="ph ph-clock me-2"></i>
+                                {{ game.start_time.strftime('%I:%M %p') if game.start_time else 'Time TBD' }}
+                            </div>
+                            {% if game.venue %}
+                                <div class="d-flex align-items-center text-muted small mb-3">
+                                    <i class="ph ph-map-pin me-2"></i>
+                                    {{ game.venue.name }}
+                                </div>
                             {% endif %}
                         </div>
-                        <div class="team-side text-end">
-                            <div class="team-info">
-                                <p class="team-name mb-0">{{ game.away_team.name if game.away_team else 'TBD' }}</p>
-                                <small>Away</small>
-                            </div>
-                            <div class="team-logo">
-                                {% if game.away_team and game.away_team.logo_url %}
-                                    <img src="{{ game.away_team.logo_url }}" alt="{{ game.away_team.name }} logo">
-                                {% else %}
-                                    <span>{{ (game.away_team.name[:2] if game.away_team and game.away_team.name else 'NA')|upper }}</span>
-                                {% endif %}
-                            </div>
-                        </div>
+
+                        <!-- Action Button -->
+                        <a href="{{ url_for('portal.game_detail', game_id=game.id) }}" class="btn btn-outline-primary btn-sm w-100">
+                            <i class="ph ph-eye me-2"></i>View Game Details
+                        </a>
                     </div>
-                    <p class="text-muted small mb-3">{{ game.start_time.strftime('%b %d, %Y - %I:%M %p') if game.start_time else 'To be scheduled' }}</p>
-                    <a class="btn btn-sm btn-outline-primary stretched-link" href="{{ url_for('portal.game_detail', game_id=game.id) }}">View game center</a>
-                </article>
+                </div>
             </div>
         {% endfor %}
     </div>
 </section>
+
+<style>
+/* Game Cards Styling */
+.game-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-radius: 0.75rem !important;
+}
+
+.game-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1) !important;
+}
+
+.team-avatar {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+}
+
+.team-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.team-initial {
+    width: 40px;
+    height: 40px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.score-display {
+    min-width: 40px;
+    text-align: center;
+}
+
+.game-info i {
+    color: #6c757d;
+    font-size: 1rem;
+}
+</style>
 {% endif %}
 
+{% if news_articles and config.show_news != false %}
+<section class="section pt-0">
+    <div class="section-header">
+        <h2 class="section-title">{{ config.news_section_title or 'Latest News' }}</h2>
+        <p class="section-subtitle">{{ config.news_section_subtitle or 'Stay updated with the latest league announcements and news.' }}</p>
+    </div>
+    <div class="row g-4">
+        {% for article in news_articles[:config.max_news_display or 6] %}
+            <div class="col-md-6 col-xl-4">
+                <div class="card news-card h-100 border-0 shadow-sm">
+                    {% if article[7] %}
+                    <div class="news-image">
+                        <img src="{{ article[7] }}" alt="{{ article[1] }}" class="card-img-top">
+                        {% if article[8] %}
+                        <div class="featured-badge">
+                            <i class="ph ph-star-fill"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% elif article[8] %}
+                    <div class="card-header bg-warning bg-opacity-10 border-0">
+                        <div class="d-flex align-items-center">
+                            <i class="ph ph-star-fill text-warning me-2"></i>
+                            <small class="text-warning fw-semibold">Featured Article</small>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="badge bg-light text-dark">{{ article[4] }}</span>
+                            <small class="text-muted">{{ article[5].strftime('%b %d, %Y') if article[5] else 'Recently' }}</small>
+                        </div>
+                        <h5 class="card-title">{{ article[1] }}</h5>
+                        {% if article[2] %}
+                        <p class="card-text text-muted">{{ article[2][:150] }}{% if article[2]|length > 150 %}...{% endif %}</p>
+                        {% else %}
+                        <p class="card-text text-muted">{{ article[3][:150] if article[3] else '' }}{% if article[3] and article[3]|length > 150 %}...{% endif %}</p>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer bg-transparent border-0 p-4 pt-0">
+                        <button class="btn btn-outline-primary btn-sm w-100" onclick="showNewsModal('{{ article[0] }}', '{{ article[1]|e }}', '{{ article[3]|e }}', '{{ article[4] }}', '{{ article[5].strftime('%B %d, %Y') if article[5] else 'Recently' }}')">
+                            <i class="ph ph-eye me-2"></i>Read Full Article
+                        </button>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</section>
+
+<style>
+/* News Cards Styling */
+.news-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-radius: 0.75rem !important;
+}
+
+.news-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1) !important;
+}
+
+.news-image {
+    position: relative;
+    overflow: hidden;
+}
+
+.news-image img {
+    height: 200px;
+    object-fit: cover;
+    border-radius: 0.75rem 0.75rem 0 0;
+    transition: transform 0.3s ease;
+}
+
+.news-card:hover .news-image img {
+    transform: scale(1.05);
+}
+
+.featured-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(255, 193, 7, 0.9);
+    color: white;
+    padding: 6px 8px;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    backdrop-filter: blur(4px);
+}
+</style>
+
+<!-- News Article Modal -->
+<div class="modal fade" id="newsModal" tabindex="-1" aria-labelledby="newsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="newsModalLabel">Article Title</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="badge bg-light text-dark" id="newsModalCategory">Category</span>
+                    <small class="text-muted" id="newsModalDate">Date</small>
+                </div>
+                <div id="newsModalContent">Content will appear here...</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showNewsModal(newsId, title, content, category, date) {
+    document.getElementById('newsModalLabel').textContent = title;
+    document.getElementById('newsModalCategory').textContent = category;
+    document.getElementById('newsModalDate').textContent = date;
+    document.getElementById('newsModalContent').innerHTML = content.replace(/\n/g, '<br>');
+
+    const modal = new bootstrap.Modal(document.getElementById('newsModal'));
+    modal.show();
+}
+</script>
+{% endif %}
+
+{% if config.show_cta_panel != false %}
 <section class="section pt-0">
     <div class="cta-panel">
         <div>
@@ -190,4 +410,5 @@
         <a class="btn btn-primary btn-lg px-4" href="{{ url_for('portal.index') }}">Go to Portal</a>
     </div>
 </section>
+{% endif %}
 {% endblock %}

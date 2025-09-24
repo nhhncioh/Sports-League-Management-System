@@ -334,19 +334,19 @@
         <div class="wizard-progress">
             <div class="d-flex">
                 <div class="progress-step completed">
-                    <div class="step-circle"><i class="bi bi-check"></i></div>
+                    <div class="step-circle"><i class="ph ph-check"></i></div>
                     <div class="step-label">Season Info</div>
                 </div>
                 <div class="progress-step completed">
-                    <div class="step-circle"><i class="bi bi-check"></i></div>
+                    <div class="step-circle"><i class="ph ph-check"></i></div>
                     <div class="step-label">Teams</div>
                 </div>
                 <div class="progress-step completed">
-                    <div class="step-circle"><i class="bi bi-check"></i></div>
+                    <div class="step-circle"><i class="ph ph-check"></i></div>
                     <div class="step-label">Venues</div>
                 </div>
                 <div class="progress-step completed">
-                    <div class="step-circle"><i class="bi bi-check"></i></div>
+                    <div class="step-circle"><i class="ph ph-check"></i></div>
                     <div class="step-label">Registration</div>
                 </div>
                 <div class="progress-step active">
@@ -359,7 +359,7 @@
         <!-- Step 5 Form -->
         <div class="wizard-card">
             <div class="wizard-header">
-                <h1><i class="bi bi-calendar-event"></i> Step 5: Generate Schedule</h1>
+                <h1><i class="ph ph-calendar"></i> Step 5: Generate Schedule</h1>
                 <p class="mb-0">Create the game schedule for your season</p>
             </div>
 
@@ -367,7 +367,7 @@
                 <!-- Schedule Configuration -->
                 <div class="schedule-section">
                     <h5 class="section-title">
-                        <i class="bi bi-sliders"></i> Schedule Configuration
+                        <i class="ph ph-sliders"></i> Schedule Configuration
                     </h5>
 
                     <form id="schedule-form">
@@ -410,7 +410,7 @@
 
                         <!-- Game Day Selection -->
                         <div class="time-slot-group">
-                            <h6><i class="bi bi-calendar-day"></i> Game Days</h6>
+                            <h6><i class="ph ph-calendar"></i> Game Days</h6>
                             <div class="day-selector">
                                 {% for day_name, day_code in [('Monday', 'mon'), ('Tuesday', 'tue'), ('Wednesday', 'wed'), ('Thursday', 'thu'), ('Friday', 'fri'), ('Saturday', 'sat'), ('Sunday', 'sun')] %}
                                 <div class="form-check form-check-inline day-checkbox">
@@ -425,7 +425,7 @@
 
                         <!-- Preferred Game Times -->
                         <div class="time-slot-group">
-                            <h6><i class="bi bi-clock"></i> Preferred Game Times</h6>
+                            <h6><i class="ph ph-clock"></i> Preferred Game Times</h6>
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group">
@@ -475,7 +475,7 @@
 
                         <div class="text-center mt-4">
                             <button type="button" class="btn generate-btn" onclick="generateSchedule()">
-                                <i class="bi bi-magic"></i> Generate Schedule
+                                <i class="ph ph-magic-wand"></i> Generate Schedule
                             </button>
                         </div>
                     </form>
@@ -493,14 +493,14 @@
                 <div id="schedule-preview" class="schedule-preview">
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <h5 class="section-title">
-                            <i class="bi bi-eye"></i> Schedule Preview
+                            <i class="ph ph-eye"></i> Schedule Preview
                         </h5>
                         <div>
                             <button type="button" class="btn btn-outline-warning regenerate-btn me-2" onclick="generateSchedule()">
-                                <i class="bi bi-arrow-clockwise"></i> Regenerate
+                                <i class="ph ph-arrow-clockwise"></i> Regenerate
                             </button>
                             <button type="button" class="btn btn-outline-info btn-export" onclick="exportSchedule('csv')">
-                                <i class="bi bi-download"></i> Export CSV
+                                <i class="ph ph-download-simple"></i> Export CSV
                             </button>
                         </div>
                     </div>
@@ -545,7 +545,7 @@
 
                 <!-- Alerts -->
                 <div class="alert alert-schedule">
-                    <h6><i class="bi bi-info-circle"></i> Schedule Generation Tips:</h6>
+                    <h6><i class="ph ph-info"></i> Schedule Generation Tips:</h6>
                     <ul class="mb-0">
                         <li><strong>Round Robin:</strong> Best for regular season play, ensures all teams play each other</li>
                         <li><strong>Tournament:</strong> Elimination format for playoff scenarios</li>
@@ -558,14 +558,14 @@
 
             <div class="wizard-footer">
                 <a href="{{ url_for('admin.season_wizard_step', step=4) }}" class="btn btn-outline-secondary btn-wizard">
-                    <i class="bi bi-arrow-left"></i> Back
+                    <i class="ph ph-arrow-left"></i> Back
                 </a>
                 <div>
                     <button type="button" class="btn btn-outline-success btn-wizard me-2" onclick="saveAsDraft()">
-                        <i class="bi bi-save"></i> Save Draft
+                        <i class="ph ph-floppy-disk"></i> Save Draft
                     </button>
                     <button type="button" class="btn btn-success btn-wizard" onclick="finalizeSeason()" id="finalize-btn" disabled>
-                        <i class="bi bi-check-circle"></i> Create Season
+                        <i class="ph ph-check-circle"></i> Create Season
                     </button>
                 </div>
             </div>
@@ -741,7 +741,7 @@ function finalizeSeason() {
         // Show loading state
         const finalizeBtn = document.getElementById('finalize-btn');
         const originalText = finalizeBtn.innerHTML;
-        finalizeBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Creating...';
+        finalizeBtn.innerHTML = '<i class="ph ph-hourglass"></i> Creating...';
         finalizeBtn.disabled = true;
 
         // Submit final wizard data

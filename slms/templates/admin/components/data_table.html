@@ -5,19 +5,19 @@
         <div class="card-header bg-gradient-primary text-white">
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
-                    <i class="bi bi-table"></i> {{ title }}
+                    <i class="ph ph-table"></i> {{ title }}
                     <span id="{{ table_id }}-count" class="badge bg-light text-dark ms-2">Loading...</span>
                 </h5>
                 <div class="table-actions">
                     {% if create_url %}
                     <a href="{{ create_url }}" class="btn btn-light btn-sm me-2">
-                        <i class="bi bi-plus"></i> Add New
+                        <i class="ph ph-plus"></i> Add New
                     </a>
                     {% endif %}
                     {% if export_urls %}
                     <div class="btn-group">
                         <button type="button" class="btn btn-outline-light btn-sm dropdown-toggle" data-bs-toggle="dropdown">
-                            <i class="bi bi-download"></i> Export
+                            <i class="ph ph-download-simple"></i> Export
                         </button>
                         <ul class="dropdown-menu">
                             {% for format, url in export_urls.items() %}
@@ -47,7 +47,7 @@
                                hx-include="#{{ table_id }}-filters input, #{{ table_id }}-filters select"
                                name="search">
                         <button class="btn btn-outline-secondary" type="button" onclick="clearSearch('{{ table_id }}')">
-                            <i class="bi bi-x"></i>
+                            <i class="ph ph-x"></i>
                         </button>
                     </div>
                 </div>
@@ -108,7 +108,7 @@
 
             <div class="mt-2">
                 <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetFilters('{{ table_id }}', '{{ data_url }}')">
-                    <i class="bi bi-arrow-clockwise"></i> Reset Filters
+                    <i class="ph ph-arrow-clockwise"></i> Reset Filters
                 </button>
             </div>
         </div>
@@ -138,7 +138,7 @@
                             {% endif %}>
                             {{ column.label }}
                             {% if column.sortable %}
-                            <i class="bi bi-arrow-down-up sort-icon ms-1" id="{{ table_id }}-sort-{{ column.key }}"></i>
+                            <i class="ph ph-arrows-vertical sort-icon ms-1" id="{{ table_id }}-sort-{{ column.key }}"></i>
                             {% endif %}
                         </th>
                         {% endfor %}
@@ -281,7 +281,7 @@ function resetFilters(tableId, dataUrl) {
 
     // Reset sort icons
     document.querySelectorAll('#' + tableId + ' .sort-icon').forEach(icon => {
-        icon.className = 'bi bi-arrow-down-up sort-icon ms-1';
+        icon.className = 'ph ph-arrows-vertical sort-icon ms-1';
     });
 
     // Reload table
@@ -306,12 +306,12 @@ function toggleSort(tableId, column, dataUrl) {
 
     // Update sort icons
     document.querySelectorAll('#' + tableId + ' .sort-icon').forEach(icon => {
-        icon.className = 'bi bi-arrow-down-up sort-icon ms-1';
+        icon.className = 'ph ph-arrows-vertical sort-icon ms-1';
     });
 
     const sortIcon = document.getElementById(tableId + '-sort-' + column);
     if (sortIcon) {
-        sortIcon.className = 'bi bi-arrow-down-up sort-icon ms-1 ' + state.sortDir;
+        sortIcon.className = 'ph ph-arrows-vertical sort-icon ms-1 ' + state.sortDir;
     }
 
     // Add sort parameters and reload

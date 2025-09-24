@@ -15,4 +15,6 @@ psycopg2-binary>=2.9.9
 pytest==8.*
 redis==5.*
 rq==1.*
+openpyxl==3.*
+pandas==2.*
 

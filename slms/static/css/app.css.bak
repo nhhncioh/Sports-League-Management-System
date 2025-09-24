@@ -1,0 +1,118 @@
+/*
+  Global UI polish for Sports League Management System
+  - Unifies look across legacy (layout.html) and modern (base.html) templates
+  - Adds spacing, typography, tables, cards, forms
+  - Provides Bootstrap 4-era class shims for Bootstrap 5 (e.g., .jumbotron)
+*/
+
+:root {
+  --slms-primary: #0d6efd;
+  --slms-bg-soft: #f8f9fa;
+  --slms-border: #e9ecef;
+  --slms-text-muted: #6c757d;
+}
+
+/* Fallback to configured org color when available via inline CSS var injection */
+:root { --primary-color: var(--slms-primary); }
+
+/* Typography & spacing */
+body { background-color: #fff; }
+.section-title { margin-bottom: 1rem; }
+.content { padding-top: 1rem; padding-bottom: 1rem; }
+
+/* Navbar spacing */
+.navbar .nav-link { font-weight: 500; }
+
+/* Cards */
+.card { border-radius: .5rem; border-color: var(--slms-border); }
+.card-header { background-color: var(--slms-bg-soft); }
+
+/* Tables */
+.table thead th { border-bottom: 2px solid var(--slms-border); }
+.table-hover tbody tr:hover { background-color: rgba(13,110,253,.04); }
+.table-responsive { overflow-x: auto; }
+
+/* Forms */
+.form-label { font-weight: 500; }
+.form-control, .form-select { border-radius: .5rem; }
+.input-group-text { background-color: var(--slms-bg-soft); }
+
+/* Buttons */
+.btn { border-radius: .5rem; }
+.btn-outline-primary { border-color: var(--primary-color); color: var(--primary-color); }
+.btn-outline-primary:hover { background-color: var(--primary-color); color: #fff; }
+
+/* Badges for game status */
+.game-status-badge { font-size: .75rem; padding: .25rem .5rem; }
+
+/* Jumbotron shim (Bootstrap 4 -> 5) */
+.jumbotron { background-color: var(--slms-bg-soft); border-radius: .75rem; }
+.jumbotron .display-4 { font-weight: 700; }
+.jumbotron p.lead { color: var(--slms-text-muted); }
+
+/* Legacy .close button -> style similar to .btn-close */
+.close { font-size: 1.25rem; line-height: 1; opacity: .6; }
+.close:hover { opacity: 1; }
+
+/* Utility pills */
+.venue-pill { background-color: var(--slms-bg-soft); border: 1px solid var(--slms-border); border-radius: 1rem; padding: .25rem .75rem; font-size: .875rem; }
+
+/* Footer */
+footer .text-muted { color: var(--slms-text-muted) !important; }
+
+/* Responsive tweaks */
+@media (max-width: 576px) {
+  .navbar-brand img { height: 32px; }
+}
+
+
+/* --- Phosphor web-font hardening (admin cards) --- */
+.ph { 
+  font-family: "Phosphor" !important;
+  font-style: normal; 
+  font-weight: normal; 
+  line-height: 1; 
+  -webkit-font-smoothing: antialiased; 
+  -moz-osx-font-smoothing: grayscale;
+}
+.ph::before {
+  display: inline-block !important;
+  font-family: "Phosphor" !important;
+  /* inherit the color/size from parent (Bootstrap .fs-* classes work) */
+  font-size: inherit;
+  color: inherit;
+  /* make sure nothing else hides the glyph */ /* harmless fallback if mapping missing */ /* allow the mapping from style.css to win */
+}
+.card .ph,
+.card .ph::before {
+  line-height: 1 !important;
+}
+.btn .ph::before,
+.nav .ph::before {
+  display: inline-block !important;
+}
+@supports not (content: unset) {
+  /* older engines: still keep ::before visible */
+  .ph::before { display: inline-block !important; }
+}
+/* --- end patch --- */
+
+
+/* --- Phosphor web-font hardening (SAFE) --- */
+.ph {
+  font-family: "Phosphor" !important;
+  font-style: normal;
+  font-weight: normal;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.ph::before {
+  display: inline-block !important;
+  font-size: inherit;
+  color: inherit;
+  /* DO NOT set 'content' here — Phosphor supplies it */
+}
+.card .ph,
+.card .ph::before { line-height: 1 !important; }
+/* --- end safe patch --- */

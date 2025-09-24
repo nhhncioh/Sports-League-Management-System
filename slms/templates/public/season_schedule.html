@@ -22,120 +22,258 @@
                 <div>
                     <a href="{{ url_for('portal.season_standings', season_id=season.id) }}"
                        class="btn btn-outline-primary">
-                        <i class="bi bi-list-ol"></i> Standings
+                        <i class="ph ph-list-numbers"></i> Standings
                     </a>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Schedule -->
+    <!-- Filters and View Controls -->
     {% if games_by_date %}
-        {% for date, games in games_by_date.items() %}
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header bg-light">
-                            <h5 class="mb-0">
-                                <i class="bi bi-calendar-event"></i>
-                                {{ date.strftime('%A, %B %d, %Y') }}
-                            </h5>
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="filter-status" class="form-label">Filter by Status</label>
+                                    <select class="form-select" id="filter-status" onchange="filterGames()">
+                                        <option value="">All Games</option>
+                                        <option value="scheduled">Scheduled</option>
+                                        <option value="live">Live</option>
+                                        <option value="final">Completed</option>
+                                        <option value="postponed">Postponed</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="filter-team" class="form-label">Filter by Team</label>
+                                    <input type="text" class="form-control" id="filter-team" placeholder="Search teams..." onkeyup="filterGames()">
+                                </div>
+                            </div>
                         </div>
-                        <div class="card-body p-0">
-                            <div class="list-group list-group-flush">
-                                {% for game in games %}
-                                    <div class="list-group-item">
-                                        <div class="row align-items-center">
-                                            <!-- Time -->
-                                            <div class="col-md-2">
-                                                {% if game.start_time %}
-                                                    <strong>{{ game.start_time.strftime('%I:%M %p') }}</strong>
-                                                {% else %}
-                                                    <span class="text-muted">TBD</span>
-                                                {% endif %}
-                                            </div>
+                        <div class="col-md-6 text-end">
+                            <div class="btn-group" role="group" aria-label="View options">
+                                <button type="button" class="btn btn-outline-primary active" id="list-view-btn" onclick="toggleView('list')">
+                                    <i class="ph ph-list"></i> List
+                                </button>
+                                <button type="button" class="btn btn-outline-primary" id="calendar-view-btn" onclick="toggleView('calendar')">
+                                    <i class="ph ph-calendar"></i> Calendar
+                                </button>
+                            </div>
+                            <button type="button" class="btn btn-outline-secondary ms-2" onclick="clearFilters()">
+                                <i class="ph ph-x"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
-                                            <!-- Teams & Score -->
-                                            <div class="col-md-6">
-                                                <div class="d-flex align-items-center">
-                                                    <div class="text-end me-3" style="min-width: 120px;">
-                                                        <strong>{{ game.home_team.name }}</strong>
+    <!-- Schedule Views -->
+    {% if games_by_date %}
+        <!-- List View (Default) -->
+        <div id="list-view">
+            {% for date, games in games_by_date.items() %}
+                <div class="row mb-4 date-group" data-date="{{ date.strftime('%Y-%m-%d') }}">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">
+                                        <i class="ph ph-calendar-dots"></i>
+                                        {{ date.strftime('%A, %B %d, %Y') }}
+                                    </h5>
+                                    <small class="text-muted">{{ games|length }} game{% if games|length != 1 %}s{% endif %}</small>
+                                </div>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="list-group list-group-flush">
+                                    {% for game in games %}
+                                        <div class="list-group-item game-item"
+                                             data-status="{{ game.status }}"
+                                             data-teams="{{ game.home_team.name }} {{ game.away_team.name }}">
+                                            <div class="row align-items-center">
+                                                <!-- Time -->
+                                                <div class="col-md-2">
+                                                    {% if game.start_time %}
+                                                        <strong>{{ game.start_time.strftime('%I:%M %p') }}</strong>
+                                                    {% else %}
+                                                        <span class="text-muted">TBD</span>
+                                                    {% endif %}
+                                                </div>
+
+                                                <!-- Teams & Score -->
+                                                <div class="col-md-6">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="text-end me-3" style="min-width: 120px;">
+                                                            <strong class="team-name">{{ game.home_team.name }}</strong>
+                                                        </div>
+
+                                                        <div class="text-center mx-3">
+                                                            {% if game.status in ['final', 'forfeit'] %}
+                                                                <span class="badge bg-light text-dark fs-6">
+                                                                    {{ game.home_score or 0 }} - {{ game.away_score or 0 }}
+                                                                </span>
+                                                            {% elif game.status == 'live' %}
+                                                                <span class="badge bg-danger pulse">LIVE</span>
+                                                            {% else %}
+                                                                <span class="text-muted">vs</span>
+                                                            {% endif %}
+                                                        </div>
+
+                                                        <div class="text-start ms-3" style="min-width: 120px;">
+                                                            <strong class="team-name">{{ game.away_team.name }}</strong>
+                                                        </div>
                                                     </div>
+                                                </div>
 
-                                                    <div class="text-center mx-3">
-                                                        {% if game.status in ['final', 'forfeit'] %}
-                                                            <span class="badge bg-light text-dark fs-6">
-                                                                {{ game.home_score or 0 }} - {{ game.away_score or 0 }}
-                                                            </span>
-                                                        {% elif game.status == 'live' %}
-                                                            <span class="badge bg-danger">LIVE</span>
-                                                        {% else %}
-                                                            <span class="text-muted">vs</span>
-                                                        {% endif %}
-                                                    </div>
+                                                <!-- Venue -->
+                                                <div class="col-md-2">
+                                                    {% if game.venue %}
+                                                        <span class="venue-pill">
+                                                            <i class="ph ph-map-pin"></i>
+                                                            {{ game.venue }}
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="text-muted">
+                                                            <i class="ph ph-clock"></i> TBD
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
 
-                                                    <div class="text-start ms-3" style="min-width: 120px;">
-                                                        <strong>{{ game.away_team.name }}</strong>
+                                                <!-- Status & Actions -->
+                                                <div class="col-md-2 text-end">
+                                                    <div class="d-flex align-items-center justify-content-end">
+                                                        <span class="badge game-status-badge me-2
+                                                            {% if game.status == 'final' %}bg-success
+                                                            {% elif game.status == 'live' %}bg-danger
+                                                            {% elif game.status == 'scheduled' %}bg-secondary
+                                                            {% elif game.status == 'postponed' %}bg-warning
+                                                            {% elif game.status == 'forfeit' %}bg-info
+                                                            {% else %}bg-light text-dark{% endif %}">
+                                                            {{ game.status.title() }}
+                                                        </span>
+
+                                                        <div class="btn-group" role="group">
+                                                            <a href="{{ url_for('portal.game_detail', game_id=game.id) }}"
+                                                               class="btn btn-sm btn-outline-primary"
+                                                               title="View Details">
+                                                                <i class="ph ph-eye"></i>
+                                                            </a>
+                                                            {% if game.venue %}
+                                                            <button class="btn btn-sm btn-outline-info"
+                                                                    onclick="showDirections('{{ game.venue }}')"
+                                                                    title="Get Directions">
+                                                                <i class="ph ph-navigation-arrow"></i>
+                                                            </button>
+                                                            {% endif %}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
 
-                                            <!-- Venue -->
-                                            <div class="col-md-2">
-                                                {% if game.venue %}
-                                                    <span class="venue-pill">
-                                                        <i class="bi bi-geo-alt"></i>
-                                                        {{ game.venue }}
-                                                    </span>
-                                                {% endif %}
-                                            </div>
+                                            <!-- Notes and additional info -->
+                                            <div class="row mt-2">
+                                                <div class="col-12">
+                                                    {% if game.notes %}
+                                                        <small class="text-muted">
+                                                            <i class="ph ph-info"></i>
+                                                            {{ game.notes }}
+                                                        </small>
+                                                    {% endif %}
 
-                                            <!-- Status & Actions -->
-                                            <div class="col-md-2 text-end">
-                                                <div class="d-flex align-items-center justify-content-end">
-                                                    <span class="badge game-status-badge me-2
-                                                        {% if game.status == 'final' %}bg-success
-                                                        {% elif game.status == 'live' %}bg-danger
-                                                        {% elif game.status == 'scheduled' %}bg-secondary
-                                                        {% elif game.status == 'postponed' %}bg-warning
-                                                        {% elif game.status == 'forfeit' %}bg-info
-                                                        {% else %}bg-light text-dark{% endif %}">
-                                                        {{ game.status.title() }}
-                                                    </span>
-
-                                                    <a href="{{ url_for('portal.game_detail', game_id=game.id) }}"
-                                                       class="btn btn-sm btn-outline-primary">
-                                                        <i class="bi bi-eye"></i>
-                                                    </a>
+                                                    <!-- Week information -->
+                                                    {% set first_date = games_by_date.keys()|sort|first %}
+                                                    {% set week_num = ((date - first_date).days // 7) + 1 %}
+                                                    <span class="badge bg-light text-dark ms-2">Week {{ week_num }}</span>
                                                 </div>
                                             </div>
                                         </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
 
-                                        <!-- Notes (if any) -->
-                                        {% if game.notes %}
-                                            <div class="row mt-2">
-                                                <div class="col-12">
-                                                    <small class="text-muted">
-                                                        <i class="bi bi-info-circle"></i>
-                                                        {{ game.notes }}
-                                                    </small>
-                                                </div>
-                                            </div>
-                                        {% endif %}
+        <!-- Calendar View (Hidden by default) -->
+        <div id="calendar-view" style="display: none;">
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="ph ph-calendar"></i>
+                                Schedule Calendar
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="calendar-container">
+                                <!-- Calendar will be generated here -->
+                                <div class="text-center py-4">
+                                    <div class="spinner-border" role="status">
+                                        <span class="visually-hidden">Loading calendar...</span>
                                     </div>
-                                {% endfor %}
+                                    <p class="mt-2">Loading calendar view...</p>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        {% endfor %}
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title">Quick Stats</h6>
+                        <div class="row text-center">
+                            <div class="col-md-3">
+                                <div class="stat-box">
+                                    <h4 class="text-primary">{{ games_by_date.values()|map('length')|sum }}</h4>
+                                    <small class="text-muted">Total Games</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-box">
+                                    {% set all_games = games_by_date.values()|sum(start=[]) %}
+                                    <h4 class="text-success">{{ all_games|selectattr('status', 'equalto', 'final')|list|length }}</h4>
+                                    <small class="text-muted">Completed</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-box">
+                                    <h4 class="text-warning">{{ all_games|selectattr('status', 'equalto', 'scheduled')|list|length }}</h4>
+                                    <small class="text-muted">Upcoming</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-box">
+                                    <h4 class="text-info">{{ games_by_date.keys()|list|length }}</h4>
+                                    <small class="text-muted">Game Days</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     {% else %}
         <div class="row">
             <div class="col-12">
-                <div class="alert alert-info">
-                    <i class="bi bi-info-circle"></i>
-                    No games scheduled for this season yet.
+                <div class="alert alert-info text-center">
+                    <i class="ph ph-calendar-x" style="font-size: 3rem;"></i>
+                    <h5 class="mt-3">No games scheduled</h5>
+                    <p>No games have been scheduled for this season yet. Check back later for updates!</p>
                 </div>
             </div>
         </div>
@@ -159,4 +297,309 @@
         </div>
     </div>
 </div>
+
+<style>
+/* Custom styles for enhanced schedule */
+.pulse {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.venue-pill {
+    background-color: rgba(13, 110, 253, 0.1);
+    color: #0d6efd;
+    padding: 0.25rem 0.5rem;
+    border-radius: 1rem;
+    font-size: 0.875rem;
+}
+
+.stat-box {
+    padding: 1rem 0;
+}
+
+.game-item {
+    transition: all 0.2s ease;
+}
+
+.game-item:hover {
+    background-color: rgba(13, 110, 253, 0.05);
+    transform: translateX(2px);
+}
+
+.team-name {
+    font-weight: 600;
+}
+
+.btn-group .btn {
+    border-radius: 0.375rem;
+    margin-left: 2px;
+}
+
+.date-group {
+    transition: opacity 0.3s ease;
+}
+
+.date-group.hidden {
+    display: none;
+}
+</style>
+
+<script>
+// Current view state
+let currentView = 'list';
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-refresh live games every 30 seconds
+    setInterval(refreshLiveGames, 30000);
+
+    // Generate calendar view when first requested
+    document.getElementById('calendar-view-btn').addEventListener('click', function() {
+        if (currentView !== 'calendar') {
+            generateCalendarView();
+        }
+    });
+});
+
+// Toggle between list and calendar view
+function toggleView(view) {
+    currentView = view;
+    const listView = document.getElementById('list-view');
+    const calendarView = document.getElementById('calendar-view');
+    const listBtn = document.getElementById('list-view-btn');
+    const calendarBtn = document.getElementById('calendar-view-btn');
+
+    if (view === 'list') {
+        listView.style.display = 'block';
+        calendarView.style.display = 'none';
+        listBtn.classList.add('active');
+        calendarBtn.classList.remove('active');
+    } else {
+        listView.style.display = 'none';
+        calendarView.style.display = 'block';
+        calendarBtn.classList.add('active');
+        listBtn.classList.remove('active');
+
+        // Generate calendar if not already done
+        if (document.getElementById('calendar-container').innerHTML.includes('Loading calendar')) {
+            generateCalendarView();
+        }
+    }
+}
+
+// Filter games based on status and team search
+function filterGames() {
+    const statusFilter = document.getElementById('filter-status').value.toLowerCase();
+    const teamFilter = document.getElementById('filter-team').value.toLowerCase();
+
+    const gameItems = document.querySelectorAll('.game-item');
+    const dateGroups = document.querySelectorAll('.date-group');
+
+    dateGroups.forEach(dateGroup => {
+        let hasVisibleGames = false;
+        const gamesInDate = dateGroup.querySelectorAll('.game-item');
+
+        gamesInDate.forEach(gameItem => {
+            const gameStatus = gameItem.dataset.status.toLowerCase();
+            const gameTeams = gameItem.dataset.teams.toLowerCase();
+
+            const matchesFilter =
+                (statusFilter === '' || gameStatus === statusFilter) &&
+                (teamFilter === '' || gameTeams.includes(teamFilter));
+
+            if (matchesFilter) {
+                gameItem.style.display = '';
+                hasVisibleGames = true;
+            } else {
+                gameItem.style.display = 'none';
+            }
+        });
+
+        // Hide date group if no games are visible
+        if (hasVisibleGames) {
+            dateGroup.classList.remove('hidden');
+        } else {
+            dateGroup.classList.add('hidden');
+        }
+    });
+}
+
+// Clear all filters
+function clearFilters() {
+    document.getElementById('filter-status').value = '';
+    document.getElementById('filter-team').value = '';
+    filterGames();
+}
+
+// Show directions to venue
+function showDirections(venue) {
+    // Open Google Maps with venue search
+    const query = encodeURIComponent(venue);
+    const url = `https://www.google.com/maps/search/${query}`;
+    window.open(url, '_blank');
+}
+
+// Generate simple calendar view
+function generateCalendarView() {
+    const container = document.getElementById('calendar-container');
+    const gameItems = document.querySelectorAll('.game-item');
+
+    if (gameItems.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-4">
+                <i class="ph ph-calendar-x" style="font-size: 3rem;"></i>
+                <h5 class="mt-3">No games to display</h5>
+                <p>No games found for the calendar view.</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Extract dates and games
+    const gamesByDate = {};
+    document.querySelectorAll('.date-group').forEach(dateGroup => {
+        const date = dateGroup.dataset.date;
+        const games = Array.from(dateGroup.querySelectorAll('.game-item')).map(item => {
+            const teams = item.dataset.teams;
+            const status = item.dataset.status;
+            const timeElement = item.querySelector('.col-md-2 strong, .col-md-2 .text-muted');
+            const time = timeElement ? timeElement.textContent.trim() : 'TBD';
+
+            return { teams, status, time };
+        });
+        gamesByDate[date] = games;
+    });
+
+    // Generate simple month view
+    const dates = Object.keys(gamesByDate).sort();
+    if (dates.length === 0) return;
+
+    const firstDate = new Date(dates[0]);
+    const lastDate = new Date(dates[dates.length - 1]);
+
+    let calendarHTML = '<div class="calendar-grid">';
+
+    // Group by month
+    const monthGroups = {};
+    dates.forEach(dateStr => {
+        const date = new Date(dateStr);
+        const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
+        if (!monthGroups[monthKey]) {
+            monthGroups[monthKey] = [];
+        }
+        monthGroups[monthKey].push(dateStr);
+    });
+
+    Object.keys(monthGroups).forEach(monthKey => {
+        const monthDates = monthGroups[monthKey];
+        const firstDateInMonth = new Date(monthDates[0]);
+        const monthName = firstDateInMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+        calendarHTML += `
+            <div class="month-section mb-4">
+                <h5 class="mb-3">${monthName}</h5>
+                <div class="row">
+        `;
+
+        monthDates.forEach(dateStr => {
+            const date = new Date(dateStr);
+            const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+            const dayNum = date.getDate();
+            const games = gamesByDate[dateStr];
+
+            calendarHTML += `
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <strong>${dayName} ${dayNum}</strong>
+                        </div>
+                        <div class="card-body p-2">
+            `;
+
+            games.forEach(game => {
+                const statusColor = getStatusColor(game.status);
+                calendarHTML += `
+                    <div class="small mb-2">
+                        <div><strong>${game.teams.replace(' ', ' vs ')}</strong></div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">${game.time}</span>
+                            <span class="badge ${statusColor}">${game.status}</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            calendarHTML += `
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        calendarHTML += '</div></div>';
+    });
+
+    calendarHTML += '</div>';
+
+    container.innerHTML = calendarHTML;
+}
+
+// Get Bootstrap color class for status
+function getStatusColor(status) {
+    switch(status.toLowerCase()) {
+        case 'final': return 'bg-success';
+        case 'live': return 'bg-danger';
+        case 'scheduled': return 'bg-secondary';
+        case 'postponed': return 'bg-warning';
+        case 'forfeit': return 'bg-info';
+        default: return 'bg-light text-dark';
+    }
+}
+
+// Refresh live games (simulate real-time updates)
+function refreshLiveGames() {
+    const liveGames = document.querySelectorAll('[data-status="live"]');
+
+    if (liveGames.length > 0) {
+        // Add subtle animation to indicate refresh
+        liveGames.forEach(game => {
+            const liveBadge = game.querySelector('.badge.bg-danger');
+            if (liveBadge) {
+                liveBadge.style.transform = 'scale(1.1)';
+                setTimeout(() => {
+                    liveBadge.style.transform = 'scale(1)';
+                }, 200);
+            }
+        });
+
+        console.log('Refreshed live games status');
+    }
+}
+
+// Add keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    // Alt + L for list view
+    if (e.altKey && e.key === 'l') {
+        e.preventDefault();
+        toggleView('list');
+    }
+
+    // Alt + C for calendar view
+    if (e.altKey && e.key === 'c') {
+        e.preventDefault();
+        toggleView('calendar');
+    }
+
+    // Alt + F to focus search
+    if (e.altKey && e.key === 'f') {
+        e.preventDefault();
+        document.getElementById('filter-team').focus();
+    }
+});
+</script>
 {% endblock %}

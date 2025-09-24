@@ -71,18 +71,77 @@
                                 </div>
                                 <div class="mb-0">
                                     <label class="form-label" for="highlight_icon_{{ loop.index }}">Bootstrap Icon</label>
-                                    <input type="text" class="form-control" id="highlight_icon_{{ loop.index }}" name="highlight_icon_{{ loop.index }}" value="{{ highlight.icon }}" placeholder="bi-trophy">
-                                    <small class="text-muted">Use any <a href="https://icons.getbootstrap.com" target="_blank" rel="noopener">Bootstrap icon</a> class.</small>
+                                    <input type="text" class="form-control" id="highlight_icon_{{ loop.index }}" name="highlight_icon_{{ loop.index }}" value="{{ highlight.icon }}" placeholder="ph ph-trophy">
+                                    <small class="text-muted">Use any <a href="https://phosphoricons.com" target="_blank" rel="noopener">Phosphor icon</a> class.</small>
                                 </div>
                             </div>
                         {% endfor %}
 
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-save"></i> Save homepage
+                                <i class="ph ph-floppy-disk"></i> Save homepage
                             </button>
                             <button type="submit" name="action" value="reset" class="btn btn-outline-danger" onclick="return confirm('Reset homepage to defaults?');">
                                 Reset
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Recent Games Section Customization -->
+            <div class="card shadow-sm border-0 mt-4">
+                <div class="card-body">
+                    <h2 class="h5 mb-3 d-flex align-items-center">
+                        <i class="ph ph-calendar-dots me-2"></i>Recent Games Section
+                    </h2>
+                    <form method="post" class="games-form">
+                        <input type="hidden" name="action" value="save_games">
+                        <input type="hidden" name="league_id" value="{{ selected_league_id }}">
+
+                        <div class="mb-3">
+                            <label class="form-label" for="show_recent_games">Display Recent Games</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="show_recent_games" name="show_recent_games" {{ 'checked' if config.show_recent_games != false else '' }}>
+                                <label class="form-check-label" for="show_recent_games">
+                                    Show recent games section on homepage
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="games_section_title">Section Title</label>
+                            <input type="text" class="form-control" id="games_section_title" name="games_section_title" value="{{ config.games_section_title or 'Recent Games' }}" placeholder="Recent Games">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="games_section_subtitle">Section Subtitle</label>
+                            <input type="text" class="form-control" id="games_section_subtitle" name="games_section_subtitle" value="{{ config.games_section_subtitle or 'Scores update instantly when officials submit results.' }}" placeholder="Stay up to date with the latest scores">
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-sm-6">
+                                <label class="form-label" for="max_games_display">Max Games to Show</label>
+                                <select class="form-select" id="max_games_display" name="max_games_display">
+                                    <option value="3" {{ 'selected' if config.max_games_display == 3 else '' }}>3 games</option>
+                                    <option value="6" {{ 'selected' if config.max_games_display == 6 else '' }}>6 games</option>
+                                    <option value="9" {{ 'selected' if config.max_games_display == 9 else '' }}>9 games</option>
+                                    <option value="12" {{ 'selected' if config.max_games_display == 12 else '' }}>12 games</option>
+                                </select>
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="form-label" for="games_time_filter">Time Filter</label>
+                                <select class="form-select" id="games_time_filter" name="games_time_filter">
+                                    <option value="recent" {{ 'selected' if config.games_time_filter == 'recent' else '' }}>Recent games</option>
+                                    <option value="upcoming" {{ 'selected' if config.games_time_filter == 'upcoming' else '' }}>Upcoming games</option>
+                                    <option value="both" {{ 'selected' if config.games_time_filter == 'both' else '' }}>Both recent & upcoming</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <i class="ph ph-floppy-disk"></i> Save Games Settings
                             </button>
                         </div>
                     </form>
@@ -107,7 +166,7 @@
                             <div class="col-md-4">
                                 <div class="card shadow-sm border-0 h-100">
                                     <div class="card-body">
-                                        <div class="text-primary mb-2"><i class="bi {{ highlight.icon or 'bi-star' }}"></i></div>
+                                        <div class="text-primary mb-2"><i class="ph {{ highlight.icon or 'ph-star' }}"></i></div>
                                         <h3 class="h6">{{ highlight.title }}</h3>
                                         <p class="text-muted small mb-0">{{ highlight.body }}</p>
                                     </div>

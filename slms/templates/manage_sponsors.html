@@ -1,0 +1,924 @@
+{% extends "base.html" %}
+
+{% block title %}Sponsorship CRM - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Sponsorship CRM</h1>
+            <p class="text-muted">Manage sponsors, deals, and partnerships</p>
+        </div>
+        <div class="d-flex gap-2">
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="ph ph-export me-2"></i>Import/Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{{ url_for('admin.export_sponsors') }}">
+                        <i class="ph ph-download me-2"></i>Export to Excel
+                    </a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#importModal">
+                        <i class="ph ph-upload me-2"></i>Import from Excel
+                    </a></li>
+                </ul>
+            </div>
+            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addDealModal">
+                <i class="ph ph-handshake me-2"></i>Add Deal
+            </button>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSponsorModal">
+                <i class="ph ph-plus me-2"></i>Add Sponsor
+            </button>
+        </div>
+    </div>
+
+    <!-- CRM Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <div class="rounded-circle bg-primary bg-opacity-10 p-3">
+                                <i class="ph ph-buildings text-primary fs-4"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <h6 class="card-title text-muted mb-1">Total Sponsors</h6>
+                            <h3 class="mb-0">{{ sponsors|length }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <div class="rounded-circle bg-success bg-opacity-10 p-3">
+                                <i class="ph ph-check-circle text-success fs-4"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <h6 class="card-title text-muted mb-1">Active Sponsors</h6>
+                            <h3 class="mb-0">{{ sponsors|selectattr('10', 'equalto', 'active')|list|length }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <div class="rounded-circle bg-warning bg-opacity-10 p-3">
+                                <i class="ph ph-handshake text-warning fs-4"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <h6 class="card-title text-muted mb-1">Active Deals</h6>
+                            <h3 class="mb-0">{{ deals|selectattr('8', 'equalto', 'active')|list|length }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <div class="rounded-circle bg-info bg-opacity-10 p-3">
+                                <i class="ph ph-currency-dollar text-info fs-4"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <h6 class="card-title text-muted mb-1">Total Value</h6>
+                            {% set total_value = sponsors|sum(attribute='17') %}
+                            <h3 class="mb-0">${{ "%.0f"|format(total_value / 100) if total_value else "0" }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs for Sponsors and Deals -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom">
+            <ul class="nav nav-tabs card-header-tabs" id="sponsorTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="sponsors-tab" data-bs-toggle="tab" data-bs-target="#sponsors" type="button" role="tab">
+                        <i class="ph ph-buildings me-2"></i>Sponsors
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="deals-tab" data-bs-toggle="tab" data-bs-target="#deals" type="button" role="tab">
+                        <i class="ph ph-handshake me-2"></i>Deals
+                    </button>
+                </li>
+            </ul>
+        </div>
+        <div class="card-body p-0">
+            <div class="tab-content" id="sponsorTabContent">
+                <!-- Sponsors Tab -->
+                <div class="tab-pane fade show active" id="sponsors" role="tabpanel">
+                    <div class="p-3 border-bottom">
+                        <div class="d-flex gap-2">
+                            <select class="form-select form-select-sm" id="statusFilter" style="width: auto;">
+                                <option value="">All Status</option>
+                                <option value="prospect">Prospect</option>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                                <option value="declined">Declined</option>
+                            </select>
+                            <select class="form-select form-select-sm" id="priorityFilter" style="width: auto;">
+                                <option value="">All Priority</option>
+                                <option value="high">High</option>
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
+                            </select>
+                            <select class="form-select form-select-sm" id="industryFilter" style="width: auto;">
+                                <option value="">All Industries</option>
+                                <option value="Technology">Technology</option>
+                                <option value="Automotive">Automotive</option>
+                                <option value="Financial Services">Financial Services</option>
+                                <option value="Sports & Recreation">Sports & Recreation</option>
+                                <option value="Energy">Energy</option>
+                                <option value="Healthcare">Healthcare</option>
+                                <option value="Retail">Retail</option>
+                                <option value="Food & Beverage">Food & Beverage</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Company</th>
+                                    <th>Contact</th>
+                                    <th>Industry</th>
+                                    <th>Status</th>
+                                    <th>Priority</th>
+                                    <th>Deals</th>
+                                    <th>Value</th>
+                                    <th>Last Contact</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sponsorsTableBody">
+                                {% for sponsor in sponsors %}
+                                <tr data-status="{{ sponsor[10] }}" data-priority="{{ sponsor[11] }}" data-industry="{{ sponsor[7] }}">
+                                    <td>
+                                        <div>
+                                            <h6 class="mb-1">{{ sponsor[1] }}</h6>
+                                            {% if sponsor[5] %}
+                                                <small class="text-muted">
+                                                    <i class="ph ph-globe me-1"></i>
+                                                    <a href="{{ sponsor[5] }}" target="_blank" class="text-decoration-none">{{ sponsor[5] }}</a>
+                                                </small>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            {% if sponsor[2] %}
+                                                <div class="fw-semibold">{{ sponsor[2] }}</div>
+                                            {% endif %}
+                                            {% if sponsor[3] %}
+                                                <small class="text-muted">
+                                                    <i class="ph ph-envelope me-1"></i>{{ sponsor[3] }}
+                                                </small>
+                                            {% endif %}
+                                            {% if sponsor[4] %}
+                                                <small class="text-muted d-block">
+                                                    <i class="ph ph-phone me-1"></i>{{ sponsor[4] }}
+                                                </small>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if sponsor[7] %}
+                                            <span class="badge bg-light text-dark">{{ sponsor[7] }}</span>
+                                        {% endif %}
+                                        {% if sponsor[8] %}
+                                            <small class="text-muted d-block">{{ sponsor[8] }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if sponsor[10] == 'active' %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% elif sponsor[10] == 'prospect' %}
+                                            <span class="badge bg-warning">Prospect</span>
+                                        {% elif sponsor[10] == 'inactive' %}
+                                            <span class="badge bg-secondary">Inactive</span>
+                                        {% elif sponsor[10] == 'declined' %}
+                                            <span class="badge bg-danger">Declined</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if sponsor[11] == 'high' %}
+                                            <span class="badge bg-danger">High</span>
+                                        {% elif sponsor[11] == 'medium' %}
+                                            <span class="badge bg-warning">Medium</span>
+                                        {% elif sponsor[11] == 'low' %}
+                                            <span class="badge bg-info">Low</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ sponsor[16] }}</span>
+                                    </td>
+                                    <td>
+                                        {% if sponsor[17] and sponsor[17] > 0 %}
+                                            <strong class="text-success">${{ "%.0f"|format(sponsor[17] / 100) }}</strong>
+                                        {% else %}
+                                            <span class="text-muted">$0</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if sponsor[14] %}
+                                            <small class="text-muted">{{ sponsor[14].strftime('%b %d, %Y') }}</small>
+                                        {% else %}
+                                            <small class="text-muted">Never</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button class="btn btn-sm btn-outline-primary"
+                                                    onclick="editSponsor('{{ sponsor[0] }}', '{{ sponsor[1] }}', '{{ sponsor[2] }}', '{{ sponsor[3] }}', '{{ sponsor[4] }}', '{{ sponsor[5] }}', '{{ sponsor[6] }}', '{{ sponsor[7] }}', '{{ sponsor[8] }}', '{{ sponsor[9] }}', '{{ sponsor[10] }}', '{{ sponsor[11] }}', '{{ sponsor[12] }}', '{{ sponsor[13] }}', '{{ sponsor[14] }}')">
+                                                <i class="ph ph-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger"
+                                                    data-bs-toggle="modal" data-bs-target="#deleteSponsorModal"
+                                                    data-id="{{ sponsor[0] }}" data-name="{{ sponsor[1] }}">
+                                                <i class="ph ph-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Deals Tab -->
+                <div class="tab-pane fade" id="deals" role="tabpanel">
+                    <div class="p-3 border-bottom">
+                        <div class="d-flex gap-2">
+                            <select class="form-select form-select-sm" id="dealStatusFilter" style="width: auto;">
+                                <option value="">All Status</option>
+                                <option value="prospect">Prospect</option>
+                                <option value="negotiating">Negotiating</option>
+                                <option value="pending">Pending</option>
+                                <option value="active">Active</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                            <select class="form-select form-select-sm" id="dealTypeFilter" style="width: auto;">
+                                <option value="">All Types</option>
+                                <option value="title">Title</option>
+                                <option value="presenting">Presenting</option>
+                                <option value="jersey">Jersey</option>
+                                <option value="stadium">Stadium</option>
+                                <option value="event">Event</option>
+                                <option value="digital">Digital</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Deal Name</th>
+                                    <th>Sponsor</th>
+                                    <th>Type</th>
+                                    <th>Level</th>
+                                    <th>Value</th>
+                                    <th>Status</th>
+                                    <th>Duration</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dealsTableBody">
+                                {% for deal in deals %}
+                                <tr data-deal-status="{{ deal[8] }}" data-deal-type="{{ deal[4] }}">
+                                    <td>
+                                        <div>
+                                            <h6 class="mb-1">{{ deal[3] }}</h6>
+                                            <small class="text-muted">{{ deal[2] }}</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <strong>{{ deal[2] }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ deal[4]|title }}</span>
+                                    </td>
+                                    <td>
+                                        {% if deal[5] == 'platinum' %}
+                                            <span class="badge bg-dark">Platinum</span>
+                                        {% elif deal[5] == 'gold' %}
+                                            <span class="badge bg-warning text-dark">Gold</span>
+                                        {% elif deal[5] == 'silver' %}
+                                            <span class="badge bg-secondary">Silver</span>
+                                        {% elif deal[5] == 'bronze' %}
+                                            <span class="badge bg-warning">Bronze</span>
+                                        {% else %}
+                                            <span class="badge bg-light text-dark">{{ deal[5]|title }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <strong>${{ "%.0f"|format(deal[6] / 100) if deal[6] else "0" }}</strong>
+                                        {% if deal[7] and deal[7] != 'USD' %}
+                                            <small class="text-muted">{{ deal[7] }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if deal[8] == 'active' %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% elif deal[8] == 'negotiating' %}
+                                            <span class="badge bg-warning">Negotiating</span>
+                                        {% elif deal[8] == 'pending' %}
+                                            <span class="badge bg-info">Pending</span>
+                                        {% elif deal[8] == 'prospect' %}
+                                            <span class="badge bg-secondary">Prospect</span>
+                                        {% elif deal[8] == 'completed' %}
+                                            <span class="badge bg-primary">Completed</span>
+                                        {% elif deal[8] == 'cancelled' %}
+                                            <span class="badge bg-danger">Cancelled</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if deal[9] and deal[10] %}
+                                            <small class="text-muted">
+                                                {{ deal[9].strftime('%b %Y') }} - {{ deal[10].strftime('%b %Y') }}
+                                            </small>
+                                        {% elif deal[9] %}
+                                            <small class="text-muted">From {{ deal[9].strftime('%b %Y') }}</small>
+                                        {% else %}
+                                            <small class="text-muted">TBD</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button class="btn btn-sm btn-outline-primary"
+                                                    onclick="editDeal('{{ deal[0] }}', '{{ deal[1] }}', '{{ deal[2] }}', '{{ deal[3] }}', '{{ deal[4] }}', '{{ deal[5] }}', '{{ deal[6] }}', '{{ deal[7] }}', '{{ deal[8] }}', '{{ deal[9] }}', '{{ deal[10] }}', '{{ deal[11] }}', '{{ deal[12] }}', '{{ deal[13] }}', '{{ deal[14] }}')">
+                                                <i class="ph ph-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger"
+                                                    data-bs-toggle="modal" data-bs-target="#deleteDealModal"
+                                                    data-id="{{ deal[0] }}" data-name="{{ deal[3] }}">
+                                                <i class="ph ph-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Sponsor Modal -->
+<div class="modal fade" id="addSponsorModal" tabindex="-1" aria-labelledby="addSponsorModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <form action="{{ url_for('admin.manage_sponsors') }}" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addSponsorModalLabel">Add Sponsor</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="sponsor_id" name="sponsor_id">
+
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="company_name" class="form-label">Company Name *</label>
+                                <input type="text" class="form-control" id="company_name" name="company_name" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="website" class="form-label">Website</label>
+                                <input type="url" class="form-control" id="website" name="website" placeholder="https://company.com">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="contact_person" class="form-label">Primary Contact</label>
+                                <input type="text" class="form-control" id="contact_person" name="contact_person">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" name="email">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="phone" class="form-label">Phone</label>
+                                <input type="tel" class="form-control" id="phone" name="phone">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="industry" class="form-label">Industry</label>
+                                <select class="form-select" id="industry" name="industry">
+                                    <option value="">Select Industry</option>
+                                    <option value="Technology">Technology</option>
+                                    <option value="Automotive">Automotive</option>
+                                    <option value="Financial Services">Financial Services</option>
+                                    <option value="Sports & Recreation">Sports & Recreation</option>
+                                    <option value="Energy">Energy</option>
+                                    <option value="Healthcare">Healthcare</option>
+                                    <option value="Retail">Retail</option>
+                                    <option value="Food & Beverage">Food & Beverage</option>
+                                    <option value="Real Estate">Real Estate</option>
+                                    <option value="Manufacturing">Manufacturing</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="address" class="form-label">Address</label>
+                        <textarea class="form-control" id="address" name="address" rows="2"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="company_size" class="form-label">Company Size</label>
+                                <select class="form-select" id="company_size" name="company_size">
+                                    <option value="">Select Size</option>
+                                    <option value="Small (1-49)">Small (1-49)</option>
+                                    <option value="Medium (50-499)">Medium (50-499)</option>
+                                    <option value="Large (500+)">Large (500+)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="status" class="form-label">Status</label>
+                                <select class="form-select" id="status" name="status">
+                                    <option value="prospect">Prospect</option>
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
+                                    <option value="declined">Declined</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="priority" class="form-label">Priority</label>
+                                <select class="form-select" id="priority" name="priority">
+                                    <option value="low">Low</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="high">High</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="first_contact_date" class="form-label">First Contact Date</label>
+                                <input type="date" class="form-control" id="first_contact_date" name="first_contact_date">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="last_contact_date" class="form-label">Last Contact Date</label>
+                                <input type="date" class="form-control" id="last_contact_date" name="last_contact_date">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="annual_revenue_range" class="form-label">Annual Revenue Range</label>
+                        <select class="form-select" id="annual_revenue_range" name="annual_revenue_range">
+                            <option value="">Select Range</option>
+                            <option value="Under $1M">Under $1M</option>
+                            <option value="$1M - $10M">$1M - $10M</option>
+                            <option value="$10M - $100M">$10M - $100M</option>
+                            <option value="$100M - $1B">$100M - $1B</option>
+                            <option value="Over $1B">Over $1B</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Internal notes about this sponsor..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" name="submit_sponsor" class="btn btn-primary" id="submitSponsorBtn">
+                        <i class="ph ph-plus me-2"></i>Add Sponsor
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Deal Modal -->
+<div class="modal fade" id="addDealModal" tabindex="-1" aria-labelledby="addDealModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <form action="{{ url_for('admin.manage_sponsors') }}" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addDealModalLabel">Add Deal</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="deal_id" name="deal_id">
+
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="deal_name" class="form-label">Deal Name *</label>
+                                <input type="text" class="form-control" id="deal_name" name="deal_name" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="deal_sponsor_id" class="form-label">Sponsor *</label>
+                                <select class="form-select" id="deal_sponsor_id" name="deal_sponsor_id" required>
+                                    <option value="">Select Sponsor</option>
+                                    {% for sponsor in sponsors %}
+                                    <option value="{{ sponsor[0] }}">{{ sponsor[1] }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="deal_type" class="form-label">Deal Type</label>
+                                <select class="form-select" id="deal_type" name="deal_type">
+                                    <option value="title">Title Sponsorship</option>
+                                    <option value="presenting">Presenting Sponsor</option>
+                                    <option value="jersey">Jersey Sponsor</option>
+                                    <option value="stadium">Stadium/Venue</option>
+                                    <option value="event">Event Sponsor</option>
+                                    <option value="digital">Digital/Online</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="sponsorship_level" class="form-label">Level</label>
+                                <select class="form-select" id="sponsorship_level" name="sponsorship_level">
+                                    <option value="platinum">Platinum</option>
+                                    <option value="gold">Gold</option>
+                                    <option value="silver">Silver</option>
+                                    <option value="bronze" selected>Bronze</option>
+                                    <option value="community">Community</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="deal_status" class="form-label">Status</label>
+                                <select class="form-select" id="deal_status" name="deal_status">
+                                    <option value="prospect">Prospect</option>
+                                    <option value="negotiating">Negotiating</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="active">Active</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="deal_value" class="form-label">Deal Value</label>
+                                <input type="number" class="form-control" id="deal_value" name="deal_value" step="0.01" min="0">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="currency" class="form-label">Currency</label>
+                                <select class="form-select" id="currency" name="currency">
+                                    <option value="USD" selected>USD</option>
+                                    <option value="EUR">EUR</option>
+                                    <option value="GBP">GBP</option>
+                                    <option value="CAD">CAD</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="start_date" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="start_date" name="start_date">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="end_date" class="form-label">End Date</label>
+                                <input type="date" class="form-control" id="end_date" name="end_date">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="benefits_provided" class="form-label">Benefits Provided</label>
+                        <textarea class="form-control" id="benefits_provided" name="benefits_provided" rows="2" placeholder="Logo placement, signage, tickets, etc."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="deliverables" class="form-label">Deliverables</label>
+                        <textarea class="form-control" id="deliverables" name="deliverables" rows="2" placeholder="What we need to deliver..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="payment_terms" class="form-label">Payment Terms</label>
+                        <textarea class="form-control" id="payment_terms" name="payment_terms" rows="2" placeholder="Payment schedule and terms..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="deal_notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="deal_notes" name="deal_notes" rows="3" placeholder="Internal notes about this deal..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" name="submit_deal" class="btn btn-primary" id="submitDealBtn">
+                        <i class="ph ph-plus me-2"></i>Add Deal
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Sponsor Modal -->
+<div class="modal fade" id="deleteSponsorModal" tabindex="-1" aria-labelledby="deleteSponsorModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.manage_sponsors') }}">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteSponsorModalLabel">Confirm Delete</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="ph ph-warning me-2"></i>
+                        Are you sure you want to delete this sponsor? This will also delete all associated deals and cannot be undone.
+                    </div>
+                    <input type="hidden" id="deleteEntityId" name="deleteEntityId">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" name="delete_sponsor" class="btn btn-danger">
+                        <i class="ph ph-trash me-2"></i>Delete Sponsor
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Deal Modal -->
+<div class="modal fade" id="deleteDealModal" tabindex="-1" aria-labelledby="deleteDealModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.manage_sponsors') }}">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteDealModalLabel">Confirm Delete</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="ph ph-warning me-2"></i>
+                        Are you sure you want to delete this deal? This action cannot be undone.
+                    </div>
+                    <input type="hidden" id="deleteDealId" name="deleteDealId">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" name="delete_deal" class="btn btn-danger">
+                        <i class="ph ph-trash me-2"></i>Delete Deal
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Import Modal -->
+<div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.import_sponsors') }}" enctype="multipart/form-data">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="importModalLabel">Import Sponsors from Excel</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="ph ph-info me-2"></i>
+                        <strong>Import Requirements:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>File must be in Excel format (.xlsx or .xls)</li>
+                            <li>Required column: "Company Name"</li>
+                            <li>Optional columns: Contact Person, Email, Phone, Website, Address, Industry, Company Size, Revenue Range, Status, Priority, Notes, First Contact Date, Last Contact Date</li>
+                            <li>Status values: prospect, active, inactive, declined</li>
+                            <li>Priority values: low, medium, high</li>
+                        </ul>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="excel_file" class="form-label">Choose Excel File</label>
+                        <input type="file" class="form-control" id="excel_file" name="excel_file" accept=".xlsx,.xls" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <a href="{{ url_for('admin.export_sponsors') }}" class="btn btn-sm btn-outline-info">
+                            <i class="ph ph-download me-1"></i>Download Template (Export Current Data)
+                        </a>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="ph ph-upload me-2"></i>Import Sponsors
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Filter functionality for sponsors
+document.getElementById('statusFilter').addEventListener('change', filterSponsors);
+document.getElementById('priorityFilter').addEventListener('change', filterSponsors);
+document.getElementById('industryFilter').addEventListener('change', filterSponsors);
+
+function filterSponsors() {
+    const statusFilter = document.getElementById('statusFilter').value;
+    const priorityFilter = document.getElementById('priorityFilter').value;
+    const industryFilter = document.getElementById('industryFilter').value;
+    const rows = document.querySelectorAll('#sponsorsTableBody tr');
+
+    rows.forEach(row => {
+        const status = row.getAttribute('data-status');
+        const priority = row.getAttribute('data-priority');
+        const industry = row.getAttribute('data-industry');
+
+        const statusMatch = !statusFilter || status === statusFilter;
+        const priorityMatch = !priorityFilter || priority === priorityFilter;
+        const industryMatch = !industryFilter || industry === industryFilter;
+
+        if (statusMatch && priorityMatch && industryMatch) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+// Filter functionality for deals
+document.getElementById('dealStatusFilter').addEventListener('change', filterDeals);
+document.getElementById('dealTypeFilter').addEventListener('change', filterDeals);
+
+function filterDeals() {
+    const statusFilter = document.getElementById('dealStatusFilter').value;
+    const typeFilter = document.getElementById('dealTypeFilter').value;
+    const rows = document.querySelectorAll('#dealsTableBody tr');
+
+    rows.forEach(row => {
+        const status = row.getAttribute('data-deal-status');
+        const type = row.getAttribute('data-deal-type');
+
+        const statusMatch = !statusFilter || status === statusFilter;
+        const typeMatch = !typeFilter || type === typeFilter;
+
+        if (statusMatch && typeMatch) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+// Edit sponsor functionality
+function editSponsor(sponsorId, companyName, contactPerson, email, phone, website, address, industry, companySize, annualRevenueRange, status, priority, notes, firstContactDate, lastContactDate) {
+    document.getElementById('sponsor_id').value = sponsorId;
+    document.getElementById('company_name').value = companyName;
+    document.getElementById('contact_person').value = contactPerson || '';
+    document.getElementById('email').value = email || '';
+    document.getElementById('phone').value = phone || '';
+    document.getElementById('website').value = website || '';
+    document.getElementById('address').value = address || '';
+    document.getElementById('industry').value = industry || '';
+    document.getElementById('company_size').value = companySize || '';
+    document.getElementById('annual_revenue_range').value = annualRevenueRange || '';
+    document.getElementById('status').value = status || 'prospect';
+    document.getElementById('priority').value = priority || 'medium';
+    document.getElementById('notes').value = notes || '';
+    document.getElementById('first_contact_date').value = firstContactDate ? firstContactDate.split('T')[0] : '';
+    document.getElementById('last_contact_date').value = lastContactDate ? lastContactDate.split('T')[0] : '';
+
+    document.getElementById('addSponsorModalLabel').textContent = 'Edit Sponsor';
+    document.getElementById('submitSponsorBtn').innerHTML = '<i class="ph ph-check me-2"></i>Update Sponsor';
+
+    const modal = new bootstrap.Modal(document.getElementById('addSponsorModal'));
+    modal.show();
+}
+
+// Edit deal functionality
+function editDeal(deal) {
+    document.getElementById('deal_id').value = deal[0];
+    document.getElementById('deal_sponsor_id').value = deal[1];
+    document.getElementById('deal_name').value = deal[3];
+    document.getElementById('deal_type').value = deal[4] || 'other';
+    document.getElementById('sponsorship_level').value = deal[5] || 'bronze';
+    document.getElementById('deal_value').value = deal[6] ? (deal[6] / 100).toFixed(2) : '';
+    document.getElementById('currency').value = deal[7] || 'USD';
+    document.getElementById('deal_status').value = deal[8] || 'prospect';
+    document.getElementById('start_date').value = deal[9] ? deal[9].split('T')[0] : '';
+    document.getElementById('end_date').value = deal[10] ? deal[10].split('T')[0] : '';
+    document.getElementById('benefits_provided').value = deal[11] || '';
+    document.getElementById('deliverables').value = deal[12] || '';
+    document.getElementById('payment_terms').value = deal[13] || '';
+    document.getElementById('deal_notes').value = deal[14] || '';
+
+    document.getElementById('addDealModalLabel').textContent = 'Edit Deal';
+    document.getElementById('submitDealBtn').innerHTML = '<i class="ph ph-check me-2"></i>Update Deal';
+
+    const modal = new bootstrap.Modal(document.getElementById('addDealModal'));
+    modal.show();
+}
+
+// Reset modals when opening for new entries
+document.getElementById('addSponsorModal').addEventListener('show.bs.modal', function(event) {
+    if (!event.relatedTarget || !event.relatedTarget.onclick) {
+        document.getElementById('sponsor_id').value = '';
+        document.getElementById('addSponsorModalLabel').textContent = 'Add Sponsor';
+        document.getElementById('submitSponsorBtn').innerHTML = '<i class="ph ph-plus me-2"></i>Add Sponsor';
+        this.querySelector('form').reset();
+    }
+});
+
+document.getElementById('addDealModal').addEventListener('show.bs.modal', function(event) {
+    if (!event.relatedTarget || !event.relatedTarget.onclick) {
+        document.getElementById('deal_id').value = '';
+        document.getElementById('addDealModalLabel').textContent = 'Add Deal';
+        document.getElementById('submitDealBtn').innerHTML = '<i class="ph ph-plus me-2"></i>Add Deal';
+        this.querySelector('form').reset();
+    }
+});
+
+// Delete modals functionality
+document.getElementById('deleteSponsorModal').addEventListener('show.bs.modal', function(event) {
+    const button = event.relatedTarget;
+    const sponsorId = button.getAttribute('data-id');
+    const sponsorName = button.getAttribute('data-name');
+
+    document.getElementById('deleteEntityId').value = sponsorId;
+    document.querySelector('#deleteSponsorModal .alert').innerHTML =
+        '<i class="ph ph-warning me-2"></i>Are you sure you want to delete "' + sponsorName + '"? This will also delete all associated deals and cannot be undone.';
+});
+
+document.getElementById('deleteDealModal').addEventListener('show.bs.modal', function(event) {
+    const button = event.relatedTarget;
+    const dealId = button.getAttribute('data-id');
+    const dealName = button.getAttribute('data-name');
+
+    document.getElementById('deleteDealId').value = dealId;
+    document.querySelector('#deleteDealModal .alert').innerHTML =
+        '<i class="ph ph-warning me-2"></i>Are you sure you want to delete "' + dealName + '"? This action cannot be undone.';
+});
+</script>
+{% endblock %}

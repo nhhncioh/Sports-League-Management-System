@@ -39,12 +39,12 @@
                         <td>{{ country[2] }}</td>
                         <td>
                             <button class="btn btn-success btn-sm" onclick="editCountry('{{ country[0] }}', '{{ country[1] }}', '{{ country[2] }}')">
-                                <i class="fa fa-pencil-alt"></i>
+                                <i class="ph ph-pencil"></i>
                             </button>
                         </td>
                         <td>
                             <button class="btn btn-danger btn-sm" data-toggle="modal" data-target="#deleteModal" data-id="{{ country[0] }}" data-action="{{ url_for('admin.manage_countries') }}">
-                                <i class="fa fa-minus"></i>
+                                <i class="ph ph-minus"></i>
                             </button>
                         </td>
                     </tr>

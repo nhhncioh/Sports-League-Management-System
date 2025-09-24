@@ -87,16 +87,19 @@
         <div class="row align-items-center">
             <div class="col-md-8">
                 <h1 class="mb-0">
-                    <i class="bi bi-people"></i> Teams Management
+                    <i class="ph ph-users"></i> Teams Management
                 </h1>
                 <p class="mb-0 mt-2 opacity-75">Manage teams, players, and league assignments</p>
             </div>
             <div class="col-md-4 text-end">
                 <a href="{{ url_for('admin.create_team') }}" class="btn btn-light">
-                    <i class="bi bi-plus"></i> Add Team
+                    <i class="ph ph-plus"></i> Add Team
                 </a>
+                <button type="button" class="btn btn-outline-light" data-bs-toggle="modal" data-bs-target="#teamBrandingModal">
+                    <i class="ph ph-palette"></i> Team Branding
+                </button>
                 <a href="{{ url_for('admin.import_teams') }}" class="btn btn-outline-light">
-                    <i class="bi bi-upload"></i> Import
+                    <i class="ph ph-upload"></i> Import
                 </a>
             </div>
         </div>
@@ -140,13 +143,13 @@
             </div>
             <div>
                 <button class="btn btn-outline-primary btn-sm me-2" onclick="bulkAssignLeague()">
-                    <i class="bi bi-tag"></i> Assign League
+                    <i class="ph ph-tag"></i> Assign League
                 </button>
                 <button class="btn btn-outline-warning btn-sm me-2" onclick="bulkDeactivate()">
-                    <i class="bi bi-pause"></i> Deactivate
+                    <i class="ph ph-pause"></i> Deactivate
                 </button>
                 <button class="btn btn-outline-danger btn-sm" onclick="bulkDelete()">
-                    <i class="bi bi-trash"></i> Delete
+                    <i class="ph ph-trash"></i> Delete
                 </button>
             </div>
         </div>
@@ -239,7 +242,103 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary" onclick="confirmBulkLeague()">
-                    <i class="bi bi-check"></i> Assign League
+                    <i class="ph ph-check"></i> Assign League
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Team Branding Modal -->
+<div class="modal fade" id="teamBrandingModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="ph ph-palette"></i> Team Branding Management
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info mb-4">
+                    <i class="ph ph-info me-2"></i>
+                    <strong>Bulk customize team branding.</strong> Set logos and colors for all teams at once, or configure individual teams.
+                </div>
+
+                <form id="team-branding-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <!-- Global Settings -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Global Team Settings</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Default Primary Color</label>
+                                    <div class="row g-2">
+                                        <div class="col-4">
+                                            <input type="color" id="global-primary-picker" class="form-control form-control-color" value="#007bff">
+                                        </div>
+                                        <div class="col-8">
+                                            <input type="text" id="global-primary-hex" class="form-control" value="#007bff" placeholder="#007bff">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Default Secondary Color</label>
+                                    <div class="row g-2">
+                                        <div class="col-4">
+                                            <input type="color" id="global-secondary-picker" class="form-control form-control-color" value="#6c757d">
+                                        </div>
+                                        <div class="col-8">
+                                            <input type="text" id="global-secondary-hex" class="form-control" value="#6c757d" placeholder="#6c757d">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="applyGlobalColors()">
+                                    <i class="ph ph-arrow-down"></i> Apply to All Teams
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Individual Team Settings -->
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">Individual Team Branding</h6>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="loadTeamBranding()">
+                                <i class="ph ph-arrow-clockwise"></i> Refresh
+                            </button>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Team</th>
+                                            <th>Logo URL</th>
+                                            <th>Primary Color</th>
+                                            <th>Secondary Color</th>
+                                            <th>Preview</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="team-branding-tbody">
+                                        <!-- Teams will be loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveTeamBranding()">
+                    <i class="ph ph-floppy-disk"></i> Save All Changes
                 </button>
             </div>
         </div>
@@ -449,6 +548,115 @@ document.addEventListener('htmx:afterSwap', function(e) {
         selectedTeams.clear();
         updateBulkActions();
     }
+});
+
+// Team Branding Modal Functions
+function loadTeamBranding() {
+    htmx.ajax('GET', '/admin/api/teams/branding', {
+        target: '#team-branding-tbody'
+    });
+}
+
+function applyGlobalColors() {
+    const primaryColor = document.getElementById('global-primary-hex').value;
+    const secondaryColor = document.getElementById('global-secondary-hex').value;
+
+    // Apply to all team color inputs
+    document.querySelectorAll('.team-primary-hex').forEach(input => {
+        input.value = primaryColor;
+        const picker = input.closest('tr').querySelector('.team-primary-picker');
+        if (picker) picker.value = primaryColor;
+        updateTeamPreview(input.closest('tr'));
+    });
+
+    document.querySelectorAll('.team-secondary-hex').forEach(input => {
+        input.value = secondaryColor;
+        const picker = input.closest('tr').querySelector('.team-secondary-picker');
+        if (picker) picker.value = secondaryColor;
+        updateTeamPreview(input.closest('tr'));
+    });
+}
+
+function updateTeamPreview(row) {
+    const logo = row.querySelector('.team-logo-input').value;
+    const primary = row.querySelector('.team-primary-hex').value;
+    const secondary = row.querySelector('.team-secondary-hex').value;
+    const preview = row.querySelector('.team-preview');
+
+    if (preview) {
+        preview.style.background = `linear-gradient(45deg, ${primary}, ${secondary})`;
+        if (logo) {
+            preview.innerHTML = `<img src="${logo}" alt="Logo" style="width: 20px; height: 20px; border-radius: 50%;">`;
+        } else {
+            preview.innerHTML = '<i class="ph ph-image text-white"></i>';
+        }
+    }
+}
+
+function saveTeamBranding() {
+    const formData = new FormData(document.getElementById('team-branding-form'));
+    const teams = [];
+
+    document.querySelectorAll('#team-branding-tbody tr').forEach(row => {
+        const teamId = row.dataset.teamId;
+        if (teamId) {
+            teams.push({
+                id: teamId,
+                logo_url: row.querySelector('.team-logo-input').value,
+                primary_color: row.querySelector('.team-primary-hex').value,
+                secondary_color: row.querySelector('.team-secondary-hex').value
+            });
+        }
+    });
+
+    htmx.ajax('PUT', '/admin/api/teams/branding', {
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+        },
+        values: { teams: teams }
+    }).then(() => {
+        bootstrap.Modal.getInstance(document.getElementById('teamBrandingModal')).hide();
+        showAlert('Team branding updated successfully', 'success');
+        htmx.trigger('#teams-table-tbody', 'refresh');
+    }).catch(() => {
+        showAlert('Error updating team branding', 'danger');
+    });
+}
+
+// Sync global color pickers
+document.addEventListener('DOMContentLoaded', function() {
+    const globalPrimaryPicker = document.getElementById('global-primary-picker');
+    const globalPrimaryHex = document.getElementById('global-primary-hex');
+    const globalSecondaryPicker = document.getElementById('global-secondary-picker');
+    const globalSecondaryHex = document.getElementById('global-secondary-hex');
+
+    if (globalPrimaryPicker && globalPrimaryHex) {
+        globalPrimaryPicker.addEventListener('input', () => {
+            globalPrimaryHex.value = globalPrimaryPicker.value;
+        });
+        globalPrimaryHex.addEventListener('input', () => {
+            if (globalPrimaryHex.value.match(/^#[0-9A-F]{6}$/i)) {
+                globalPrimaryPicker.value = globalPrimaryHex.value;
+            }
+        });
+    }
+
+    if (globalSecondaryPicker && globalSecondaryHex) {
+        globalSecondaryPicker.addEventListener('input', () => {
+            globalSecondaryHex.value = globalSecondaryPicker.value;
+        });
+        globalSecondaryHex.addEventListener('input', () => {
+            if (globalSecondaryHex.value.match(/^#[0-9A-F]{6}$/i)) {
+                globalSecondaryPicker.value = globalSecondaryHex.value;
+            }
+        });
+    }
+});
+
+// Load team branding when modal opens
+document.getElementById('teamBrandingModal').addEventListener('shown.bs.modal', function() {
+    loadTeamBranding();
 });
 </script>
 {% endblock %}

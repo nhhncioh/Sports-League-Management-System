@@ -230,11 +230,11 @@
         <div class="wizard-progress">
             <div class="d-flex">
                 <div class="progress-step completed">
-                    <div class="step-circle"><i class="bi bi-check"></i></div>
+                    <div class="step-circle"><i class="ph ph-check"></i></div>
                     <div class="step-label">Season Info</div>
                 </div>
                 <div class="progress-step completed">
-                    <div class="step-circle"><i class="bi bi-check"></i></div>
+                    <div class="step-circle"><i class="ph ph-check"></i></div>
                     <div class="step-label">Teams</div>
                 </div>
                 <div class="progress-step active">
@@ -255,7 +255,7 @@
         <!-- Step 3 Form -->
         <div class="wizard-card">
             <div class="wizard-header">
-                <h1><i class="bi bi-geo-alt"></i> Step 3: Venues & Availability</h1>
+                <h1><i class="ph ph-map-pin"></i> Step 3: Venues & Availability</h1>
                 <p class="mb-0">Set up game venues and their availability schedules</p>
             </div>
 
@@ -266,7 +266,7 @@
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <h4>Game Venues</h4>
                         <button type="button" class="btn btn-outline-primary" onclick="addVenueRow()">
-                            <i class="bi bi-plus"></i> Add Venue
+                            <i class="ph ph-plus"></i> Add Venue
                         </button>
                     </div>
 
@@ -279,11 +279,11 @@
                                     <div>
                                         <button type="button" class="btn btn-outline-info btn-sm toggle-availability"
                                                 onclick="toggleAvailability(this)">
-                                            <i class="bi bi-calendar"></i> Set Availability
+                                            <i class="ph ph-calendar"></i> Set Availability
                                         </button>
                                         <button type="button" class="btn btn-outline-danger btn-sm ms-2"
                                                 onclick="removeVenueRow(this)">
-                                            <i class="bi bi-trash"></i>
+                                            <i class="ph ph-trash"></i>
                                         </button>
                                     </div>
                                 </div>
@@ -341,7 +341,7 @@
                                 <!-- Availability Section -->
                                 <div class="availability-section">
                                     <h6 class="mt-3 mb-3">
-                                        <i class="bi bi-calendar-week"></i> Weekly Availability
+                                        <i class="ph ph-calendar"></i> Weekly Availability
                                         <small class="text-muted">(Leave unchecked if venue is always available)</small>
                                     </h6>
 
@@ -384,11 +384,11 @@
                                     <div>
                                         <button type="button" class="btn btn-outline-info btn-sm toggle-availability"
                                                 onclick="toggleAvailability(this)">
-                                            <i class="bi bi-calendar"></i> Set Availability
+                                            <i class="ph ph-calendar"></i> Set Availability
                                         </button>
                                         <button type="button" class="btn btn-outline-danger btn-sm ms-2"
                                                 onclick="removeVenueRow(this)">
-                                            <i class="bi bi-trash"></i>
+                                            <i class="ph ph-trash"></i>
                                         </button>
                                     </div>
                                 </div>
@@ -446,7 +446,7 @@
                                 <!-- Availability Section -->
                                 <div class="availability-section">
                                     <h6 class="mt-3 mb-3">
-                                        <i class="bi bi-calendar-week"></i> Weekly Availability
+                                        <i class="ph ph-calendar"></i> Weekly Availability
                                         <small class="text-muted">(Leave unchecked if venue is always available)</small>
                                     </h6>
 
@@ -483,7 +483,7 @@
                     </div>
 
                     <div class="alert alert-info mt-4">
-                        <h6><i class="bi bi-lightbulb"></i> Venue Tips:</h6>
+                        <h6><i class="ph ph-lightbulb"></i> Venue Tips:</h6>
                         <ul class="mb-0">
                             <li>You need at least one venue to schedule games</li>
                             <li>Availability settings help ensure games are scheduled at appropriate times</li>
@@ -495,10 +495,10 @@
 
                 <div class="wizard-footer">
                     <a href="{{ url_for('admin.season_wizard_step', step=2) }}" class="btn btn-outline-secondary btn-wizard">
-                        <i class="bi bi-arrow-left"></i> Back
+                        <i class="ph ph-arrow-left"></i> Back
                     </a>
                     <button type="submit" class="btn btn-primary btn-wizard">
-                        Next: Registration <i class="bi bi-arrow-right"></i>
+                        Next: Registration <i class="ph ph-arrow-right"></i>
                     </button>
                 </div>
             </form>
@@ -521,11 +521,11 @@ function addVenueRow() {
             <div>
                 <button type="button" class="btn btn-outline-info btn-sm toggle-availability"
                         onclick="toggleAvailability(this)">
-                    <i class="bi bi-calendar"></i> Set Availability
+                    <i class="ph ph-calendar"></i> Set Availability
                 </button>
                 <button type="button" class="btn btn-outline-danger btn-sm ms-2"
                         onclick="removeVenueRow(this)">
-                    <i class="bi bi-trash"></i>
+                    <i class="ph ph-trash"></i>
                 </button>
             </div>
         </div>
@@ -582,7 +582,7 @@ function addVenueRow() {
 
         <div class="availability-section">
             <h6 class="mt-3 mb-3">
-                <i class="bi bi-calendar-week"></i> Weekly Availability
+                <i class="ph ph-calendar"></i> Weekly Availability
                 <small class="text-muted">(Leave unchecked if venue is always available)</small>
             </h6>
 
@@ -666,12 +666,12 @@ function toggleAvailability(button) {
 
     if (availabilitySection.classList.contains('show')) {
         availabilitySection.classList.remove('show');
-        button.innerHTML = '<i class="bi bi-calendar"></i> Set Availability';
+        button.innerHTML = '<i class="ph ph-calendar"></i> Set Availability';
         button.classList.remove('btn-success');
         button.classList.add('btn-outline-info');
     } else {
         availabilitySection.classList.add('show');
-        button.innerHTML = '<i class="bi bi-calendar-check"></i> Hide Availability';
+        button.innerHTML = '<i class="ph ph-calendar-check"></i> Hide Availability';
         button.classList.remove('btn-outline-info');
         button.classList.add('btn-success');
     }

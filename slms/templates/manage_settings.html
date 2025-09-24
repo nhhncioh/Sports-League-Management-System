@@ -6,10 +6,10 @@
         <h1 class="h3 mb-0">Site Settings</h1>
         <div class="d-flex gap-2">
             <a href="{{ url_for('admin.manage_navigation') }}" class="btn btn-outline-primary">
-                <i class="bi bi-compass"></i> Manage Navigation
+                <i class="ph ph-compass"></i> Manage Navigation
             </a>
             <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-secondary">
-                <i class="bi bi-speedometer2"></i> Admin Dashboard
+                <i class="ph ph-speedometer"></i> Admin Dashboard
             </a>
         </div>
     </div>
@@ -27,8 +27,16 @@
                         <div class="mb-3">
                             <label for="brand_image_url" class="form-label">Brand Image URL (optional)</label>
                             <input type="url" id="brand_image_url" name="brand_image_url" class="form-control" value="{{ settings.brand_image_url or '' }}" placeholder="https://example.com/logo.png">
+                            <small class="text-muted">Recommended size: 200x60px for best results</small>
                         </div>
-                        <div class="row g-3 align-items-end">
+
+                        <div class="mb-3">
+                            <label for="favicon_url" class="form-label">Favicon URL (optional)</label>
+                            <input type="url" id="favicon_url" name="favicon_url" class="form-control" value="{{ settings.favicon_url or '' }}" placeholder="https://example.com/favicon.ico">
+                            <small class="text-muted">Shows in browser tabs. Recommended: 32x32px .ico or .png file</small>
+                        </div>
+
+                        <div class="row g-3 mb-3">
                             <div class="col-6">
                                 <label for="primary_color" class="form-label">Primary Color</label>
                                 <input type="color" id="primary_color_picker" class="form-control form-control-color" value="{{ settings.primary_color }}" title="Choose your color">
@@ -36,6 +44,161 @@
                             <div class="col-6">
                                 <label for="primary_color" class="form-label">Hex Value</label>
                                 <input type="text" id="primary_color" name="primary_color" class="form-control" value="{{ settings.primary_color }}" placeholder="#0d6efd">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-6">
+                                <label for="secondary_color" class="form-label">Secondary Color</label>
+                                <input type="color" id="secondary_color_picker" class="form-control form-control-color" value="{{ settings.secondary_color or '#6c757d' }}" title="Choose secondary color">
+                            </div>
+                            <div class="col-6">
+                                <label for="secondary_color" class="form-label">Hex Value</label>
+                                <input type="text" id="secondary_color" name="secondary_color" class="form-control" value="{{ settings.secondary_color or '#6c757d' }}" placeholder="#6c757d">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="league_tagline" class="form-label">League Tagline</label>
+                            <input type="text" id="league_tagline" name="league_tagline" class="form-control" value="{{ settings.league_tagline or '' }}" placeholder="Where Champions Are Made">
+                            <small class="text-muted">Appears in page headers and meta descriptions</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="contact_email" class="form-label">Contact Email</label>
+                            <input type="email" id="contact_email" name="contact_email" class="form-control" value="{{ settings.contact_email or '' }}" placeholder="info@yourleague.com">
+                            <small class="text-muted">Displayed on contact pages and forms</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="social_links" class="form-label">Social Media Links</label>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="ph ph-facebook-logo"></i></span>
+                                        <input type="url" name="facebook_url" class="form-control" value="{{ settings.facebook_url or '' }}" placeholder="https://facebook.com/yourleague">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="ph ph-instagram-logo"></i></span>
+                                        <input type="url" name="instagram_url" class="form-control" value="{{ settings.instagram_url or '' }}" placeholder="https://instagram.com/yourleague">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="ph ph-x-logo"></i></span>
+                                        <input type="url" name="twitter_url" class="form-control" value="{{ settings.twitter_url or '' }}" placeholder="https://x.com/yourleague">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="ph ph-youtube-logo"></i></span>
+                                        <input type="url" name="youtube_url" class="form-control" value="{{ settings.youtube_url or '' }}" placeholder="https://youtube.com/@yourleague">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Homepage Sections</label>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="show_hero" name="show_hero" {{ 'checked' if settings.show_hero != false else '' }}>
+                                        <label class="form-check-label" for="show_hero">Show Hero Section</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="show_stats" name="show_stats" {{ 'checked' if settings.show_stats != false else '' }}>
+                                        <label class="form-check-label" for="show_stats">Show Statistics Cards</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="show_leagues" name="show_leagues" {{ 'checked' if settings.show_leagues != false else '' }}>
+                                        <label class="form-check-label" for="show_leagues">Show Leagues & Seasons</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="show_recent_games" name="show_recent_games" {{ 'checked' if settings.show_recent_games != false else '' }}>
+                                        <label class="form-check-label" for="show_recent_games">Show Recent Games</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="show_cta_panel" name="show_cta_panel" {{ 'checked' if settings.show_cta_panel != false else '' }}>
+                                        <label class="form-check-label" for="show_cta_panel">Show Call-to-Action Panel</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="show_team_logos" name="show_team_logos" {{ 'checked' if settings.show_team_logos != false else '' }}>
+                                        <label class="form-check-label" for="show_team_logos">Show Team Logos in Cards</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Navigation & Layout</label>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="show_breadcrumbs" name="show_breadcrumbs" {{ 'checked' if settings.show_breadcrumbs != false else '' }}>
+                                        <label class="form-check-label" for="show_breadcrumbs">Show Breadcrumb Navigation</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="show_footer_social" name="show_footer_social" {{ 'checked' if settings.show_footer_social != false else '' }}>
+                                        <label class="form-check-label" for="show_footer_social">Show Social Links in Footer</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="enable_dark_mode" name="enable_dark_mode" {{ 'checked' if settings.enable_dark_mode else '' }}>
+                                        <label class="form-check-label" for="enable_dark_mode">Enable Dark Mode Toggle</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="show_season_filter" name="show_season_filter" {{ 'checked' if settings.show_season_filter != false else '' }}>
+                                        <label class="form-check-label" for="show_season_filter">Show Season Filter Dropdown</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Game & Schedule Display</label>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="show_live_scores" name="show_live_scores" {{ 'checked' if settings.show_live_scores != false else '' }}>
+                                        <label class="form-check-label" for="show_live_scores">Show Live Score Updates</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="show_venue_details" name="show_venue_details" {{ 'checked' if settings.show_venue_details != false else '' }}>
+                                        <label class="form-check-label" for="show_venue_details">Show Venue Information</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="show_player_stats" name="show_player_stats" {{ 'checked' if settings.show_player_stats != false else '' }}>
+                                        <label class="form-check-label" for="show_player_stats">Show Player Statistics</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="show_standings_preview" name="show_standings_preview" {{ 'checked' if settings.show_standings_preview != false else '' }}>
+                                        <label class="form-check-label" for="show_standings_preview">Show Standings Preview</label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="mt-3 d-flex gap-2">
@@ -67,17 +230,41 @@
 
 {% block extra_js %}
 <script>
-    const picker = document.getElementById('primary_color_picker');
-    const input = document.getElementById('primary_color');
-    const preview = document.getElementById('themePreview');
-    if (picker && input && preview) {
-        picker.addEventListener('input', (e) => {
-            input.value = e.target.value;
-            preview.style.background = e.target.value;
-        });
-        input.addEventListener('input', (e) => {
-            preview.style.background = e.target.value;
-        });
+// Sync color pickers with text inputs
+document.addEventListener('DOMContentLoaded', function() {
+    const primaryColorPicker = document.getElementById('primary_color_picker');
+    const primaryColorInput = document.getElementById('primary_color');
+    const secondaryColorPicker = document.getElementById('secondary_color_picker');
+    const secondaryColorInput = document.getElementById('secondary_color');
+    const themePreview = document.getElementById('themePreview');
+
+    // Primary color sync
+    primaryColorPicker.addEventListener('input', function() {
+        primaryColorInput.value = this.value;
+        updatePreview();
+    });
+
+    primaryColorInput.addEventListener('input', function() {
+        if (this.value.match(/^#[0-9A-F]{6}$/i)) {
+            primaryColorPicker.value = this.value;
+            updatePreview();
+        }
+    });
+
+    // Secondary color sync
+    secondaryColorPicker.addEventListener('input', function() {
+        secondaryColorInput.value = this.value;
+    });
+
+    secondaryColorInput.addEventListener('input', function() {
+        if (this.value.match(/^#[0-9A-F]{6}$/i)) {
+            secondaryColorPicker.value = this.value;
+        }
+    });
+
+    function updatePreview() {
+        themePreview.style.background = primaryColorInput.value;
     }
+});
 </script>
 {% endblock %}

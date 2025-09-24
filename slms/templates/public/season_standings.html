@@ -22,7 +22,7 @@
                 <div>
                     <a href="{{ url_for('portal.season_schedule', season_id=season.id) }}"
                        class="btn btn-outline-primary">
-                        <i class="bi bi-calendar-event"></i> Schedule
+                        <i class="ph ph-calendar-dots"></i> Schedule
                     </a>
                 </div>
             </div>
@@ -32,64 +32,203 @@
     <!-- Standings Table -->
     <div class="row">
         <div class="col-12">
+            {% if config.enable_filtering %}
+            <div class="card mb-3">
+                <div class="card-body py-2">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="ph ph-magnifying-glass"></i></span>
+                                <input type="text" class="form-control" id="team-filter" placeholder="Filter teams...">
+                            </div>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <small class="text-muted">{{ standings|length }} teams total</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
             <div class="card">
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0">
+                        <table class="table
+                            {% if config.table_style == 'compact' %}table-sm
+                            {% elif config.table_style == 'modern' or not config.table_style %}table-hover
+                            {% endif %} mb-0" id="standings-table">
                             <thead class="table-light">
                                 <tr>
                                     <th class="text-center">#</th>
-                                    <th>Team</th>
-                                    <th class="text-center">GP</th>
-                                    <th class="text-center">W</th>
-                                    <th class="text-center">L</th>
-                                    <th class="text-center">PCT</th>
-                                    <th class="text-center">PF</th>
-                                    <th class="text-center">PA</th>
-                                    <th class="text-center">DIFF</th>
+                                    <th>
+                                        Team
+                                        {% if config.enable_sorting != false %}
+                                        <i class="ph ph-caret-up-down ms-1 text-muted sortable" data-column="team"></i>
+                                        {% endif %}
+                                    </th>
+                                    {% if 'games_played' in (config.displayed_columns or default_columns) %}
+                                    <th class="text-center">
+                                        GP
+                                        {% if config.enable_sorting != false %}
+                                        <i class="ph ph-caret-up-down ms-1 text-muted sortable" data-column="games_played"></i>
+                                        {% endif %}
+                                    </th>
+                                    {% endif %}
+                                    {% if 'wins' in (config.displayed_columns or default_columns) %}
+                                    <th class="text-center">
+                                        W
+                                        {% if config.enable_sorting != false %}
+                                        <i class="ph ph-caret-up-down ms-1 text-muted sortable" data-column="wins"></i>
+                                        {% endif %}
+                                    </th>
+                                    {% endif %}
+                                    {% if 'draws' in (config.displayed_columns or default_columns) %}
+                                    <th class="text-center">
+                                        D
+                                        {% if config.enable_sorting != false %}
+                                        <i class="ph ph-caret-up-down ms-1 text-muted sortable" data-column="draws"></i>
+                                        {% endif %}
+                                    </th>
+                                    {% endif %}
+                                    {% if 'losses' in (config.displayed_columns or default_columns) %}
+                                    <th class="text-center">
+                                        L
+                                        {% if config.enable_sorting != false %}
+                                        <i class="ph ph-caret-up-down ms-1 text-muted sortable" data-column="losses"></i>
+                                        {% endif %}
+                                    </th>
+                                    {% endif %}
+                                    {% if 'points' in (config.displayed_columns or default_columns) %}
+                                    <th class="text-center">
+                                        {{ config.points_label or 'PTS' }}
+                                        {% if config.enable_sorting != false %}
+                                        <i class="ph ph-caret-up-down ms-1 text-muted sortable" data-column="points"></i>
+                                        {% endif %}
+                                    </th>
+                                    {% endif %}
+                                    {% if 'win_percentage' in (config.displayed_columns or default_columns) %}
+                                    <th class="text-center">
+                                        PCT
+                                        {% if config.enable_sorting != false %}
+                                        <i class="ph ph-caret-up-down ms-1 text-muted sortable" data-column="win_percentage"></i>
+                                        {% endif %}
+                                    </th>
+                                    {% endif %}
+                                    {% if 'points_for' in (config.displayed_columns or default_columns) %}
+                                    <th class="text-center">
+                                        {{ config.goals_label or 'PF' }}
+                                        {% if config.enable_sorting != false %}
+                                        <i class="ph ph-caret-up-down ms-1 text-muted sortable" data-column="points_for"></i>
+                                        {% endif %}
+                                    </th>
+                                    {% endif %}
+                                    {% if 'points_against' in (config.displayed_columns or default_columns) %}
+                                    <th class="text-center">
+                                        {{ config.against_label or 'PA' }}
+                                        {% if config.enable_sorting != false %}
+                                        <i class="ph ph-caret-up-down ms-1 text-muted sortable" data-column="points_against"></i>
+                                        {% endif %}
+                                    </th>
+                                    {% endif %}
+                                    {% if 'point_differential' in (config.displayed_columns or default_columns) %}
+                                    <th class="text-center">
+                                        {{ config.differential_label or 'DIFF' }}
+                                        {% if config.enable_sorting != false %}
+                                        <i class="ph ph-caret-up-down ms-1 text-muted sortable" data-column="point_differential"></i>
+                                        {% endif %}
+                                    </th>
+                                    {% endif %}
+                                    {% if config.show_form != false and 'form' in (config.displayed_columns or default_columns) %}
                                     <th class="text-center">FORM</th>
+                                    {% endif %}
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="standings-tbody">
                                 {% for standing in standings %}
-                                    <tr>
+                                    <tr class="team-row
+                                        {% if config.highlight_top3 != false and loop.index <= 3 %}bg-light border-start border-primary border-3{% endif %}
+                                        {% if config.show_team_colors and standing.team.primary_color %}
+                                        " style="border-left: 4px solid {{ standing.team.primary_color }}!important;{% endif %}">
+
                                         <!-- Rank -->
                                         <td class="text-center">
-                                            <strong>{{ loop.index }}</strong>
+                                            {% if config.highlight_top3 != false and loop.index <= 3 %}
+                                                <span class="badge bg-primary">{{ loop.index }}</span>
+                                            {% else %}
+                                                <strong>{{ loop.index }}</strong>
+                                            {% endif %}
+                                            {% if config.show_position_change and standing.position_change %}
+                                                <small class="d-block text-{% if standing.position_change > 0 %}success{% elif standing.position_change < 0 %}danger{% else %}muted{% endif %}">
+                                                    {% if standing.position_change > 0 %}▲{% elif standing.position_change < 0 %}▼{% else %}▬{% endif %}
+                                                </small>
+                                            {% endif %}
                                         </td>
 
                                         <!-- Team Name -->
                                         <td>
-                                            <a href="{{ url_for('portal.team_detail', team_id=standing.team.id) }}"
-                                               class="text-decoration-none">
-                                                <strong>{{ standing.team.name }}</strong>
-                                            </a>
+                                            <div class="d-flex align-items-center gap-2">
+                                                {% if config.show_team_logos != false and standing.team.logo_url %}
+                                                <img src="{{ standing.team.logo_url }}" alt="{{ standing.team.name }}"
+                                                     class="rounded" style="width: 24px; height: 24px; object-fit: cover;">
+                                                {% endif %}
+                                                <a href="{{ url_for('portal.team_detail', team_id=standing.team.id) }}"
+                                                   class="text-decoration-none">
+                                                    <strong>{{ standing.team.name }}</strong>
+                                                </a>
+                                            </div>
                                         </td>
 
+                                        {% if 'games_played' in (config.displayed_columns or default_columns) %}
                                         <!-- Games Played -->
                                         <td class="text-center">{{ standing.games_played }}</td>
+                                        {% endif %}
 
+                                        {% if 'wins' in (config.displayed_columns or default_columns) %}
                                         <!-- Wins -->
                                         <td class="text-center">
-                                            <span class="text-success">{{ standing.wins }}</span>
+                                            <span class="text-success fw-semibold">{{ standing.wins }}</span>
                                         </td>
+                                        {% endif %}
 
+                                        {% if 'draws' in (config.displayed_columns or default_columns) %}
+                                        <!-- Draws -->
+                                        <td class="text-center">
+                                            <span class="text-warning">{{ standing.draws or 0 }}</span>
+                                        </td>
+                                        {% endif %}
+
+                                        {% if 'losses' in (config.displayed_columns or default_columns) %}
                                         <!-- Losses -->
                                         <td class="text-center">
-                                            <span class="text-danger">{{ standing.losses }}</span>
+                                            <span class="text-danger fw-semibold">{{ standing.losses }}</span>
                                         </td>
+                                        {% endif %}
 
+                                        {% if 'points' in (config.displayed_columns or default_columns) %}
+                                        <!-- Points -->
+                                        <td class="text-center">
+                                            <strong class="text-primary">{{ standing.points or (standing.wins * (config.win_points or 3)) + ((standing.draws or 0) * (config.draw_points or 1)) }}</strong>
+                                        </td>
+                                        {% endif %}
+
+                                        {% if 'win_percentage' in (config.displayed_columns or default_columns) %}
                                         <!-- Win Percentage -->
                                         <td class="text-center">
                                             <strong>{{ "%.3f"|format(standing.win_percentage) }}</strong>
                                         </td>
+                                        {% endif %}
 
+                                        {% if 'points_for' in (config.displayed_columns or default_columns) %}
                                         <!-- Points For -->
                                         <td class="text-center">{{ standing.points_for }}</td>
+                                        {% endif %}
 
+                                        {% if 'points_against' in (config.displayed_columns or default_columns) %}
                                         <!-- Points Against -->
                                         <td class="text-center">{{ standing.points_against }}</td>
+                                        {% endif %}
 
+                                        {% if 'point_differential' in (config.displayed_columns or default_columns) %}
                                         <!-- Differential -->
                                         <td class="text-center">
                                             {% set diff = standing.point_differential %}
@@ -97,17 +236,20 @@
                                                 {% if diff > 0 %}+{% endif %}{{ diff }}
                                             </span>
                                         </td>
+                                        {% endif %}
 
-                                        <!-- Form (last 5 games) -->
+                                        {% if config.show_form != false and 'form' in (config.displayed_columns or default_columns) %}
+                                        <!-- Form (recent games) -->
                                         <td class="text-center">
                                             {% if standing.recent_form %}
                                                 <div class="d-flex justify-content-center gap-1">
-                                                    {% for result in standing.recent_form %}
+                                                    {% for result in standing.recent_form[:(config.form_length or 5)] %}
                                                         <span class="badge
                                                             {% if result == 'W' %}bg-success
                                                             {% elif result == 'L' %}bg-danger
+                                                            {% elif result == 'D' %}bg-warning
                                                             {% else %}bg-secondary{% endif %}"
-                                                              style="width: 20px; height: 20px; line-height: 20px; font-size: 10px;">
+                                                              style="width: 18px; height: 18px; line-height: 18px; font-size: 9px;">
                                                             {{ result }}
                                                         </span>
                                                     {% endfor %}
@@ -116,6 +258,7 @@
                                                 <span class="text-muted">-</span>
                                             {% endif %}
                                         </td>
+                                        {% endif %}
                                     </tr>
                                 {% endfor %}
                             </tbody>
@@ -127,41 +270,91 @@
     </div>
 
     <!-- Stats Summary -->
-    {% if standings %}
+    {% if standings and config.show_stats_summary != false %}
         <div class="row mt-4">
-            <div class="col-md-6">
-                <div class="card">
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card border-0 bg-primary text-white">
                     <div class="card-body">
-                        <h6 class="card-title">
-                            <i class="bi bi-trophy"></i>
-                            Top Performer
-                        </h6>
-                        {% set leader = standings[0] %}
-                        <p class="mb-1">
-                            <strong>{{ leader.team.name }}</strong>
-                        </p>
-                        <small class="text-muted">
-                            {{ leader.wins }}-{{ leader.losses }}
-                            ({{ "%.1f"|format(leader.win_percentage * 100) }}%)
-                        </small>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title mb-1">
+                                    <i class="ph ph-trophy"></i> League Leader
+                                </h6>
+                                {% set leader = standings[0] %}
+                                <h5 class="mb-0">{{ leader.team.name }}</h5>
+                                <small class="opacity-75">
+                                    {{ leader.wins }}-{{ leader.losses }}
+                                    {% if leader.draws %}-{{ leader.draws }}{% endif %}
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <div class="display-6 opacity-75">1st</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-6">
-                <div class="card">
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card border-0 bg-success text-white">
                     <div class="card-body">
-                        <h6 class="card-title">
-                            <i class="bi bi-graph-up"></i>
-                            Highest Scoring
-                        </h6>
-                        {% set top_scorer = standings|sort(attribute='points_for', reverse=true)|first %}
-                        <p class="mb-1">
-                            <strong>{{ top_scorer.team.name }}</strong>
-                        </p>
-                        <small class="text-muted">
-                            {{ top_scorer.points_for }} points scored
-                        </small>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title mb-1">
+                                    <i class="ph ph-trend-up"></i> Top Scoring
+                                </h6>
+                                {% set top_scorer = standings|sort(attribute='points_for', reverse=true)|first %}
+                                <h5 class="mb-0">{{ top_scorer.team.name }}</h5>
+                                <small class="opacity-75">{{ top_scorer.points_for }} {{ config.goals_label or 'points' }}</small>
+                            </div>
+                            <div class="text-end">
+                                <div class="h4 mb-0">{{ top_scorer.points_for }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card border-0 bg-info text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title mb-1">
+                                    <i class="ph ph-shield"></i> Best Defense
+                                </h6>
+                                {% set best_defense = standings|sort(attribute='points_against')|first %}
+                                <h5 class="mb-0">{{ best_defense.team.name }}</h5>
+                                <small class="opacity-75">{{ best_defense.points_against }} {{ config.against_label or 'allowed' }}</small>
+                            </div>
+                            <div class="text-end">
+                                <div class="h4 mb-0">{{ best_defense.points_against }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card border-0 bg-warning text-dark">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title mb-1">
+                                    <i class="ph ph-chart-line"></i> Best {{ config.differential_label or 'Differential' }}
+                                </h6>
+                                {% set best_diff = standings|sort(attribute='point_differential', reverse=true)|first %}
+                                <h5 class="mb-0">{{ best_diff.team.name }}</h5>
+                                <small>
+                                    {% if best_diff.point_differential > 0 %}+{% endif %}{{ best_diff.point_differential }}
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <div class="h4 mb-0">
+                                    {% if best_diff.point_differential > 0 %}+{% endif %}{{ best_diff.point_differential }}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -170,7 +363,7 @@
         <div class="row mt-4">
             <div class="col-12">
                 <div class="alert alert-info">
-                    <i class="bi bi-info-circle"></i>
+                    <i class="ph ph-info"></i>
                     No games have been completed yet. Standings will appear after teams have played games.
                 </div>
             </div>
@@ -181,7 +374,7 @@
     <div class="row mt-3">
         <div class="col-12">
             <small class="text-muted">
-                <i class="bi bi-clock"></i>
+                <i class="ph ph-clock"></i>
                 Last updated: {{ moment().format('MMMM Do YYYY, h:mm a') if moment else 'Now' }}
             </small>
         </div>
@@ -200,9 +393,223 @@
         vertical-align: middle;
     }
 
+    {% if config.table_style == 'modern' or not config.table_style %}
     .table tbody tr:hover {
         background-color: rgba(var(--bs-primary-rgb), 0.05);
+        transform: translateY(-1px);
+        transition: all 0.2s ease;
     }
+    {% elif config.table_style == 'compact' %}
+    .table-sm td, .table-sm th {
+        padding: 0.25rem;
+        font-size: 0.8rem;
+    }
+    {% elif config.table_style == 'card' %}
+    @media (max-width: 768px) {
+        .table-responsive table,
+        .table-responsive thead,
+        .table-responsive tbody,
+        .table-responsive th,
+        .table-responsive td,
+        .table-responsive tr {
+            display: block;
+        }
+
+        .table-responsive thead tr {
+            position: absolute;
+            top: -9999px;
+            left: -9999px;
+        }
+
+        .table-responsive tr {
+            border: 1px solid #ccc;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            background: white;
+        }
+
+        .table-responsive td {
+            border: none;
+            border-bottom: 1px solid #eee;
+            position: relative;
+            padding-left: 50%;
+        }
+
+        .table-responsive td:before {
+            content: attr(data-label);
+            position: absolute;
+            left: 6px;
+            width: 45%;
+            padding-right: 10px;
+            white-space: nowrap;
+            font-weight: 600;
+        }
+    }
+    {% endif %}
+
+    .sortable {
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .sortable:hover {
+        color: var(--bs-primary);
+    }
+
+    .sort-asc::before {
+        content: "▲";
+        color: var(--bs-primary);
+    }
+
+    .sort-desc::before {
+        content: "▼";
+        color: var(--bs-primary);
+    }
+
+    {% if config.auto_refresh %}
+    .auto-refresh-indicator {
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+    {% endif %}
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Team filtering
+    {% if config.enable_filtering %}
+    const teamFilter = document.getElementById('team-filter');
+    const teamRows = document.querySelectorAll('.team-row');
+
+    teamFilter.addEventListener('input', function() {
+        const filterValue = this.value.toLowerCase();
+
+        teamRows.forEach(row => {
+            const teamName = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+            if (teamName.includes(filterValue)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+    {% endif %}
+
+    // Column sorting
+    {% if config.enable_sorting != false %}
+    const sortableHeaders = document.querySelectorAll('.sortable');
+    let currentSort = { column: null, direction: 'asc' };
+
+    sortableHeaders.forEach(header => {
+        header.addEventListener('click', function() {
+            const column = this.dataset.column;
+            const table = document.getElementById('standings-table');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+
+            // Toggle sort direction
+            if (currentSort.column === column) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.direction = 'asc';
+            }
+            currentSort.column = column;
+
+            // Clear all sort indicators
+            sortableHeaders.forEach(h => {
+                h.classList.remove('sort-asc', 'sort-desc');
+            });
+
+            // Add sort indicator
+            this.classList.add(currentSort.direction === 'asc' ? 'sort-asc' : 'sort-desc');
+
+            // Sort rows
+            rows.sort((a, b) => {
+                let aVal, bVal;
+
+                switch(column) {
+                    case 'team':
+                        aVal = a.querySelector('td:nth-child(2)').textContent.trim();
+                        bVal = b.querySelector('td:nth-child(2)').textContent.trim();
+                        break;
+                    case 'games_played':
+                    case 'wins':
+                    case 'losses':
+                    case 'points':
+                    case 'points_for':
+                    case 'points_against':
+                    case 'point_differential':
+                        // Get numeric values
+                        const columnIndex = Array.from(header.closest('tr').children).indexOf(header.closest('th'));
+                        aVal = parseFloat(a.children[columnIndex].textContent.trim().replace(/[^\d.-]/g, '')) || 0;
+                        bVal = parseFloat(b.children[columnIndex].textContent.trim().replace(/[^\d.-]/g, '')) || 0;
+                        break;
+                    case 'win_percentage':
+                        const pctIndex = Array.from(header.closest('tr').children).indexOf(header.closest('th'));
+                        aVal = parseFloat(a.children[pctIndex].textContent.trim()) || 0;
+                        bVal = parseFloat(b.children[pctIndex].textContent.trim()) || 0;
+                        break;
+                    default:
+                        aVal = a.querySelector('td:nth-child(2)').textContent.trim();
+                        bVal = b.querySelector('td:nth-child(2)').textContent.trim();
+                }
+
+                if (typeof aVal === 'string') {
+                    return currentSort.direction === 'asc'
+                        ? aVal.localeCompare(bVal)
+                        : bVal.localeCompare(aVal);
+                } else {
+                    return currentSort.direction === 'asc'
+                        ? aVal - bVal
+                        : bVal - aVal;
+                }
+            });
+
+            // Re-append sorted rows
+            rows.forEach(row => tbody.appendChild(row));
+
+            // Update position numbers
+            rows.forEach((row, index) => {
+                const positionCell = row.querySelector('td:first-child');
+                {% if config.highlight_top3 != false %}
+                if (index < 3) {
+                    positionCell.innerHTML = `<span class="badge bg-primary">${index + 1}</span>`;
+                } else {
+                    positionCell.innerHTML = `<strong>${index + 1}</strong>`;
+                }
+                {% else %}
+                positionCell.innerHTML = `<strong>${index + 1}</strong>`;
+                {% endif %}
+            });
+        });
+    });
+    {% endif %}
+
+    // Auto-refresh
+    {% if config.auto_refresh %}
+    setInterval(function() {
+        // Add refresh indicator
+        const lastUpdated = document.querySelector('.auto-refresh-indicator');
+        if (lastUpdated) {
+            lastUpdated.classList.add('auto-refresh-indicator');
+        }
+
+        // Simulate refresh (in real implementation, this would fetch new data)
+        setTimeout(() => {
+            if (lastUpdated) {
+                lastUpdated.classList.remove('auto-refresh-indicator');
+            }
+        }, 1000);
+    }, 30000); // Refresh every 30 seconds
+    {% endif %}
+});
+</script>
 {% endblock %}
 {% endblock %}

@@ -139,7 +139,21 @@ def index():
         leagues = []
         recent_games = []
 
-    return render_template('public/index.html', leagues=leagues, recent_games=recent_games)
+    # Get news articles for homepage
+    try:
+        from slms.services.db import get_db
+        db = get_db()
+        cur = db.cursor()
+        cur.execute('''SELECT news_id, title, summary, content, category, created_at, published_at, image_url, is_featured
+                       FROM news WHERE status = 'published' AND show_on_homepage = true
+                       ORDER BY is_featured DESC, published_at DESC LIMIT 6''')
+        news_articles = cur.fetchall()
+        cur.close()
+    except Exception as e:
+        print(f"Error fetching news: {e}")
+        news_articles = []
+
+    return render_template('public/index.html', leagues=leagues, recent_games=recent_games, news_articles=news_articles)
 
 
 @portal_bp.route('/seasons/<season_id>/schedule')

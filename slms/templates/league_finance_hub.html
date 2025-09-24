@@ -1,0 +1,664 @@
+{% extends "base.html" %}
+{% block title %}League Finance Hub{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+  <!-- Header -->
+  <div class="row">
+    <div class="col-12 mb-4">
+      <div class="d-flex justify-content-between align-items-center flex-wrap">
+        <div>
+          <h1 class="mb-1">
+            <i class="ph ph-chart-line-up me-2 text-success"></i>League Finance Hub
+          </h1>
+          <p class="text-muted mb-0">Comprehensive financial management and revenue tracking</p>
+        </div>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{{ url_for('admin.admin_dashboard') }}">Admin</a></li>
+            <li class="breadcrumb-item active">Finance Hub</li>
+          </ol>
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  <!-- League Selection -->
+  {% if leagues %}
+  <div class="row mb-4">
+    <div class="col-12">
+      <form method="get" class="d-flex align-items-center gap-3 p-3 bg-light rounded">
+        <label for="league_id" class="form-label mb-0 fw-semibold">
+          <i class="ph ph-trophy me-1"></i>Select League:
+        </label>
+        <select class="form-select" id="league_id" name="league_id" onchange="this.form.submit()" style="width: auto;">
+          {% for league in leagues %}
+            <option value="{{ league.id }}" {% if selected_league_id and league.id == selected_league_id|int %}selected{% endif %}>
+              {{ league.name }}
+            </option>
+          {% endfor %}
+        </select>
+        <div class="ms-auto">
+          <small class="text-muted">Last updated: <span id="lastUpdated">{{ current_datetime }}</span></small>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if not leagues %}
+    <div class="alert alert-info">
+      <i class="ph ph-info-circle me-2"></i>
+      No leagues found. Please <a href="{{ url_for('admin.manage_leagues') }}">create a league</a> first.
+    </div>
+  {% else %}
+
+  <!-- Revenue Overview Cards -->
+  <div class="row g-4 mb-4">
+    <div class="col-xl-3 col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body text-center">
+          <div class="d-flex justify-content-center mb-3">
+            <div class="bg-success bg-opacity-10 rounded-circle p-3">
+              <i class="ph ph-currency-dollar fs-1 text-success"></i>
+            </div>
+          </div>
+          <h3 class="card-title text-success mb-2">{{ total_revenue.display }}</h3>
+          <p class="text-muted mb-0">Total Revenue</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body text-center">
+          <div class="d-flex justify-content-center mb-3">
+            <div class="bg-primary bg-opacity-10 rounded-circle p-3">
+              <i class="ph ph-coins fs-1 text-primary"></i>
+            </div>
+          </div>
+          <h3 class="card-title text-primary mb-2">{{ fee_revenue.display }}</h3>
+          <p class="text-muted mb-0">Registration Fees</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body text-center">
+          <div class="d-flex justify-content-center mb-3">
+            <div class="bg-info bg-opacity-10 rounded-circle p-3">
+              <i class="ph ph-handshake fs-1 text-info"></i>
+            </div>
+          </div>
+          <h3 class="card-title text-info mb-2">{{ sponsor_revenue.display }}</h3>
+          <p class="text-muted mb-0">Sponsorship Revenue</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body text-center">
+          <div class="d-flex justify-content-center mb-3">
+            <div class="bg-warning bg-opacity-10 rounded-circle p-3">
+              <i class="ph ph-hand-coins fs-1 text-warning"></i>
+            </div>
+          </div>
+          <h3 class="card-title text-warning mb-2">{{ in_person_revenue.display }}</h3>
+          <p class="text-muted mb-0">In-Person Payments</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Tabs -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom">
+          <ul class="nav nav-pills card-header-pills" id="financeTab" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="dashboard-tab" data-bs-toggle="pill" data-bs-target="#dashboard" type="button" role="tab">
+                <i class="ph ph-chart-pie me-1"></i>Dashboard
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="fees-tab" data-bs-toggle="pill" data-bs-target="#fees" type="button" role="tab">
+                <i class="ph ph-coins me-1"></i>Registration Fees
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="in-person-tab" data-bs-toggle="pill" data-bs-target="#in-person" type="button" role="tab">
+                <i class="ph ph-hand-coins me-1"></i>In-Person Payments
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="sponsors-tab" data-bs-toggle="pill" data-bs-target="#sponsors" type="button" role="tab">
+                <i class="ph ph-handshake me-1"></i>Sponsor Revenue
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="reports-tab" data-bs-toggle="pill" data-bs-target="#reports" type="button" role="tab">
+                <i class="ph ph-chart-bar me-1"></i>Reports
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="square-tab" data-bs-toggle="pill" data-bs-target="#square" type="button" role="tab">
+                <i class="ph ph-credit-card me-1"></i>Square Integration
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <div class="card-body">
+          <div class="tab-content" id="financeTabContent">
+
+            <!-- Dashboard Tab -->
+            <div class="tab-pane fade show active" id="dashboard" role="tabpanel">
+              <div class="row g-4">
+                <!-- Revenue Breakdown Chart -->
+                <div class="col-lg-8">
+                  <div class="card border-0 bg-light h-100">
+                    <div class="card-header bg-transparent border-bottom">
+                      <h5 class="card-title mb-0">
+                        <i class="ph ph-chart-donut me-2"></i>Revenue Breakdown
+                      </h5>
+                    </div>
+                    <div class="card-body">
+                      {% if revenue_breakdown %}
+                        <div class="row g-3">
+                          {% for revenue_type, data in revenue_breakdown.items() %}
+                            <div class="col-md-6">
+                              <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                  {% if revenue_type == 'fees' %}
+                                    <div class="bg-primary bg-opacity-20 rounded p-2">
+                                      <i class="ph ph-coins text-primary"></i>
+                                    </div>
+                                  {% elif revenue_type == 'sponsorship' %}
+                                    <div class="bg-info bg-opacity-20 rounded p-2">
+                                      <i class="ph ph-handshake text-info"></i>
+                                    </div>
+                                  {% elif revenue_type == 'in_person' %}
+                                    <div class="bg-warning bg-opacity-20 rounded p-2">
+                                      <i class="ph ph-hand-coins text-warning"></i>
+                                    </div>
+                                  {% else %}
+                                    <div class="bg-secondary bg-opacity-20 rounded p-2">
+                                      <i class="ph ph-circle text-secondary"></i>
+                                    </div>
+                                  {% endif %}
+                                </div>
+                                <div class="flex-grow-1">
+                                  <div class="fw-semibold">{{ revenue_type.title() }}</div>
+                                  <div class="text-muted small">{{ data.transaction_count }} transactions</div>
+                                </div>
+                                <div class="text-end">
+                                  <div class="fw-bold">${{ data.amount_display }}</div>
+                                </div>
+                              </div>
+                            </div>
+                          {% endfor %}
+                        </div>
+                      {% else %}
+                        <div class="text-center text-muted py-4">
+                          <i class="ph ph-chart-donut fs-1 mb-3 d-block"></i>
+                          <p>No revenue data available yet.</p>
+                          <p><small>Start recording payments to see breakdown.</small></p>
+                        </div>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Recent Transactions -->
+                <div class="col-lg-4">
+                  <div class="card border-0 bg-light h-100">
+                    <div class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center">
+                      <h5 class="card-title mb-0">
+                        <i class="ph ph-clock-clockwise me-2"></i>Recent Transactions
+                      </h5>
+                      <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addTransactionModal">
+                        <i class="ph ph-plus me-1"></i>Add
+                      </button>
+                    </div>
+                    <div class="card-body p-0">
+                      {% if recent_transactions %}
+                        <div class="list-group list-group-flush">
+                          {% for transaction in recent_transactions %}
+                            <div class="list-group-item">
+                              <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                  <div class="fw-semibold">{{ transaction.type.title() }}</div>
+                                  <div class="text-muted small">{{ transaction.description }}</div>
+                                  <div class="text-muted small">
+                                    {{ transaction.date }} • {{ transaction.payment_method }}
+                                  </div>
+                                </div>
+                                <div class="text-end">
+                                  <span class="badge bg-success">${{ transaction.amount_display }}</span>
+                                </div>
+                              </div>
+                            </div>
+                          {% endfor %}
+                        </div>
+                      {% else %}
+                        <div class="text-center text-muted p-4">
+                          <i class="ph ph-clock-clockwise fs-2 mb-2 d-block"></i>
+                          <p class="mb-0">No transactions yet</p>
+                        </div>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Registration Fees Tab -->
+            <div class="tab-pane fade" id="fees" role="tabpanel">
+              <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="mb-0">Registration Fees Management</h4>
+                <a href="{{ url_for('admin.manage_league_fees', league_id=selected_league_id) }}" class="btn btn-primary">
+                  <i class="ph ph-gear me-1"></i>Manage Fee Plans
+                </a>
+              </div>
+
+              {% if fee_plan %}
+                <div class="row g-4">
+                  <div class="col-md-6">
+                    <div class="card border-0 bg-light">
+                      <div class="card-body">
+                        <h5>Fee Plan Summary</h5>
+                        <div class="table-responsive">
+                          <table class="table table-sm">
+                            <tr>
+                              <td>Total Fee:</td>
+                              <td class="fw-semibold">${{ fee_plan.total_fee_display }}</td>
+                            </tr>
+                            {% if fee_plan.deposit_display %}
+                            <tr>
+                              <td>Deposit:</td>
+                              <td class="fw-semibold">${{ fee_plan.deposit_display }}</td>
+                            </tr>
+                            {% endif %}
+                            <tr>
+                              <td>Currency:</td>
+                              <td>{{ fee_plan.currency }}</td>
+                            </tr>
+                            <tr>
+                              <td>Installments:</td>
+                              <td>{{ 'Enabled' if fee_plan.installments_enabled else 'Disabled' }}</td>
+                            </tr>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="col-md-6">
+                    <div class="card border-0 bg-light">
+                      <div class="card-body">
+                        <h5>Revenue Status</h5>
+                        <div class="progress mb-3" style="height: 20px;">
+                          {% set collected_amount = fee_revenue.amount %}
+                          {% set total_amount = fee_plan.total_fee_cents %}
+                          {% set progress_percent = (collected_amount / total_amount * 100) if total_amount > 0 else 0 %}
+                          <div class="progress-bar bg-success" role="progressbar" style="width: {{ progress_percent }}%">
+                            {{ "%.1f"|format(progress_percent) }}%
+                          </div>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                          <small class="text-muted">Collected: {{ fee_revenue.display }}</small>
+                          <small class="text-muted">Target: ${{ fee_plan.total_fee_display }}</small>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {% if installments %}
+                <div class="mt-4">
+                  <h5>Installments</h5>
+                  <div class="table-responsive">
+                    <table class="table table-hover">
+                      <thead>
+                        <tr>
+                          <th>Label</th>
+                          <th>Amount</th>
+                          <th>Due Date</th>
+                          <th>Status</th>
+                          <th>Notes</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {% for installment in installments %}
+                          <tr>
+                            <td>{{ installment.label }}</td>
+                            <td>${{ installment.amount_display }}</td>
+                            <td>{{ installment.due_date or 'No date set' }}</td>
+                            <td>
+                              <span class="badge {% if installment.status == 'paid' %}bg-success{% elif installment.status == 'overdue' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                                {{ installment.status.title() }}
+                              </span>
+                            </td>
+                            <td>{{ installment.notes or '-' }}</td>
+                          </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                {% endif %}
+
+              {% else %}
+                <div class="text-center py-5">
+                  <i class="ph ph-coins fs-1 text-muted mb-3 d-block"></i>
+                  <h5 class="text-muted">No Fee Plan Configured</h5>
+                  <p class="text-muted">Set up registration fees to start tracking revenue.</p>
+                  <a href="{{ url_for('admin.manage_league_fees', league_id=selected_league_id) }}" class="btn btn-primary">
+                    <i class="ph ph-plus me-1"></i>Create Fee Plan
+                  </a>
+                </div>
+              {% endif %}
+            </div>
+
+            <!-- In-Person Payments Tab -->
+            <div class="tab-pane fade" id="in-person" role="tabpanel">
+              <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="mb-0">In-Person Payments</h4>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addInPersonPaymentModal">
+                  <i class="ph ph-plus me-1"></i>Record Payment
+                </button>
+              </div>
+
+              <div class="alert alert-info">
+                <i class="ph ph-info-circle me-2"></i>
+                <strong>Track cash, check, and card payments</strong> received in person at games, events, or the office.
+              </div>
+
+              <!-- In-person payments will be loaded here -->
+              <div class="text-center py-4 text-muted">
+                <i class="ph ph-hand-coins fs-1 mb-3 d-block"></i>
+                <p>In-person payment tracking coming soon.</p>
+              </div>
+            </div>
+
+            <!-- Sponsor Revenue Tab -->
+            <div class="tab-pane fade" id="sponsors" role="tabpanel">
+              <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="mb-0">Sponsor Revenue</h4>
+                <a href="{{ url_for('admin.manage_sponsors') }}" class="btn btn-primary">
+                  <i class="ph ph-gear me-1"></i>Manage Sponsors
+                </a>
+              </div>
+
+              <div class="alert alert-success">
+                <i class="ph ph-handshake me-2"></i>
+                <strong>Total Sponsor Revenue: {{ sponsor_revenue.display }}</strong> from active sponsorship deals.
+              </div>
+
+              <div class="text-center py-4 text-muted">
+                <i class="ph ph-handshake fs-1 mb-3 d-block"></i>
+                <p>Detailed sponsor revenue breakdown coming soon.</p>
+                <p><small>Currently integrating with existing sponsor CRM data.</small></p>
+              </div>
+            </div>
+
+            <!-- Reports Tab -->
+            <div class="tab-pane fade" id="reports" role="tabpanel">
+              <h4 class="mb-4">Financial Reports</h4>
+
+              <div class="row g-4">
+                <div class="col-md-6">
+                  <div class="card border-0 bg-light">
+                    <div class="card-body text-center">
+                      <i class="ph ph-chart-line fs-1 text-primary mb-3 d-block"></i>
+                      <h5>Revenue Trends</h5>
+                      <p class="text-muted">Track revenue growth over time</p>
+                      <button class="btn btn-outline-primary" disabled>
+                        <i class="ph ph-chart-line me-1"></i>Coming Soon
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="card border-0 bg-light">
+                    <div class="card-body text-center">
+                      <i class="ph ph-export fs-1 text-success mb-3 d-block"></i>
+                      <h5>Export Reports</h5>
+                      <p class="text-muted">Download financial data for accounting</p>
+                      <button class="btn btn-outline-success" disabled>
+                        <i class="ph ph-export me-1"></i>Coming Soon
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Square Integration Tab -->
+            <div class="tab-pane fade" id="square" role="tabpanel">
+              <h4 class="mb-4">Square Payment Integration</h4>
+
+              <div class="alert alert-warning">
+                <i class="ph ph-warning-circle me-2"></i>
+                <strong>Integration Ready</strong> - Square payment processing can be configured when needed.
+              </div>
+
+              <div class="row g-4">
+                <div class="col-lg-6">
+                  <div class="card border-0 bg-light">
+                    <div class="card-body">
+                      <h5 class="card-title">
+                        <i class="ph ph-credit-card me-2 text-primary"></i>Payment Processing
+                      </h5>
+                      <p class="text-muted">Accept online payments for registration fees, merchandise, and more.</p>
+                      <ul class="list-unstyled">
+                        <li><i class="ph ph-check text-success me-2"></i>Secure payment processing</li>
+                        <li><i class="ph ph-check text-success me-2"></i>Automated revenue tracking</li>
+                        <li><i class="ph ph-check text-success me-2"></i>Receipt generation</li>
+                        <li><i class="ph ph-check text-success me-2"></i>Refund management</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-lg-6">
+                  <div class="card border-0 bg-light">
+                    <div class="card-body">
+                      <h5 class="card-title">
+                        <i class="ph ph-gear me-2 text-secondary"></i>Setup Required
+                      </h5>
+                      <p class="text-muted">To enable Square integration, you'll need:</p>
+                      <ul class="list-unstyled">
+                        <li><i class="ph ph-circle text-muted me-2"></i>Square developer account</li>
+                        <li><i class="ph ph-circle text-muted me-2"></i>Application credentials</li>
+                        <li><i class="ph ph-circle text-muted me-2"></i>Webhook configuration</li>
+                        <li><i class="ph ph-circle text-muted me-2"></i>SSL certificate</li>
+                      </ul>
+                      <button class="btn btn-outline-primary mt-3" disabled>
+                        <i class="ph ph-gear me-1"></i>Configure Integration
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% endif %}
+</div>
+
+<!-- Add In-Person Payment Modal -->
+<div class="modal fade" id="addInPersonPaymentModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="ph ph-plus me-2"></i>Record In-Person Payment
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('admin.league_finance_hub') }}">
+        <input type="hidden" name="action" value="add_in_person_payment">
+        <input type="hidden" name="league_id" value="{{ selected_league_id }}">
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label for="amount" class="form-label">Amount <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="text" class="form-control" id="amount" name="amount" required placeholder="0.00">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label for="payment_method" class="form-label">Payment Method <span class="text-danger">*</span></label>
+              <select class="form-select" id="payment_method" name="payment_method" required>
+                <option value="">Choose...</option>
+                <option value="cash">Cash</option>
+                <option value="check">Check</option>
+                <option value="card">Credit/Debit Card</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label for="payment_date" class="form-label">Payment Date</label>
+              <input type="date" class="form-control" id="payment_date" name="payment_date" value="{{ current_date }}">
+            </div>
+            <div class="col-md-6">
+              <label for="payer_name" class="form-label">Payer Name</label>
+              <input type="text" class="form-control" id="payer_name" name="payer_name" placeholder="e.g., John Smith">
+            </div>
+            <div class="col-md-6">
+              <label for="payer_contact" class="form-label">Contact</label>
+              <input type="text" class="form-control" id="payer_contact" name="payer_contact" placeholder="Phone or email">
+            </div>
+            <div class="col-12">
+              <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="description" name="description" required placeholder="e.g., Registration fee, Tournament entry">
+            </div>
+            <div class="col-md-6" id="check_number_field" style="display: none;">
+              <label for="check_number" class="form-label">Check Number</label>
+              <input type="text" class="form-control" id="check_number" name="check_number">
+            </div>
+            <div class="col-md-6" id="card_last_four_field" style="display: none;">
+              <label for="card_last_four" class="form-label">Last 4 Digits</label>
+              <input type="text" class="form-control" id="card_last_four" name="card_last_four" maxlength="4" pattern="[0-9]{4}">
+            </div>
+            <div class="col-12">
+              <label for="receipt_number" class="form-label">Receipt Number</label>
+              <input type="text" class="form-control" id="receipt_number" name="receipt_number" placeholder="Optional">
+            </div>
+            <div class="col-12">
+              <label for="notes" class="form-label">Additional Notes</label>
+              <textarea class="form-control" id="notes" name="notes" rows="2" placeholder="Optional additional details"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="ph ph-floppy-disk me-1"></i>Record Payment
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Add Transaction Modal (Generic) -->
+<div class="modal fade" id="addTransactionModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="ph ph-plus me-2"></i>Add Transaction
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center py-4">
+        <i class="ph ph-gear fs-1 text-muted mb-3 d-block"></i>
+        <p class="text-muted">Manual transaction entry coming soon.</p>
+        <p><small>Use specific tabs for recording different types of revenue.</small></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Show/hide payment method specific fields
+document.getElementById('payment_method').addEventListener('change', function() {
+    const method = this.value;
+    const checkField = document.getElementById('check_number_field');
+    const cardField = document.getElementById('card_last_four_field');
+
+    // Hide all conditional fields
+    checkField.style.display = 'none';
+    cardField.style.display = 'none';
+
+    // Show relevant field
+    if (method === 'check') {
+        checkField.style.display = 'block';
+    } else if (method === 'card') {
+        cardField.style.display = 'block';
+    }
+});
+
+// Update last updated timestamp
+setInterval(function() {
+    const now = new Date();
+    const timestamp = now.toISOString().slice(0, 16).replace('T', ' ');
+    document.getElementById('lastUpdated').textContent = timestamp;
+}, 60000); // Update every minute
+</script>
+
+<style>
+.nav-pills .nav-link {
+    color: #6c757d;
+    border-radius: 0.5rem;
+}
+
+.nav-pills .nav-link.active {
+    background-color: #0d6efd;
+    color: white;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.progress-bar {
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.list-group-item {
+    border-left: none;
+    border-right: none;
+}
+
+.list-group-item:first-child {
+    border-top: none;
+}
+
+.list-group-item:last-child {
+    border-bottom: none;
+}
+
+.bg-opacity-10 {
+    --bs-bg-opacity: 0.1;
+}
+
+.bg-opacity-20 {
+    --bs-bg-opacity: 0.2;
+}
+</style>
+{% endblock %}

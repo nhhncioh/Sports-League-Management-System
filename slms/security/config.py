@@ -48,11 +48,11 @@ def configure_security_headers(app):
         # Content Security Policy
         csp_directives = [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
-            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com",
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com",
             "img-src 'self' data: https:",
-            "font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
-            "connect-src 'self'",
+            "font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.gstatic.com",
+            "connect-src 'self' https://cdn.jsdelivr.net",
             "frame-ancestors 'none'",
             "base-uri 'self'",
             "form-action 'self'"
@@ -66,7 +66,7 @@ def configure_security_headers(app):
                 "style-src 'self' 'unsafe-inline'",  # Bootstrap needs inline styles
                 "img-src 'self' data:",
                 "font-src 'self'",
-                "connect-src 'self'",
+                "connect-src 'self' https://cdn.jsdelivr.net",
                 "frame-ancestors 'none'",
                 "base-uri 'self'",
                 "form-action 'self'"

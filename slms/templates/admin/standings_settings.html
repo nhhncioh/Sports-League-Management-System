@@ -1,0 +1,466 @@
+{% extends "base.html" %}
+{% block title %}Standings Configuration - Admin Panel{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Standings Configuration</h1>
+            <p class="text-muted mb-0">Customize how standings are calculated and displayed for each league.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('admin.manage_standings') }}" class="btn btn-outline-secondary">
+                <i class="ph ph-list"></i> Manage Standings Data
+            </a>
+            <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-secondary">
+                <i class="ph ph-speedometer"></i> Admin Dashboard
+            </a>
+        </div>
+    </div>
+
+    {% if not leagues %}
+        <div class="alert alert-info">No leagues found. Create a league first to configure its standings.</div>
+    {% else %}
+    <div class="row g-4">
+        <!-- League Selection -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="d-flex align-items-center gap-3">
+                        <label for="league_id" class="form-label mb-0 fw-semibold">Configure League:</label>
+                        <select class="form-select" id="league_id" name="league_id" onchange="this.form.submit()" style="width: auto;">
+                            {% for league in leagues %}
+                                <option value="{{ league.id }}" {% if selected_league_id and league.id == selected_league_id|int %}selected{% endif %}>
+                                    {{ league.name }} ({{ league.sport.value if league.sport else 'General' }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration Forms -->
+        <div class="col-lg-6">
+            <!-- Stat Fields Configuration -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="ph ph-table me-2"></i>Standings Columns & Stats
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{{ url_for('admin.standings_settings') }}">
+                        <input type="hidden" name="action" value="save_columns">
+                        <input type="hidden" name="league_id" value="{{ selected_league_id }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Select columns to display:</label>
+                            <div class="row g-2">
+                                {% for column in available_columns %}
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="col_{{ column.key }}"
+                                               name="columns[]" value="{{ column.key }}"
+                                               {% if column.key in (config.displayed_columns or default_columns) %}checked{% endif %}>
+                                        <label class="form-check-label" for="col_{{ column.key }}">
+                                            <strong>{{ column.label }}</strong>
+                                            <small class="text-muted d-block">{{ column.description }}</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Custom Column Names:</label>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label for="points_label" class="form-label">Points Label</label>
+                                    <input type="text" class="form-control" id="points_label" name="points_label"
+                                           value="{{ config.points_label or 'PTS' }}" placeholder="PTS">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="goals_label" class="form-label">Goals/Scores Label</label>
+                                    <input type="text" class="form-control" id="goals_label" name="goals_label"
+                                           value="{{ config.goals_label or 'GF' }}" placeholder="GF">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="against_label" class="form-label">Against Label</label>
+                                    <input type="text" class="form-control" id="against_label" name="against_label"
+                                           value="{{ config.against_label or 'GA' }}" placeholder="GA">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="differential_label" class="form-label">Differential Label</label>
+                                    <input type="text" class="form-control" id="differential_label" name="differential_label"
+                                           value="{{ config.differential_label or 'DIFF' }}" placeholder="DIFF">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="ph ph-floppy-disk"></i> Save Column Settings
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Calculation Rules -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="ph ph-calculator me-2"></i>Calculation Rules
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{{ url_for('admin.standings_settings') }}">
+                        <input type="hidden" name="action" value="save_calculations">
+                        <input type="hidden" name="league_id" value="{{ selected_league_id }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Points System:</label>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label for="win_points" class="form-label">Win Points</label>
+                                    <input type="number" class="form-control" id="win_points" name="win_points"
+                                           value="{{ config.win_points or 3 }}" min="0" max="10">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="draw_points" class="form-label">Draw Points</label>
+                                    <input type="number" class="form-control" id="draw_points" name="draw_points"
+                                           value="{{ config.draw_points or 1 }}" min="0" max="10">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="loss_points" class="form-label">Loss Points</label>
+                                    <input type="number" class="form-control" id="loss_points" name="loss_points"
+                                           value="{{ config.loss_points or 0 }}" min="0" max="10">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Sorting Priority:</label>
+                            <div class="alert alert-light border">
+                                <small class="text-muted">Drag to reorder how teams are ranked when tied:</small>
+                            </div>
+                            <div id="sort-criteria" class="list-group">
+                                {% for criteria in config.sort_criteria or default_sort_criteria %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center" data-criteria="{{ criteria.key }}">
+                                    <div>
+                                        <i class="ph ph-dots-six-vertical text-muted me-2"></i>
+                                        <strong>{{ criteria.label }}</strong>
+                                        <small class="text-muted">{{ criteria.description }}</small>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" name="sort_{{ criteria.key }}"
+                                               {% if criteria.enabled %}checked{% endif %}>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Form Calculation:</label>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="form_length" class="form-label">Recent Games Count</label>
+                                    <select class="form-select" id="form_length" name="form_length">
+                                        <option value="3" {% if config.form_length == 3 %}selected{% endif %}>Last 3 games</option>
+                                        <option value="5" {% if config.form_length == 5 or not config.form_length %}selected{% endif %}>Last 5 games</option>
+                                        <option value="7" {% if config.form_length == 7 %}selected{% endif %}>Last 7 games</option>
+                                        <option value="10" {% if config.form_length == 10 %}selected{% endif %}>Last 10 games</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch mt-4">
+                                        <input class="form-check-input" type="checkbox" id="show_form" name="show_form"
+                                               {% if config.show_form != false %}checked{% endif %}>
+                                        <label class="form-check-label" for="show_form">
+                                            Show recent form in standings
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="ph ph-floppy-disk"></i> Save Calculation Rules
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview & Display Settings -->
+        <div class="col-lg-6">
+            <!-- Display Options -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="ph ph-eye me-2"></i>Display Settings
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{{ url_for('admin.standings_settings') }}">
+                        <input type="hidden" name="action" value="save_display">
+                        <input type="hidden" name="league_id" value="{{ selected_league_id }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Table Style:</label>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="table_style" id="style_modern"
+                                               value="modern" {% if config.table_style == 'modern' or not config.table_style %}checked{% endif %}>
+                                        <label class="form-check-label" for="style_modern">
+                                            Modern (with hover effects)
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="table_style" id="style_classic"
+                                               value="classic" {% if config.table_style == 'classic' %}checked{% endif %}>
+                                        <label class="form-check-label" for="style_classic">
+                                            Classic (traditional)
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="table_style" id="style_compact"
+                                               value="compact" {% if config.table_style == 'compact' %}checked{% endif %}>
+                                        <label class="form-check-label" for="style_compact">
+                                            Compact (dense layout)
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="table_style" id="style_card"
+                                               value="card" {% if config.table_style == 'card' %}checked{% endif %}>
+                                        <label class="form-check-label" for="style_card">
+                                            Card Layout (mobile-friendly)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Team Display Options:</label>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="show_team_logos" name="show_team_logos"
+                                               {% if config.show_team_logos != false %}checked{% endif %}>
+                                        <label class="form-check-label" for="show_team_logos">
+                                            Show team logos
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="show_team_colors" name="show_team_colors"
+                                               {% if config.show_team_colors != false %}checked{% endif %}>
+                                        <label class="form-check-label" for="show_team_colors">
+                                            Use team colors
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="highlight_top3" name="highlight_top3"
+                                               {% if config.highlight_top3 != false %}checked{% endif %}>
+                                        <label class="form-check-label" for="highlight_top3">
+                                            Highlight top 3 positions
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="show_position_change" name="show_position_change"
+                                               {% if config.show_position_change %}checked{% endif %}>
+                                        <label class="form-check-label" for="show_position_change">
+                                            Show position changes
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Additional Features:</label>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="show_stats_summary" name="show_stats_summary"
+                                               {% if config.show_stats_summary != false %}checked{% endif %}>
+                                        <label class="form-check-label" for="show_stats_summary">
+                                            Show stats summary cards
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="enable_filtering" name="enable_filtering"
+                                               {% if config.enable_filtering %}checked{% endif %}>
+                                        <label class="form-check-label" for="enable_filtering">
+                                            Enable team filtering
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="enable_sorting" name="enable_sorting"
+                                               {% if config.enable_sorting != false %}checked{% endif %}>
+                                        <label class="form-check-label" for="enable_sorting">
+                                            Enable column sorting
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="auto_refresh" name="auto_refresh"
+                                               {% if config.auto_refresh %}checked{% endif %}>
+                                        <label class="form-check-label" for="auto_refresh">
+                                            Auto-refresh standings
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="ph ph-floppy-disk"></i> Save Display Settings
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Preview -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="ph ph-monitor me-2"></i>Preview
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="ph ph-info me-2"></i>
+                        <strong>Preview shows how standings will look with current settings.</strong>
+                        Changes will be visible after saving.
+                    </div>
+
+                    <!-- Mini preview table -->
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="text-center">#</th>
+                                    <th>Team</th>
+                                    {% if 'games_played' in (config.displayed_columns or default_columns) %}
+                                    <th class="text-center">GP</th>
+                                    {% endif %}
+                                    {% if 'wins' in (config.displayed_columns or default_columns) %}
+                                    <th class="text-center">W</th>
+                                    {% endif %}
+                                    {% if 'losses' in (config.displayed_columns or default_columns) %}
+                                    <th class="text-center">L</th>
+                                    {% endif %}
+                                    {% if 'points' in (config.displayed_columns or default_columns) %}
+                                    <th class="text-center">{{ config.points_label or 'PTS' }}</th>
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="text-center"><strong>1</strong></td>
+                                    <td><strong>Sample Team A</strong></td>
+                                    <td class="text-center">5</td>
+                                    <td class="text-center text-success">4</td>
+                                    <td class="text-center text-danger">1</td>
+                                    <td class="text-center"><strong>12</strong></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-center"><strong>2</strong></td>
+                                    <td><strong>Sample Team B</strong></td>
+                                    <td class="text-center">5</td>
+                                    <td class="text-center text-success">3</td>
+                                    <td class="text-center text-danger">2</td>
+                                    <td class="text-center"><strong>9</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.list-group-item {
+    cursor: move;
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+.form-check-label small {
+    font-size: 0.8em;
+}
+
+.card {
+    border-radius: 0.75rem;
+}
+</style>
+
+<script>
+// Make sort criteria sortable
+document.addEventListener('DOMContentLoaded', function() {
+    // Simple drag and drop implementation
+    const sortList = document.getElementById('sort-criteria');
+    if (sortList) {
+        let draggedElement = null;
+
+        sortList.addEventListener('dragstart', function(e) {
+            draggedElement = e.target.closest('.list-group-item');
+            e.dataTransfer.effectAllowed = 'move';
+        });
+
+        sortList.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        });
+
+        sortList.addEventListener('drop', function(e) {
+            e.preventDefault();
+            const targetElement = e.target.closest('.list-group-item');
+            if (targetElement && targetElement !== draggedElement) {
+                const rect = targetElement.getBoundingClientRect();
+                const insertBefore = e.clientY < rect.top + rect.height / 2;
+
+                if (insertBefore) {
+                    sortList.insertBefore(draggedElement, targetElement);
+                } else {
+                    sortList.insertBefore(draggedElement, targetElement.nextSibling);
+                }
+            }
+        });
+
+        // Enable dragging on all items
+        sortList.querySelectorAll('.list-group-item').forEach(item => {
+            item.draggable = true;
+        });
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

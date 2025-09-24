@@ -92,6 +92,336 @@ def _format_cents_to_decimal(cents):
     return (Decimal(cents) / Decimal('100')).quantize(Decimal('0.01'))
 
 
+def _ensure_finance_hub_tables(db_wrapper):
+    """Create tables for comprehensive finance hub"""
+    cur = db_wrapper.cursor()
+    try:
+        # Revenue tracking table for consolidated financial data
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS league_revenue (
+                revenue_id SERIAL PRIMARY KEY,
+                league_id INTEGER NOT NULL REFERENCES leagues(league_id) ON DELETE CASCADE,
+                revenue_type VARCHAR(50) NOT NULL, -- 'fees', 'sponsorship', 'in_person', 'square', 'other'
+                amount_cents INTEGER NOT NULL DEFAULT 0,
+                currency VARCHAR(3) NOT NULL DEFAULT 'USD',
+                transaction_date DATE NOT NULL DEFAULT CURRENT_DATE,
+                description TEXT,
+                reference_id INTEGER, -- References to related records (fee_id, sponsor_id, etc)
+                reference_type VARCHAR(50), -- 'installment', 'sponsorship_deal', 'manual_entry'
+                payment_method VARCHAR(50), -- 'cash', 'check', 'card', 'bank_transfer', 'square', 'online'
+                status VARCHAR(20) NOT NULL DEFAULT 'confirmed', -- 'pending', 'confirmed', 'cancelled'
+                created_by INTEGER REFERENCES users(user_id),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                metadata JSONB -- For storing additional payment gateway data
+            )
+        """)
+
+        # In-person payment transactions
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS in_person_payments (
+                payment_id SERIAL PRIMARY KEY,
+                league_id INTEGER NOT NULL REFERENCES leagues(league_id) ON DELETE CASCADE,
+                amount_cents INTEGER NOT NULL,
+                currency VARCHAR(3) NOT NULL DEFAULT 'USD',
+                payment_method VARCHAR(50) NOT NULL, -- 'cash', 'check', 'card'
+                payment_date DATE NOT NULL DEFAULT CURRENT_DATE,
+                payer_name VARCHAR(255),
+                payer_contact VARCHAR(255), -- Phone or email
+                description TEXT NOT NULL,
+                check_number VARCHAR(50), -- For check payments
+                card_last_four VARCHAR(4), -- For card payments (security)
+                receipt_number VARCHAR(100),
+                notes TEXT,
+                created_by INTEGER REFERENCES users(user_id),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # Enhanced financial reports/budget tracking
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS league_budgets (
+                budget_id SERIAL PRIMARY KEY,
+                league_id INTEGER NOT NULL REFERENCES leagues(league_id) ON DELETE CASCADE,
+                budget_year INTEGER NOT NULL,
+                category VARCHAR(100) NOT NULL, -- 'registration_fees', 'sponsorships', 'concessions', etc
+                budgeted_amount_cents INTEGER NOT NULL DEFAULT 0,
+                actual_amount_cents INTEGER NOT NULL DEFAULT 0,
+                currency VARCHAR(3) NOT NULL DEFAULT 'USD',
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(league_id, budget_year, category)
+            )
+        """)
+
+        # Square payment integration tracking (ready for future)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS square_payments (
+                square_payment_id SERIAL PRIMARY KEY,
+                league_id INTEGER NOT NULL REFERENCES leagues(league_id) ON DELETE CASCADE,
+                square_payment_id_external VARCHAR(255) UNIQUE NOT NULL,
+                amount_cents INTEGER NOT NULL,
+                currency VARCHAR(3) NOT NULL DEFAULT 'USD',
+                status VARCHAR(50) NOT NULL, -- 'completed', 'pending', 'failed', 'cancelled'
+                payment_date TIMESTAMP,
+                description TEXT,
+                customer_email VARCHAR(255),
+                customer_name VARCHAR(255),
+                receipt_url TEXT,
+                reference_id INTEGER, -- Link to league fees, etc
+                reference_type VARCHAR(50),
+                square_order_id VARCHAR(255),
+                metadata JSONB,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # Create indexes for better performance
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_league_revenue_league_id ON league_revenue(league_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_league_revenue_date ON league_revenue(transaction_date)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_league_revenue_type ON league_revenue(revenue_type)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_in_person_payments_league_id ON in_person_payments(league_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_in_person_payments_date ON in_person_payments(payment_date)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_league_budgets_league_year ON league_budgets(league_id, budget_year)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_square_payments_league_id ON square_payments(league_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_square_payments_status ON square_payments(status)")
+
+        db_wrapper.commit()
+    except Exception:
+        db_wrapper.rollback()
+        raise
+    finally:
+        cur.close()
+
+
+def _get_comprehensive_finance_data(db, league_id_int):
+    """Get all financial data for the finance hub"""
+    if not league_id_int:
+        return {
+            'total_revenue': {'amount': 0, 'display': '$0.00'},
+            'revenue_breakdown': {},
+            'recent_transactions': [],
+            'budget_vs_actual': [],
+            'sponsor_revenue': {'amount': 0, 'display': '$0.00'},
+            'fee_revenue': {'amount': 0, 'display': '$0.00'},
+            'in_person_revenue': {'amount': 0, 'display': '$0.00'},
+            'fee_plan': None,
+            'installments': [],
+            'teams': []
+        }
+
+    cur = db.cursor()
+    try:
+        # Get total revenue by type
+        cur.execute("""
+            SELECT revenue_type,
+                   COALESCE(SUM(amount_cents), 0) as total_cents,
+                   COUNT(*) as transaction_count
+            FROM league_revenue
+            WHERE league_id = %s AND status = 'confirmed'
+            GROUP BY revenue_type
+            ORDER BY total_cents DESC
+        """, (league_id_int,))
+
+        revenue_breakdown = {}
+        total_revenue_cents = 0
+
+        for row in cur.fetchall():
+            revenue_type, amount_cents, count = row
+            revenue_breakdown[revenue_type] = {
+                'amount_cents': amount_cents,
+                'amount_display': _format_cents_to_decimal(amount_cents),
+                'transaction_count': count
+            }
+            total_revenue_cents += amount_cents
+
+        # Get recent transactions
+        cur.execute("""
+            SELECT revenue_type, amount_cents, transaction_date, description, payment_method
+            FROM league_revenue
+            WHERE league_id = %s
+            ORDER BY transaction_date DESC, created_at DESC
+            LIMIT 10
+        """, (league_id_int,))
+
+        recent_transactions = []
+        for row in cur.fetchall():
+            revenue_type, amount_cents, trans_date, description, payment_method = row
+            recent_transactions.append({
+                'type': revenue_type,
+                'amount_display': _format_cents_to_decimal(amount_cents),
+                'date': trans_date.strftime('%Y-%m-%d') if trans_date else '',
+                'description': description or '',
+                'payment_method': payment_method or ''
+            })
+
+        # Get sponsor revenue data (all active deals since sponsors aren't league-specific in current schema)
+        cur.execute("""
+            SELECT COALESCE(SUM(sd.deal_value_cents), 0) as sponsor_revenue
+            FROM sponsorship_deals sd
+            WHERE sd.deal_status = 'active'
+        """)
+
+        sponsor_revenue_cents = cur.fetchone()[0] or 0
+
+        # Get fee plan and installments (existing logic)
+        plan = _get_league_fee_plan(cur, league_id_int)
+        installments = []
+        fee_revenue_cents = 0
+
+        if plan:
+            cur.execute("""
+                SELECT installment_id, label, due_date, amount_cents, status, notes
+                FROM league_fee_installments
+                WHERE plan_id = %s
+                ORDER BY due_date IS NULL, due_date
+            """, (plan['plan_id'],))
+
+            for row in cur.fetchall():
+                installment_id, label, due_date, amount_cents, status, notes = row
+                installments.append({
+                    'installment_id': installment_id,
+                    'label': label,
+                    'due_date': due_date.strftime('%Y-%m-%d') if due_date else '',
+                    'amount_cents': amount_cents or 0,
+                    'amount_display': _format_cents_to_decimal(amount_cents or 0),
+                    'status': status or 'pending',
+                    'notes': notes
+                })
+                if status == 'paid':
+                    fee_revenue_cents += amount_cents or 0
+
+        # Get in-person payments
+        cur.execute("""
+            SELECT COALESCE(SUM(amount_cents), 0)
+            FROM in_person_payments
+            WHERE league_id = %s
+        """, (league_id_int,))
+
+        in_person_revenue_cents = cur.fetchone()[0] or 0
+
+        # Get teams for the league
+        cur.execute('SELECT team_id, name FROM teams WHERE league_id = %s ORDER BY name', (league_id_int,))
+        teams = [{'team_id': row[0], 'name': row[1]} for row in cur.fetchall()]
+
+        return {
+            'total_revenue': {
+                'amount': total_revenue_cents,
+                'display': f'${_format_cents_to_decimal(total_revenue_cents)}'
+            },
+            'revenue_breakdown': revenue_breakdown,
+            'recent_transactions': recent_transactions,
+            'sponsor_revenue': {
+                'amount': sponsor_revenue_cents,
+                'display': f'${_format_cents_to_decimal(sponsor_revenue_cents)}'
+            },
+            'fee_revenue': {
+                'amount': fee_revenue_cents,
+                'display': f'${_format_cents_to_decimal(fee_revenue_cents)}'
+            },
+            'in_person_revenue': {
+                'amount': in_person_revenue_cents,
+                'display': f'${_format_cents_to_decimal(in_person_revenue_cents)}'
+            },
+            'fee_plan': plan,
+            'installments': installments,
+            'teams': teams
+        }
+
+    finally:
+        cur.close()
+
+
+def _handle_add_in_person_payment(db):
+    """Handle adding in-person payment"""
+    try:
+        league_id = int(request.form.get('league_id'))
+        amount_cents = _parse_amount_to_cents(request.form.get('amount'))
+        payment_method = request.form.get('payment_method')
+        payer_name = request.form.get('payer_name', '').strip()
+        description = request.form.get('description', '').strip()
+        payment_date = request.form.get('payment_date') or datetime.now().date()
+
+        if not amount_cents or amount_cents <= 0:
+            flash('Valid payment amount is required.', 'error')
+            return redirect(url_for('admin.league_finance_hub', league_id=league_id))
+
+        cur = db.cursor()
+        try:
+            # Insert in-person payment
+            cur.execute("""
+                INSERT INTO in_person_payments
+                (league_id, amount_cents, payment_method, payer_name, description,
+                 payment_date, check_number, card_last_four, receipt_number, notes, created_by)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING payment_id
+            """, (
+                league_id, amount_cents, payment_method, payer_name, description,
+                payment_date,
+                request.form.get('check_number', '').strip() or None,
+                request.form.get('card_last_four', '').strip() or None,
+                request.form.get('receipt_number', '').strip() or None,
+                request.form.get('notes', '').strip() or None,
+                1  # TODO: Replace with current_user.id when auth is implemented
+            ))
+
+            payment_id = cur.fetchone()[0]
+
+            # Also add to league_revenue for consolidated tracking
+            cur.execute("""
+                INSERT INTO league_revenue
+                (league_id, revenue_type, amount_cents, transaction_date, description,
+                 reference_id, reference_type, payment_method, status, created_by)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                league_id, 'in_person', amount_cents, payment_date,
+                f'{description} - {payer_name}', payment_id, 'in_person_payment',
+                payment_method, 'confirmed', 1
+            ))
+
+            db.commit()
+            flash('In-person payment recorded successfully.', 'success')
+
+        except Exception as e:
+            db.rollback()
+            flash(f'Failed to record payment: {str(e)}', 'error')
+        finally:
+            cur.close()
+
+    except (ValueError, TypeError):
+        flash('Invalid payment data provided.', 'error')
+
+    return redirect(url_for('admin.league_finance_hub',
+                           league_id=request.form.get('league_id')))
+
+
+def _handle_update_budget(db):
+    """Handle budget update"""
+    # Implementation for budget management
+    flash('Budget feature coming soon.', 'info')
+    return redirect(url_for('admin.league_finance_hub',
+                           league_id=request.form.get('league_id')))
+
+
+def _handle_generate_revenue_entry(db):
+    """Handle manual revenue entry"""
+    # Implementation for manual revenue entries
+    flash('Manual revenue entry feature coming soon.', 'info')
+    return redirect(url_for('admin.league_finance_hub',
+                           league_id=request.form.get('league_id')))
+
+
+def _handle_legacy_fee_actions(db):
+    """Handle existing fee management actions"""
+    # This will contain the existing fee management logic
+    # For now, redirect to the old system
+    flash('Fee management integration in progress.', 'info')
+    return redirect(url_for('admin.manage_league_fees',
+                           league_id=request.form.get('league_id')))
+
+
 def _ensure_league_rules_table(db_wrapper):
     cur = db_wrapper.cursor()
     try:
@@ -108,6 +438,28 @@ def _ensure_league_rules_table(db_wrapper):
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+
+        # Create custom fields table for league rules
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS league_rules_custom_fields (
+                field_id SERIAL PRIMARY KEY,
+                league_id INTEGER NOT NULL REFERENCES leagues(league_id) ON DELETE CASCADE,
+                field_name VARCHAR(100) NOT NULL,
+                field_type VARCHAR(20) NOT NULL DEFAULT 'text',
+                field_value TEXT,
+                display_order INTEGER DEFAULT 0,
+                is_required BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(league_id, field_name)
+            )
+        """)
+
+        # Create index for better performance
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_league_rules_custom_fields_league_id
+            ON league_rules_custom_fields(league_id)
+        """)
+
         db_wrapper.commit()
     except Exception:
         db_wrapper.rollback()
@@ -667,7 +1019,7 @@ def manage_league_homepage():
                         highlights.append({
                             'title': title,
                             'body': body,
-                            'icon': icon or 'bi-star',
+                            'icon': icon or 'ph ph-star',
                         })
 
                 config_payload = {
@@ -697,7 +1049,7 @@ def manage_league_homepage():
 
     highlights = list(config.get('highlights', []))
     while len(highlights) < 3:
-        highlights.append({'title': '', 'body': '', 'icon': 'bi-star'})
+        highlights.append({'title': '', 'body': '', 'icon': 'ph ph-star'})
 
     return render_template(
         'manage_league_homepage.html',
@@ -773,6 +1125,53 @@ def manage_navigation():
         layout_choices=NAV_LAYOUT_CHOICES,
         audience_choices=NAV_AUDIENCE_CHOICES,
     )
+
+
+@admin_bp.route('/league_finance_hub', methods=['GET', 'POST'])
+@admin_required
+def league_finance_hub():
+    """Comprehensive league finance management hub"""
+    db = get_db()
+    try:
+        _ensure_finance_hub_tables(db)
+    except Exception as exc:
+        flash('Failed to prepare finance hub storage: ' + str(exc), 'error')
+        return redirect(url_for('admin.admin_dashboard'))
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+
+        if action == 'add_in_person_payment':
+            return _handle_add_in_person_payment(db)
+        elif action == 'update_budget':
+            return _handle_update_budget(db)
+        elif action == 'generate_revenue_entry':
+            return _handle_generate_revenue_entry(db)
+        # Continue handling existing fee management actions
+        else:
+            return _handle_legacy_fee_actions(db)
+
+    # Get league selection
+    base_cur = db.cursor()
+    base_cur.execute('SELECT league_id, name FROM leagues ORDER BY name')
+    leagues = [{'id': row[0], 'name': row[1]} for row in base_cur.fetchall()]
+    base_cur.close()
+
+    selected_league_id = request.form.get('league_id') or request.args.get('league_id')
+    if not selected_league_id and leagues:
+        selected_league_id = str(leagues[0]['id'])
+
+    league_id_int = int(selected_league_id) if selected_league_id else None
+
+    # Gather comprehensive financial data
+    finance_data = _get_comprehensive_finance_data(db, league_id_int)
+
+    return render_template('league_finance_hub.html',
+                         leagues=leagues,
+                         selected_league_id=selected_league_id,
+                         current_datetime=datetime.now().strftime('%Y-%m-%d %H:%M'),
+                         current_date=datetime.now().strftime('%Y-%m-%d'),
+                         **finance_data)
 
 
 @admin_bp.route('/manage_league_fees', methods=['GET', 'POST'])
@@ -996,73 +1395,246 @@ def manage_league_rules():
         return redirect(url_for('admin.admin_dashboard'))
 
     if request.method == 'POST':
-        cur = db.cursor()
-        try:
-            league_id_value = request.form.get('league_id')
-            if not league_id_value:
-                flash('Please select a league before saving rules.', 'error')
-                return redirect(url_for('admin.manage_league_rules'))
-            try:
-                league_id = int(league_id_value)
-            except (TypeError, ValueError):
-                flash('Invalid league selection.', 'error')
-                return redirect(url_for('admin.manage_league_rules'))
+        action = request.form.get('action', 'save_rules')
 
-            def _optional_int(value):
-                if value is None or value == '':
-                    return None
-                return int(value)
+        if action == 'add_custom_field':
+            return _handle_add_custom_field(db)
+        elif action == 'delete_custom_field':
+            return _handle_delete_custom_field(db)
+        elif action == 'save_rules':
+            return _handle_save_rules(db)
+        elif action == 'load_rules':
+            return _handle_load_rules(db)
 
-            points_win = int(request.form.get('points_win', 3) or 3)
-            points_draw = int(request.form.get('points_draw', 1) or 1)
-            points_loss = int(request.form.get('points_loss', 0) or 0)
-            tiebreakers = (request.form.get('tiebreakers') or '').strip() or None
-            substitution_limit = _optional_int(request.form.get('substitution_limit'))
-            foreign_player_limit = _optional_int(request.form.get('foreign_player_limit'))
-            notes = (request.form.get('notes') or '').strip() or None
-
-            cur.execute(
-                """
-                INSERT INTO league_rules (league_id, points_win, points_draw, points_loss, tiebreakers, substitution_limit, foreign_player_limit, notes, updated_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
-                ON CONFLICT (league_id) DO UPDATE SET
-                    points_win = EXCLUDED.points_win,
-                    points_draw = EXCLUDED.points_draw,
-                    points_loss = EXCLUDED.points_loss,
-                    tiebreakers = EXCLUDED.tiebreakers,
-                    substitution_limit = EXCLUDED.substitution_limit,
-                    foreign_player_limit = EXCLUDED.foreign_player_limit,
-                    notes = EXCLUDED.notes,
-                    updated_at = CURRENT_TIMESTAMP
-                """,
-                (league_id, points_win, points_draw, points_loss, tiebreakers, substitution_limit, foreign_player_limit, notes)
-            )
-            db.commit()
-            flash('League rules saved.', 'success')
-        except Exception as exc:
-            db.rollback()
-            flash('Failed to save league rules: ' + str(exc), 'error')
-        finally:
-            cur.close()
-        return redirect(url_for('admin.manage_league_rules'))
-
+    # GET request - load all data
     cur = db.cursor()
+    leagues = []
+    rules = []
+    custom_fields_by_league = {}
+
     try:
         cur.execute('SELECT league_id, name FROM leagues ORDER BY name')
         leagues = cur.fetchall()
-        cur.execute(
-            """
+
+        # Get all league rules with custom fields
+        cur.execute("""
             SELECT lr.league_id, l.name, lr.points_win, lr.points_draw, lr.points_loss,
                    lr.tiebreakers, lr.substitution_limit, lr.foreign_player_limit, lr.notes
             FROM league_rules lr
             JOIN leagues l ON lr.league_id = l.league_id
             ORDER BY l.name
-            """
-        )
+        """)
         rules = cur.fetchall()
+
+        # Get custom fields for each league
+        cur.execute("""
+            SELECT league_id, field_id, field_name, field_type, field_value, display_order, is_required
+            FROM league_rules_custom_fields
+            ORDER BY league_id, display_order, field_name
+        """)
+        for row in cur.fetchall():
+            league_id = row[0]
+            if league_id not in custom_fields_by_league:
+                custom_fields_by_league[league_id] = []
+            custom_fields_by_league[league_id].append({
+                'field_id': row[1],
+                'field_name': row[2],
+                'field_type': row[3],
+                'field_value': row[4],
+                'display_order': row[5],
+                'is_required': row[6]
+            })
+
+    except Exception as e:
+        flash(f'Error loading league rules data: {str(e)}', 'error')
     finally:
         cur.close()
-    return render_template('manage_league_rules.html', leagues=leagues, rules=rules)
+
+    return render_template('manage_league_rules.html',
+                         leagues=leagues,
+                         rules=rules,
+                         custom_fields_by_league=custom_fields_by_league)
+
+
+def _handle_add_custom_field(db):
+    """Handle adding a new custom field"""
+    try:
+        league_id = int(request.form.get('league_id'))
+        field_name = request.form.get('field_name', '').strip()
+        field_type = request.form.get('field_type', 'text')
+        field_value = request.form.get('field_value', '').strip()
+        is_required = bool(request.form.get('is_required'))
+
+        if not field_name:
+            flash('Field name is required.', 'error')
+            return redirect(url_for('admin.manage_league_rules'))
+
+        cur = db.cursor()
+        try:
+            # Get next display order
+            cur.execute(
+                "SELECT COALESCE(MAX(display_order), 0) + 1 FROM league_rules_custom_fields WHERE league_id = %s",
+                (league_id,)
+            )
+            display_order = cur.fetchone()[0]
+
+            cur.execute("""
+                INSERT INTO league_rules_custom_fields
+                (league_id, field_name, field_type, field_value, display_order, is_required)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (league_id, field_name, field_type, field_value or None, display_order, is_required))
+
+            db.commit()
+            flash(f'Custom field "{field_name}" added successfully.', 'success')
+        except Exception as exc:
+            db.rollback()
+            if 'unique' in str(exc).lower():
+                flash(f'Field "{field_name}" already exists for this league.', 'error')
+            else:
+                flash(f'Failed to add custom field: {str(exc)}', 'error')
+        finally:
+            cur.close()
+
+    except (ValueError, TypeError):
+        flash('Invalid league selection.', 'error')
+
+    return redirect(url_for('admin.manage_league_rules'))
+
+
+def _handle_delete_custom_field(db):
+    """Handle deleting a custom field"""
+    try:
+        field_id = int(request.form.get('field_id'))
+
+        cur = db.cursor()
+        try:
+            cur.execute("DELETE FROM league_rules_custom_fields WHERE field_id = %s", (field_id,))
+
+            if cur.rowcount > 0:
+                db.commit()
+                flash('Custom field deleted successfully.', 'success')
+            else:
+                flash('Custom field not found.', 'error')
+        except Exception as exc:
+            db.rollback()
+            flash(f'Failed to delete custom field: {str(exc)}', 'error')
+        finally:
+            cur.close()
+
+    except (ValueError, TypeError):
+        flash('Invalid field selection.', 'error')
+
+    return redirect(url_for('admin.manage_league_rules'))
+
+
+def _handle_save_rules(db):
+    """Handle saving league rules and custom fields"""
+    cur = db.cursor()
+    try:
+        league_id_value = request.form.get('league_id')
+        if not league_id_value:
+            flash('Please select a league before saving rules.', 'error')
+            return redirect(url_for('admin.manage_league_rules'))
+
+        try:
+            league_id = int(league_id_value)
+        except (TypeError, ValueError):
+            flash('Invalid league selection.', 'error')
+            return redirect(url_for('admin.manage_league_rules'))
+
+        def _optional_int(value):
+            if value is None or value == '':
+                return None
+            return int(value)
+
+        # Save basic league rules
+        points_win = int(request.form.get('points_win', 3) or 3)
+        points_draw = int(request.form.get('points_draw', 1) or 1)
+        points_loss = int(request.form.get('points_loss', 0) or 0)
+        tiebreakers = (request.form.get('tiebreakers') or '').strip() or None
+        substitution_limit = _optional_int(request.form.get('substitution_limit'))
+        foreign_player_limit = _optional_int(request.form.get('foreign_player_limit'))
+        notes = (request.form.get('notes') or '').strip() or None
+
+        cur.execute("""
+            INSERT INTO league_rules (league_id, points_win, points_draw, points_loss,
+                                    tiebreakers, substitution_limit, foreign_player_limit, notes, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+            ON CONFLICT (league_id) DO UPDATE SET
+                points_win = EXCLUDED.points_win,
+                points_draw = EXCLUDED.points_draw,
+                points_loss = EXCLUDED.points_loss,
+                tiebreakers = EXCLUDED.tiebreakers,
+                substitution_limit = EXCLUDED.substitution_limit,
+                foreign_player_limit = EXCLUDED.foreign_player_limit,
+                notes = EXCLUDED.notes,
+                updated_at = CURRENT_TIMESTAMP
+        """, (league_id, points_win, points_draw, points_loss, tiebreakers, substitution_limit, foreign_player_limit, notes))
+
+        # Save custom field values
+        for key, value in request.form.items():
+            if key.startswith('custom_field_'):
+                field_id = key.replace('custom_field_', '')
+                try:
+                    field_id_int = int(field_id)
+                    cur.execute(
+                        "UPDATE league_rules_custom_fields SET field_value = %s WHERE field_id = %s",
+                        (value.strip() or None, field_id_int)
+                    )
+                except (ValueError, TypeError):
+                    continue
+
+        db.commit()
+        flash('League rules saved successfully.', 'success')
+
+    except Exception as exc:
+        db.rollback()
+        flash('Failed to save league rules: ' + str(exc), 'error')
+    finally:
+        cur.close()
+
+    return redirect(url_for('admin.manage_league_rules'))
+
+
+def _handle_load_rules(db):
+    """Handle loading rules for a specific league (AJAX endpoint)"""
+    try:
+        league_id = int(request.form.get('league_id'))
+
+        cur = db.cursor()
+        try:
+            # Get basic rules
+            cur.execute("""
+                SELECT points_win, points_draw, points_loss, tiebreakers,
+                       substitution_limit, foreign_player_limit, notes
+                FROM league_rules WHERE league_id = %s
+            """, (league_id,))
+
+            rules_data = cur.fetchone()
+
+            # Get custom fields
+            cur.execute("""
+                SELECT field_id, field_name, field_type, field_value, is_required
+                FROM league_rules_custom_fields
+                WHERE league_id = %s
+                ORDER BY display_order, field_name
+            """, (league_id,))
+
+            custom_fields = cur.fetchall()
+
+            return {
+                'success': True,
+                'rules': rules_data,
+                'custom_fields': custom_fields
+            }
+
+        finally:
+            cur.close()
+
+    except (ValueError, TypeError):
+        return {'success': False, 'error': 'Invalid league selection'}
+    except Exception as exc:
+        return {'success': False, 'error': str(exc)}
 
 
 @admin_bp.route('/manage_seasons', methods=['GET', 'POST'])
@@ -1212,15 +1784,22 @@ def manage_players():
             position = request.form['position']
             date_of_birth = request.form['date_of_birth']
             nationality = request.form['nationality']
+            email = request.form.get('email', '')
+            weight_kg = request.form.get('weight_kg') or None
+            height_cm = request.form.get('height_cm') or None
+            sport = request.form.get('sport', 'Football')
 
             if 'submit' in request.form:
                 if player_id:
-                    cur.execute('UPDATE players SET team_id = %s, name = %s, position = %s, date_of_birth = %s, nationality = %s WHERE player_id = %s', 
-                                (team_id, name, position, date_of_birth, nationality, player_id))
+                    cur.execute('''UPDATE players SET team_id = %s, name = %s, position = %s, date_of_birth = %s,
+                                   nationality = %s, email = %s, weight_kg = %s, height_cm = %s, sport = %s
+                                   WHERE player_id = %s''',
+                                (team_id, name, position, date_of_birth, nationality, email, weight_kg, height_cm, sport, player_id))
                     flash('Player updated successfully', 'success')
                 else:
-                    cur.execute('INSERT INTO players (team_id, name, position, date_of_birth, nationality) VALUES (%s, %s, %s, %s, %s)', 
-                                (team_id, name, position, date_of_birth, nationality))
+                    cur.execute('''INSERT INTO players (team_id, name, position, date_of_birth, nationality, email, weight_kg, height_cm, sport)
+                                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)''',
+                                (team_id, name, position, date_of_birth, nationality, email, weight_kg, height_cm, sport))
                     flash('Player added successfully', 'success')
             elif 'delete' in request.form:
                 player_id = request.form['deleteEntityId']
@@ -1234,14 +1813,553 @@ def manage_players():
             cur.close()
         return redirect(url_for('admin.manage_players'))
 
-    cur.execute('SELECT p.player_id, t.name AS team, p.name, p.position, p.date_of_birth, p.nationality, p.team_id FROM players p JOIN teams t ON p.team_id = t.team_id')
+    cur.execute('''SELECT p.player_id, t.name AS team, p.name, p.position, p.date_of_birth, p.nationality, p.team_id,
+                          p.email, p.weight_kg, p.height_cm, p.sport
+                   FROM players p JOIN teams t ON p.team_id = t.team_id''')
     players = cur.fetchall()
     cur.execute('SELECT team_id, name FROM teams')
     teams = cur.fetchall()
+    cur.execute('SELECT name, positions FROM sports ORDER BY name')
+    sports = cur.fetchall()
     cur.close()
-    return render_template('manage_players.html', players=players, teams=teams)
+    return render_template('manage_players.html', players=players, teams=teams, sports=sports)
 
 
+@admin_bp.route('/manage_news', methods=['GET', 'POST'])
+@admin_required
+def manage_news():
+    db = get_db()
+    cur = db.cursor()
+
+    if request.method == 'POST':
+        try:
+            news_id = request.form.get('news_id')
+            title = request.form['title']
+            content = request.form['content']
+            summary = request.form.get('summary', '')
+            category = request.form.get('category', 'General')
+            status = request.form.get('status', 'draft')
+            is_featured = request.form.get('is_featured') == 'on'
+            show_on_homepage = request.form.get('show_on_homepage') == 'on'
+            image_url = request.form.get('image_url', '')
+
+            if 'submit' in request.form:
+                if news_id:
+                    # Update existing news
+                    cur.execute('''UPDATE news SET title = %s, content = %s, summary = %s, category = %s,
+                                   status = %s, is_featured = %s, show_on_homepage = %s, image_url = %s,
+                                   updated_at = CURRENT_TIMESTAMP,
+                                   published_at = CASE WHEN status = 'published' AND published_at IS NULL
+                                                      THEN CURRENT_TIMESTAMP ELSE published_at END
+                                   WHERE news_id = %s''',
+                                (title, content, summary, category, status, is_featured, show_on_homepage, image_url, news_id))
+                    flash('News article updated successfully', 'success')
+                else:
+                    # Create new news
+                    published_at = 'CURRENT_TIMESTAMP' if status == 'published' else 'NULL'
+                    cur.execute('''INSERT INTO news (title, content, summary, category, status, is_featured,
+                                   show_on_homepage, image_url, published_at)
+                                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)''',
+                                (title, content, summary, category, status, is_featured, show_on_homepage, image_url,
+                                 'now()' if status == 'published' else None))
+                    flash('News article created successfully', 'success')
+            elif 'delete' in request.form:
+                news_id = request.form['deleteEntityId']
+                cur.execute('DELETE FROM news WHERE news_id = %s', (news_id,))
+                flash('News article deleted successfully', 'success')
+
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            flash('An error occurred: ' + str(e), 'error')
+        finally:
+            cur.close()
+        return redirect(url_for('admin.manage_news'))
+
+    # Get all news articles
+    cur.execute('''SELECT news_id, title, summary, content, category, status, is_featured, show_on_homepage,
+                   created_at, published_at, author_id FROM news ORDER BY created_at DESC''')
+    news_articles = cur.fetchall()
+
+    cur.close()
+    return render_template('manage_news.html', news_articles=news_articles)
+
+
+@admin_bp.route('/manage_sponsors', methods=['GET', 'POST'])
+@admin_required
+def manage_sponsors():
+    db = get_db()
+    cur = db.cursor()
+
+    if request.method == 'POST':
+        try:
+            if 'submit_sponsor' in request.form:
+                sponsor_id = request.form.get('sponsor_id')
+                company_name = request.form['company_name']
+                contact_person = request.form.get('contact_person', '')
+                email = request.form.get('email', '')
+                phone = request.form.get('phone', '')
+                website = request.form.get('website', '')
+                address = request.form.get('address', '')
+                industry = request.form.get('industry', '')
+                company_size = request.form.get('company_size', '')
+                annual_revenue_range = request.form.get('annual_revenue_range', '')
+                status = request.form.get('status', 'prospect')
+                priority = request.form.get('priority', 'medium')
+                notes = request.form.get('notes', '')
+                first_contact_date = request.form.get('first_contact_date') or None
+                last_contact_date = request.form.get('last_contact_date') or None
+
+                if sponsor_id:
+                    # Update existing sponsor
+                    cur.execute('''UPDATE sponsors SET company_name = %s, contact_person = %s, email = %s,
+                                   phone = %s, website = %s, address = %s, industry = %s, company_size = %s,
+                                   annual_revenue_range = %s, status = %s, priority = %s, notes = %s,
+                                   first_contact_date = %s, last_contact_date = %s, updated_at = CURRENT_TIMESTAMP
+                                   WHERE sponsor_id = %s''',
+                                (company_name, contact_person, email, phone, website, address, industry,
+                                 company_size, annual_revenue_range, status, priority, notes,
+                                 first_contact_date, last_contact_date, sponsor_id))
+                    flash('Sponsor updated successfully', 'success')
+                else:
+                    # Create new sponsor
+                    cur.execute('''INSERT INTO sponsors (company_name, contact_person, email, phone, website,
+                                   address, industry, company_size, annual_revenue_range, status, priority,
+                                   notes, first_contact_date, last_contact_date, created_by)
+                                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)''',
+                                (company_name, contact_person, email, phone, website, address, industry,
+                                 company_size, annual_revenue_range, status, priority, notes,
+                                 first_contact_date, last_contact_date, current_user.user_id if current_user.is_authenticated else None))
+                    flash('Sponsor added successfully', 'success')
+
+            elif 'submit_deal' in request.form:
+                deal_id = request.form.get('deal_id')
+                sponsor_id = request.form['deal_sponsor_id']
+                deal_name = request.form['deal_name']
+                deal_type = request.form.get('deal_type', 'other')
+                sponsorship_level = request.form.get('sponsorship_level', 'bronze')
+                deal_value = request.form.get('deal_value', '0')
+                deal_value_cents = int(float(deal_value) * 100) if deal_value else 0
+                currency = request.form.get('currency', 'USD')
+                deal_status = request.form.get('deal_status', 'prospect')
+                start_date = request.form.get('start_date') or None
+                end_date = request.form.get('end_date') or None
+                benefits_provided = request.form.get('benefits_provided', '')
+                deliverables = request.form.get('deliverables', '')
+                payment_terms = request.form.get('payment_terms', '')
+                notes = request.form.get('deal_notes', '')
+
+                if deal_id:
+                    # Update existing deal
+                    cur.execute('''UPDATE sponsorship_deals SET sponsor_id = %s, deal_name = %s, deal_type = %s,
+                                   sponsorship_level = %s, deal_value_cents = %s, currency = %s, deal_status = %s,
+                                   start_date = %s, end_date = %s, benefits_provided = %s, deliverables = %s,
+                                   payment_terms = %s, notes = %s, updated_at = CURRENT_TIMESTAMP
+                                   WHERE deal_id = %s''',
+                                (sponsor_id, deal_name, deal_type, sponsorship_level, deal_value_cents, currency,
+                                 deal_status, start_date, end_date, benefits_provided, deliverables,
+                                 payment_terms, notes, deal_id))
+                    flash('Deal updated successfully', 'success')
+                else:
+                    # Create new deal
+                    cur.execute('''INSERT INTO sponsorship_deals (sponsor_id, deal_name, deal_type, sponsorship_level,
+                                   deal_value_cents, currency, deal_status, start_date, end_date, benefits_provided,
+                                   deliverables, payment_terms, notes, created_by)
+                                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)''',
+                                (sponsor_id, deal_name, deal_type, sponsorship_level, deal_value_cents, currency,
+                                 deal_status, start_date, end_date, benefits_provided, deliverables,
+                                 payment_terms, notes, current_user.user_id if current_user.is_authenticated else None))
+                    flash('Deal added successfully', 'success')
+
+            elif 'delete_sponsor' in request.form:
+                sponsor_id = request.form['deleteEntityId']
+                cur.execute('DELETE FROM sponsors WHERE sponsor_id = %s', (sponsor_id,))
+                flash('Sponsor deleted successfully', 'success')
+
+            elif 'delete_deal' in request.form:
+                deal_id = request.form['deleteDealId']
+                cur.execute('DELETE FROM sponsorship_deals WHERE deal_id = %s', (deal_id,))
+                flash('Deal deleted successfully', 'success')
+
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            flash('An error occurred: ' + str(e), 'error')
+        finally:
+            cur.close()
+        return redirect(url_for('admin.manage_sponsors'))
+
+    # Get all sponsors with deal counts
+    cur.execute('''SELECT s.sponsor_id, s.company_name, s.contact_person, s.email, s.phone, s.website,
+                   s.address, s.industry, s.company_size, s.annual_revenue_range, s.status, s.priority,
+                   s.notes, s.first_contact_date, s.last_contact_date, s.created_at,
+                   COUNT(d.deal_id) as deal_count,
+                   COALESCE(SUM(CASE WHEN d.deal_status = 'active' THEN d.deal_value_cents ELSE 0 END), 0) as active_value
+                   FROM sponsors s
+                   LEFT JOIN sponsorship_deals d ON s.sponsor_id = d.sponsor_id
+                   GROUP BY s.sponsor_id
+                   ORDER BY s.priority DESC, s.last_contact_date DESC''')
+    sponsors = cur.fetchall()
+
+    # Get all deals with sponsor info
+    cur.execute('''SELECT d.deal_id, d.sponsor_id, s.company_name, d.deal_name, d.deal_type,
+                   d.sponsorship_level, d.deal_value_cents, d.currency, d.deal_status,
+                   d.start_date, d.end_date, d.benefits_provided, d.deliverables,
+                   d.payment_terms, d.notes, d.created_at
+                   FROM sponsorship_deals d
+                   JOIN sponsors s ON d.sponsor_id = s.sponsor_id
+                   ORDER BY d.deal_status, d.start_date DESC''')
+    deals = cur.fetchall()
+
+    cur.close()
+    return render_template('manage_sponsors.html', sponsors=sponsors, deals=deals)
+
+
+@admin_bp.route('/export_sponsors')
+@admin_required
+def export_sponsors():
+    """Export sponsors data to Excel"""
+    try:
+        import pandas as pd
+        from flask import send_file
+        import tempfile
+        import os
+        from datetime import datetime
+
+        db = get_db()
+        cur = db.cursor()
+
+        # Export sponsors
+        cur.execute('''SELECT s.sponsor_id, s.company_name, s.contact_person, s.email, s.phone, s.website,
+                       s.address, s.industry, s.company_size, s.annual_revenue_range, s.status, s.priority,
+                       s.notes, s.first_contact_date, s.last_contact_date, s.created_at,
+                       COUNT(d.deal_id) as deal_count,
+                       COALESCE(SUM(CASE WHEN d.deal_status = 'active' THEN d.deal_value_cents ELSE 0 END), 0) as active_value
+                       FROM sponsors s
+                       LEFT JOIN sponsorship_deals d ON s.sponsor_id = d.sponsor_id
+                       GROUP BY s.sponsor_id
+                       ORDER BY s.company_name''')
+        sponsors_data = cur.fetchall()
+
+        # Export deals
+        cur.execute('''SELECT d.deal_id, s.company_name as sponsor, d.deal_name, d.deal_type,
+                       d.sponsorship_level, d.deal_value_cents, d.currency, d.deal_status,
+                       d.start_date, d.end_date, d.benefits_provided, d.deliverables,
+                       d.payment_terms, d.notes, d.created_at
+                       FROM sponsorship_deals d
+                       JOIN sponsors s ON d.sponsor_id = s.sponsor_id
+                       ORDER BY s.company_name, d.deal_name''')
+        deals_data = cur.fetchall()
+
+        cur.close()
+
+        # Create DataFrames
+        sponsors_columns = ['ID', 'Company Name', 'Contact Person', 'Email', 'Phone', 'Website',
+                           'Address', 'Industry', 'Company Size', 'Revenue Range', 'Status', 'Priority',
+                           'Notes', 'First Contact Date', 'Last Contact Date', 'Created At',
+                           'Deal Count', 'Active Value (cents)']
+
+        deals_columns = ['Deal ID', 'Sponsor', 'Deal Name', 'Deal Type', 'Level', 'Value (cents)',
+                        'Currency', 'Status', 'Start Date', 'End Date', 'Benefits', 'Deliverables',
+                        'Payment Terms', 'Notes', 'Created At']
+
+        sponsors_df = pd.DataFrame(sponsors_data, columns=sponsors_columns)
+        deals_df = pd.DataFrame(deals_data, columns=deals_columns)
+
+        # Format dates
+        for date_col in ['First Contact Date', 'Last Contact Date', 'Created At']:
+            if date_col in sponsors_df.columns:
+                sponsors_df[date_col] = pd.to_datetime(sponsors_df[date_col]).dt.strftime('%Y-%m-%d')
+
+        for date_col in ['Start Date', 'End Date', 'Created At']:
+            if date_col in deals_df.columns:
+                deals_df[date_col] = pd.to_datetime(deals_df[date_col]).dt.strftime('%Y-%m-%d')
+
+        # Create temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
+            with pd.ExcelWriter(tmp.name, engine='openpyxl') as writer:
+                sponsors_df.to_excel(writer, sheet_name='Sponsors', index=False)
+                deals_df.to_excel(writer, sheet_name='Deals', index=False)
+
+            filename = f"sponsorship_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+
+            return send_file(tmp.name, as_attachment=True, download_name=filename,
+                           mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+    except Exception as e:
+        flash(f'Export failed: {str(e)}', 'error')
+        return redirect(url_for('admin.manage_sponsors'))
+
+
+@admin_bp.route('/import_sponsors', methods=['POST'])
+@admin_required
+def import_sponsors():
+    """Import sponsors data from Excel"""
+    try:
+        import pandas as pd
+        from werkzeug.utils import secure_filename
+
+        if 'excel_file' not in request.files:
+            flash('No file selected', 'error')
+            return redirect(url_for('admin.manage_sponsors'))
+
+        file = request.files['excel_file']
+        if file.filename == '':
+            flash('No file selected', 'error')
+            return redirect(url_for('admin.manage_sponsors'))
+
+        if not file.filename.lower().endswith(('.xlsx', '.xls')):
+            flash('Please upload an Excel file (.xlsx or .xls)', 'error')
+            return redirect(url_for('admin.manage_sponsors'))
+
+        # Read Excel file
+        try:
+            # Try to read sponsors sheet
+            sponsors_df = pd.read_excel(file, sheet_name='Sponsors')
+        except:
+            # Fallback to first sheet
+            sponsors_df = pd.read_excel(file)
+
+        db = get_db()
+        cur = db.cursor()
+
+        imported_count = 0
+        skipped_count = 0
+
+        for _, row in sponsors_df.iterrows():
+            try:
+                company_name = str(row.get('Company Name', '')).strip()
+                if not company_name:
+                    skipped_count += 1
+                    continue
+
+                # Check if sponsor already exists
+                cur.execute('SELECT sponsor_id FROM sponsors WHERE company_name = %s', (company_name,))
+                existing = cur.fetchone()
+
+                contact_person = str(row.get('Contact Person', '')) if pd.notna(row.get('Contact Person')) else None
+                email = str(row.get('Email', '')) if pd.notna(row.get('Email')) else None
+                phone = str(row.get('Phone', '')) if pd.notna(row.get('Phone')) else None
+                website = str(row.get('Website', '')) if pd.notna(row.get('Website')) else None
+                address = str(row.get('Address', '')) if pd.notna(row.get('Address')) else None
+                industry = str(row.get('Industry', '')) if pd.notna(row.get('Industry')) else None
+                company_size = str(row.get('Company Size', '')) if pd.notna(row.get('Company Size')) else None
+                revenue_range = str(row.get('Revenue Range', '')) if pd.notna(row.get('Revenue Range')) else None
+                status = str(row.get('Status', 'prospect')).lower() if pd.notna(row.get('Status')) else 'prospect'
+                priority = str(row.get('Priority', 'medium')).lower() if pd.notna(row.get('Priority')) else 'medium'
+                notes = str(row.get('Notes', '')) if pd.notna(row.get('Notes')) else None
+
+                # Handle dates
+                first_contact_date = None
+                if pd.notna(row.get('First Contact Date')):
+                    try:
+                        first_contact_date = pd.to_datetime(row.get('First Contact Date')).strftime('%Y-%m-%d')
+                    except:
+                        pass
+
+                last_contact_date = None
+                if pd.notna(row.get('Last Contact Date')):
+                    try:
+                        last_contact_date = pd.to_datetime(row.get('Last Contact Date')).strftime('%Y-%m-%d')
+                    except:
+                        pass
+
+                if existing:
+                    # Update existing sponsor
+                    cur.execute('''UPDATE sponsors SET contact_person = %s, email = %s, phone = %s,
+                                   website = %s, address = %s, industry = %s, company_size = %s,
+                                   annual_revenue_range = %s, status = %s, priority = %s, notes = %s,
+                                   first_contact_date = %s, last_contact_date = %s, updated_at = CURRENT_TIMESTAMP
+                                   WHERE company_name = %s''',
+                                (contact_person, email, phone, website, address, industry,
+                                 company_size, revenue_range, status, priority, notes,
+                                 first_contact_date, last_contact_date, company_name))
+                else:
+                    # Create new sponsor
+                    cur.execute('''INSERT INTO sponsors (company_name, contact_person, email, phone, website,
+                                   address, industry, company_size, annual_revenue_range, status, priority,
+                                   notes, first_contact_date, last_contact_date, created_by)
+                                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)''',
+                                (company_name, contact_person, email, phone, website, address, industry,
+                                 company_size, revenue_range, status, priority, notes,
+                                 first_contact_date, last_contact_date, current_user.user_id if current_user.is_authenticated else None))
+
+                imported_count += 1
+
+            except Exception as e:
+                print(f"Error processing row: {str(e)}")
+                skipped_count += 1
+                continue
+
+        db.commit()
+        cur.close()
+
+        flash(f'Import completed: {imported_count} sponsors imported/updated, {skipped_count} skipped', 'success')
+
+    except Exception as e:
+        flash(f'Import failed: {str(e)}', 'error')
+
+    return redirect(url_for('admin.manage_sponsors'))
+
+
+@admin_bp.route('/export_players')
+@admin_required
+def export_players():
+    """Export players data to Excel"""
+    try:
+        import pandas as pd
+        from flask import send_file
+        import tempfile
+        from datetime import datetime
+
+        db = get_db()
+        cur = db.cursor()
+
+        # Export players with team info
+        cur.execute('''SELECT p.player_id, p.name, p.email, p.date_of_birth, p.position,
+                       p.nationality, p.weight_kg, p.height_cm, p.sport,
+                       t.name as team_name, s.year as season_year, l.name as league_name
+                       FROM players p
+                       LEFT JOIN teams t ON p.team_id = t.team_id
+                       LEFT JOIN seasons s ON t.league_id = s.league_id
+                       LEFT JOIN leagues l ON t.league_id = l.league_id
+                       ORDER BY p.name''')
+        players_data = cur.fetchall()
+
+        cur.close()
+
+        # Create DataFrame
+        columns = ['Player ID', 'Name', 'Email', 'Date of Birth', 'Position',
+                  'Nationality', 'Weight (kg)', 'Height (cm)', 'Sport',
+                  'Team', 'Season Year', 'League']
+
+        players_df = pd.DataFrame(players_data, columns=columns)
+
+        # Format dates
+        if 'Date of Birth' in players_df.columns:
+            players_df['Date of Birth'] = pd.to_datetime(players_df['Date of Birth']).dt.strftime('%Y-%m-%d')
+
+        # Create temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
+            with pd.ExcelWriter(tmp.name, engine='openpyxl') as writer:
+                players_df.to_excel(writer, sheet_name='Players', index=False)
+
+            filename = f"players_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+
+            return send_file(tmp.name, as_attachment=True, download_name=filename,
+                           mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+    except Exception as e:
+        flash(f'Export failed: {str(e)}', 'error')
+        return redirect(url_for('admin.manage_players'))
+
+
+@admin_bp.route('/import_players', methods=['POST'])
+@admin_required
+def import_players():
+    """Import players data from Excel"""
+    try:
+        import pandas as pd
+
+        if 'excel_file' not in request.files:
+            flash('No file selected', 'error')
+            return redirect(url_for('admin.manage_players'))
+
+        file = request.files['excel_file']
+        if file.filename == '':
+            flash('No file selected', 'error')
+            return redirect(url_for('admin.manage_players'))
+
+        if not file.filename.lower().endswith(('.xlsx', '.xls')):
+            flash('Please upload an Excel file (.xlsx or .xls)', 'error')
+            return redirect(url_for('admin.manage_players'))
+
+        # Read Excel file
+        try:
+            # Try to read players sheet
+            players_df = pd.read_excel(file, sheet_name='Players')
+        except:
+            # Fallback to first sheet
+            players_df = pd.read_excel(file)
+
+        db = get_db()
+        cur = db.cursor()
+
+        imported_count = 0
+        skipped_count = 0
+
+        for _, row in players_df.iterrows():
+            try:
+                name = str(row.get('Name', '')).strip()
+                if not name:
+                    skipped_count += 1
+                    continue
+
+                email = str(row.get('Email', '')) if pd.notna(row.get('Email')) else None
+                phone = str(row.get('Phone', '')) if pd.notna(row.get('Phone')) else None
+                position = str(row.get('Position', '')) if pd.notna(row.get('Position')) else None
+                jersey_number = None
+                if pd.notna(row.get('Jersey Number')):
+                    try:
+                        jersey_number = int(row.get('Jersey Number'))
+                    except:
+                        pass
+
+                emergency_contact_name = str(row.get('Emergency Contact Name', '')) if pd.notna(row.get('Emergency Contact Name')) else None
+                emergency_contact_phone = str(row.get('Emergency Contact Phone', '')) if pd.notna(row.get('Emergency Contact Phone')) else None
+
+                # Handle date of birth
+                date_of_birth = None
+                if pd.notna(row.get('Date of Birth')):
+                    try:
+                        date_of_birth = pd.to_datetime(row.get('Date of Birth')).strftime('%Y-%m-%d')
+                    except:
+                        pass
+
+                # Find team by name if provided
+                team_id = None
+                team_name = str(row.get('Team', '')) if pd.notna(row.get('Team')) else None
+                if team_name:
+                    cur.execute('SELECT team_id FROM teams WHERE team_name = %s LIMIT 1', (team_name,))
+                    team_result = cur.fetchone()
+                    if team_result:
+                        team_id = team_result[0]
+
+                # Check if player already exists
+                cur.execute('SELECT player_id FROM players WHERE name = %s AND email = %s', (name, email))
+                existing = cur.fetchone()
+
+                if existing:
+                    # Update existing player
+                    cur.execute('''UPDATE players SET phone = %s, date_of_birth = %s, position = %s,
+                                   jersey_number = %s, emergency_contact_name = %s, emergency_contact_phone = %s,
+                                   team_id = %s WHERE player_id = %s''',
+                                (phone, date_of_birth, position, jersey_number, emergency_contact_name,
+                                 emergency_contact_phone, team_id, existing[0]))
+                else:
+                    # Create new player
+                    cur.execute('''INSERT INTO players (name, email, phone, date_of_birth, position,
+                                   jersey_number, emergency_contact_name, emergency_contact_phone, team_id)
+                                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)''',
+                                (name, email, phone, date_of_birth, position, jersey_number,
+                                 emergency_contact_name, emergency_contact_phone, team_id))
+
+                imported_count += 1
+
+            except Exception as e:
+                print(f"Error processing row: {str(e)}")
+                skipped_count += 1
+                continue
+
+        db.commit()
+        cur.close()
+
+        flash(f'Import completed: {imported_count} players imported/updated, {skipped_count} skipped', 'success')
+
+    except Exception as e:
+        flash(f'Import failed: {str(e)}', 'error')
+
+    return redirect(url_for('admin.manage_players'))
 
 
 @admin_bp.route('/generate_fixtures', methods=['GET', 'POST'])

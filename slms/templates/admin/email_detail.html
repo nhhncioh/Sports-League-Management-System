@@ -26,12 +26,12 @@
                               style="display: inline;">
                             <button type="submit" class="btn btn-warning"
                                     onclick="return confirm('Retry sending this email?')">
-                                <i class="bi bi-arrow-clockwise"></i> Retry Email
+                                <i class="ph ph-arrow-clockwise"></i> Retry Email
                             </button>
                         </form>
                     {% endif %}
                     <a href="{{ url_for('admin.email_management') }}" class="btn btn-outline-primary">
-                        <i class="bi bi-arrow-left"></i> Back to List
+                        <i class="ph ph-arrow-left"></i> Back to List
                     </a>
                 </div>
             </div>
@@ -44,7 +44,7 @@
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0">
-                        <i class="bi bi-info-circle"></i>
+                        <i class="ph ph-info"></i>
                         Email Information
                     </h5>
                 </div>
@@ -169,7 +169,7 @@
             <div class="card mt-4">
                 <div class="card-header">
                     <h6 class="mb-0">
-                        <i class="bi bi-link"></i>
+                        <i class="ph ph-link"></i>
                         Related Entities
                     </h6>
                 </div>
@@ -216,7 +216,7 @@
             <div class="card mt-4">
                 <div class="card-header">
                     <h6 class="mb-0">
-                        <i class="bi bi-code"></i>
+                        <i class="ph ph-code"></i>
                         Template Context
                     </h6>
                 </div>
@@ -232,7 +232,7 @@
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0">
-                        <i class="bi bi-envelope-open"></i>
+                        <i class="ph ph-envelope-open"></i>
                         Email Preview
                     </h5>
                 </div>
@@ -245,7 +245,7 @@
                         </div>
                     {% else %}
                         <div class="text-center py-5 text-muted">
-                            <i class="bi bi-file-earmark-x" style="font-size: 3rem;"></i>
+                            <i class="ph ph-file-x" style="font-size: 3rem;"></i>
                             <h5 class="mt-3">No Content Available</h5>
                             <p>Email content could not be rendered or was not saved.</p>
                         </div>
@@ -258,7 +258,7 @@
             <div class="card mt-4">
                 <div class="card-header">
                     <h6 class="mb-0">
-                        <i class="bi bi-file-code"></i>
+                        <i class="ph ph-file-code"></i>
                         Raw HTML
                         <button class="btn btn-sm btn-outline-secondary float-end"
                                 onclick="toggleRawHtml()">

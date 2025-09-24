@@ -8,7 +8,7 @@
             <p class="text-muted mb-0">Brand each league with unique colours, imagery, and logos.</p>
         </div>
         <button type="button" class="btn btn-outline-secondary" onclick="resetLeagueForm()">
-            <i class="bi bi-plus-circle"></i>
+            <i class="ph ph-plus-circle"></i>
             New League
         </button>
     </div>
@@ -50,7 +50,7 @@
                                     </span>
                                     <input type="text" class="form-control" id="{{ field }}" name="{{ field }}" placeholder="{{ color_defaults[field] }}" pattern="^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$" data-default="{{ color_defaults[field] }}">
                                     <button class="btn btn-outline-secondary" type="button" data-clear-color="{{ field }}">
-                                        <i class="bi bi-x"></i>
+                                        <i class="ph ph-x"></i>
                                     </button>
                                 </div>
                             </div>
@@ -69,11 +69,11 @@
 
                         <div class="d-flex gap-2">
                             <button type="submit" name="add" class="btn btn-primary" id="submit-button">
-                                <i class="bi bi-save"></i>
+                                <i class="ph ph-floppy-disk"></i>
                                 Save League
                             </button>
                             <button type="submit" name="edit" class="btn btn-primary d-none" id="update-button">
-                                <i class="bi bi-save"></i>
+                                <i class="ph ph-floppy-disk"></i>
                                 Update League
                             </button>
                             <button type="button" class="btn btn-light" onclick="resetLeagueForm()">Cancel</button>
@@ -142,7 +142,7 @@
                                     </td>
                                     <td>
                                         {% if league.hero_image_url %}
-                                            <span class="badge bg-success-subtle text-success"><i class="bi bi-image"></i> Provided</span>
+                                            <span class="badge bg-success-subtle text-success"><i class="ph ph-image"></i> Provided</span>
                                         {% else %}
                                             <span class="badge bg-light text-muted">Not set</span>
                                         {% endif %}
@@ -150,10 +150,10 @@
                                     <td class="text-end">
                                         <div class="btn-group btn-group-sm" role="group">
                                             <button type="button" class="btn btn-outline-primary" data-league='{{ league|tojson }}' onclick="editLeague(this)">
-                                                <i class="bi bi-pencil"></i>
+                                                <i class="ph ph-pencil-simple"></i>
                                             </button>
                                             <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal" data-id="{{ league.id }}" data-action="{{ url_for('admin.manage_leagues') }}">
-                                                <i class="bi bi-trash"></i>
+                                                <i class="ph ph-trash"></i>
                                             </button>
                                         </div>
                                     </td>
@@ -243,10 +243,10 @@
 
         previewTags.innerHTML = '';
         if (logoUrl) {
-            previewTags.insertAdjacentHTML('beforeend', '<span class="badge rounded-pill bg-light text-dark"><i class="bi bi-patch-check"></i> Logo attached</span>');
+            previewTags.insertAdjacentHTML('beforeend', '<span class="badge rounded-pill bg-light text-dark"><i class="ph ph-check-circle"></i> Logo attached</span>');
         }
         if (heroUrl) {
-            previewTags.insertAdjacentHTML('beforeend', '<span class="badge rounded-pill bg-light text-dark"><i class="bi bi-image"></i> Hero ready</span>');
+            previewTags.insertAdjacentHTML('beforeend', '<span class="badge rounded-pill bg-light text-dark"><i class="ph ph-image"></i> Hero ready</span>');
         }
         const colorSummary = Object.values(colors).some(Boolean) ? 'Brand palette set' : 'Using default colours';
         previewTags.insertAdjacentHTML('beforeend', `<span class="badge rounded-pill bg-light text-dark">${colorSummary}</span>`);

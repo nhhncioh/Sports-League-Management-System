@@ -45,6 +45,423 @@ body { background-color: #fff; }
 /* Badges for game status */
 .game-status-badge { font-size: .75rem; padding: .25rem .5rem; }
 
+/* Enhanced match and schedule styling */
+.venue-pill {
+  background-color: rgba(13, 110, 253, 0.1);
+  color: #0d6efd;
+  padding: 0.25rem 0.5rem;
+  border-radius: 1rem;
+  font-size: 0.875rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.match-status-badge {
+  font-weight: 500;
+  font-size: 0.75rem;
+}
+
+.match-row:hover {
+  background-color: rgba(13, 110, 253, 0.05);
+  transform: translateX(2px);
+  transition: all 0.2s ease;
+}
+
+.match-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.match-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.game-item {
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+}
+
+.game-item:hover {
+  background-color: rgba(13, 110, 253, 0.05);
+  border-left-color: var(--slms-primary);
+}
+
+.game-item[data-status="live"] {
+  border-left-color: #dc3545;
+  background-color: rgba(220, 53, 69, 0.05);
+}
+
+.pulse {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
+.stat-box {
+  padding: 1rem 0;
+  border-radius: 0.5rem;
+}
+
+.team-name {
+  font-weight: 600;
+  color: #333;
+}
+
+.btn-group .btn {
+  border-radius: 0.375rem;
+  margin-left: 2px;
+}
+
+.btn-group .btn:first-child {
+  margin-left: 0;
+}
+
+/* Calendar view styling */
+.calendar-grid .month-section h5 {
+  color: var(--slms-primary);
+  border-bottom: 2px solid var(--slms-border);
+  padding-bottom: 0.5rem;
+}
+
+.calendar-grid .card {
+  height: 100%;
+  min-height: 150px;
+}
+
+.calendar-grid .card-header {
+  text-align: center;
+  font-weight: 600;
+}
+
+/* Filter section styling */
+.card .form-label {
+  color: #495057;
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+
+/* Quick stats styling */
+.stat-box h4 {
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.stat-box small {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+}
+
+/* Enhanced table responsiveness */
+@media (max-width: 768px) {
+  .match-row .col-md-2,
+  .match-row .col-md-6 {
+    margin-bottom: 0.5rem;
+  }
+
+  .btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .venue-pill {
+    font-size: 0.75rem;
+    padding: 0.125rem 0.375rem;
+  }
+}
+
+/* Status-specific styling */
+.game-item[data-status="final"] {
+  border-left-color: #198754;
+}
+
+.game-item[data-status="postponed"] {
+  border-left-color: #ffc107;
+}
+
+.game-item[data-status="cancelled"] {
+  border-left-color: #6c757d;
+  opacity: 0.7;
+}
+
+/* Loading states */
+.spinner-border {
+  color: var(--slms-primary);
+}
+
+/* Empty states */
+.empty-state {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: var(--slms-text-muted);
+}
+
+.empty-state i {
+  font-size: 3rem;
+  opacity: 0.5;
+  margin-bottom: 1rem;
+}
+
+/* Player Management CRM Styles */
+.stat-card {
+  border: none;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.stat-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.5rem;
+}
+
+.avatar-placeholder, .avatar-placeholder-large, .avatar-placeholder-small {
+  background-color: var(--slms-bg-soft);
+  border: 2px solid var(--slms-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--slms-text-muted);
+  font-size: 1.2rem;
+}
+
+.avatar-placeholder {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.avatar-placeholder-large {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  font-size: 1.5rem;
+}
+
+.avatar-placeholder-small {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 1rem;
+}
+
+.team-badge, .team-badge-small {
+  background-color: rgba(13, 110, 253, 0.1);
+  color: #0d6efd;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.team-badge-small {
+  padding: 0.125rem 0.375rem;
+  font-size: 0.75rem;
+}
+
+.position-pill {
+  padding: 0.25rem 0.5rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.position-goalkeeper { background-color: #dc3545; color: white; }
+.position-defender { background-color: #198754; color: white; }
+.position-midfielder { background-color: #ffc107; color: #212529; }
+.position-forward { background-color: #fd7e14; color: white; }
+
+.status-badge {
+  font-weight: 500;
+  font-size: 0.75rem;
+}
+
+.status-active { background-color: #198754 !important; }
+.status-injured { background-color: #dc3545 !important; }
+.status-suspended { background-color: #ffc107 !important; color: #212529 !important; }
+.status-inactive { background-color: #6c757d !important; }
+.status-trial { background-color: #0dcaf0 !important; color: #212529 !important; }
+.status-loan { background-color: #6f42c1 !important; }
+
+.rating-bar {
+  height: 8px;
+  background-color: var(--slms-bg-soft);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.rating-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #dc3545 0%, #ffc107 50%, #198754 100%);
+  transition: width 0.3s ease;
+}
+
+.player-profile-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.player-profile-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--slms-border);
+}
+
+.detail-label {
+  font-weight: 500;
+  color: var(--slms-text-muted);
+  font-size: 0.875rem;
+}
+
+.player-list-item {
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+}
+
+.player-list-item:hover {
+  background-color: rgba(13, 110, 253, 0.05);
+  border-left-color: var(--slms-primary);
+}
+
+.photo-preview {
+  width: 150px;
+  height: 150px;
+  border: 2px dashed var(--slms-border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--slms-bg-soft);
+  color: var(--slms-text-muted);
+  margin: 0 auto;
+  cursor: pointer;
+}
+
+.photo-preview:hover {
+  border-color: var(--slms-primary);
+  color: var(--slms-primary);
+}
+
+.photo-preview i {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.bulk-actions {
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.contract-info {
+  font-size: 0.875rem;
+}
+
+.performance-section {
+  background-color: var(--slms-bg-soft);
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+}
+
+/* Responsive adjustments for player management */
+@media (max-width: 768px) {
+  .stat-card .card-body {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .stat-icon {
+    margin-bottom: 0.5rem;
+  }
+
+  .player-profile-card .card-body {
+    padding: 0.75rem;
+  }
+
+  .detail-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .detail-label {
+    margin-bottom: 0.25rem;
+  }
+}
+
+/* Tab content styling */
+.nav-tabs .nav-link {
+  color: var(--slms-text-muted);
+  border: none;
+  border-bottom: 2px solid transparent;
+}
+
+.nav-tabs .nav-link.active {
+  color: var(--slms-primary);
+  border-bottom-color: var(--slms-primary);
+  background-color: transparent;
+}
+
+.nav-tabs .nav-link:hover {
+  border-bottom-color: var(--slms-primary);
+  color: var(--slms-primary);
+}
+
+/* Filter section enhancements */
+.collapse.show {
+  animation: expandDown 0.3s ease;
+}
+
+@keyframes expandDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 200px;
+  }
+}
+
+/* Advanced search highlight */
+.form-control:focus, .form-select:focus {
+  border-color: var(--slms-primary);
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
 /* Jumbotron shim (Bootstrap 4 -> 5) */
 .jumbotron { background-color: var(--slms-bg-soft); border-radius: .75rem; }
 .jumbotron .display-4 { font-weight: 700; }
@@ -64,4 +481,15 @@ footer .text-muted { color: var(--slms-text-muted) !important; }
 @media (max-width: 576px) {
   .navbar-brand img { height: 32px; }
 }
+
+
+
+
+
+
+
+
+
+
+
 

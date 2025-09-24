@@ -38,13 +38,13 @@
                                 {% elif game.status.value == 'canceled' %}bg-warning
                                 {% else %}bg-light text-dark{% endif %}">
                                 {% if game.status.value == 'in_progress' %}
-                                    <i class="bi bi-broadcast"></i> LIVE
+                                    <i class="ph ph-broadcast"></i> LIVE
                                 {% elif game.status.value == 'final' %}
-                                    <i class="bi bi-check-circle"></i> FINAL
+                                    <i class="ph ph-check-circle"></i> FINAL
                                 {% elif game.status.value == 'scheduled' %}
-                                    <i class="bi bi-clock"></i> SCHEDULED
+                                    <i class="ph ph-clock"></i> SCHEDULED
                                 {% elif game.status.value == 'canceled' %}
-                                    <i class="bi bi-x-circle"></i> CANCELLED
+                                    <i class="ph ph-x-circle"></i> CANCELLED
                                 {% else %}
                                     {{ game.status.value.replace('_', ' ').title() }}
                                 {% endif %}
@@ -53,7 +53,7 @@
                         <div class="col-md-6 text-md-end">
                             {% if game.start_time %}
                                 <span class="text-muted">
-                                    <i class="bi bi-calendar-event"></i>
+                                    <i class="ph ph-calendar-dots"></i>
                                     {{ game.start_time.strftime('%A, %B %d, %Y at %I:%M %p') }}
                                 </span>
                             {% endif %}
@@ -68,7 +68,7 @@
                                class="text-decoration-none text-dark">
                                 <div class="team-display">
                                     <div class="team-logo bg-light rounded-circle p-3 d-inline-block mb-2">
-                                        <i class="bi bi-shield" style="font-size: 2rem;"></i>
+                                        <i class="ph ph-shield" style="font-size: 2rem;"></i>
                                     </div>
                                     <h4 class="mb-1">{{ game.home_team.name }}</h4>
                                     <small class="text-muted">HOME</small>
@@ -102,7 +102,7 @@
                                     </h1>
                                     <div class="live-indicator">
                                         <span class="badge bg-danger pulse-animation">
-                                            <i class="bi bi-broadcast"></i> LIVE
+                                            <i class="ph ph-broadcast"></i> LIVE
                                         </span>
                                     </div>
                                 </div>
@@ -124,7 +124,7 @@
                                class="text-decoration-none text-dark">
                                 <div class="team-display">
                                     <div class="team-logo bg-light rounded-circle p-3 d-inline-block mb-2">
-                                        <i class="bi bi-shield" style="font-size: 2rem;"></i>
+                                        <i class="ph ph-shield" style="font-size: 2rem;"></i>
                                     </div>
                                     <h4 class="mb-1">{{ game.away_team.name }}</h4>
                                     <small class="text-muted">AWAY</small>
@@ -138,13 +138,13 @@
                         <div class="col-md-6">
                             {% if game.venue %}
                                 <div class="mb-2">
-                                    <i class="bi bi-geo-alt text-muted"></i>
+                                    <i class="ph ph-map-pin text-muted"></i>
                                     <strong>Venue:</strong> {{ game.venue }}
                                 </div>
                             {% endif %}
                             {% if game.season %}
                                 <div class="mb-2">
-                                    <i class="bi bi-trophy text-muted"></i>
+                                    <i class="ph ph-trophy text-muted"></i>
                                     <strong>Season:</strong>
                                     <a href="{{ url_for('portal.season_standings', season_id=game.season.id) }}">
                                         {{ game.season.name }}
@@ -155,7 +155,7 @@
                         <div class="col-md-6">
                             {% if game.week %}
                                 <div class="mb-2">
-                                    <i class="bi bi-calendar-week text-muted"></i>
+                                    <i class="ph ph-calendar text-muted"></i>
                                     <strong>Week:</strong> {{ game.week }}
                                 </div>
                             {% endif %}
@@ -174,7 +174,7 @@
                 <div class="card mb-4">
                     <div class="card-header">
                         <h5 class="mb-0">
-                            <i class="bi bi-bar-chart"></i>
+                            <i class="ph ph-chart-bar"></i>
                             Score Summary
                         </h5>
                     </div>
@@ -218,7 +218,7 @@
                 <div class="card mb-4">
                     <div class="card-header">
                         <h5 class="mb-0">
-                            <i class="bi bi-chat-left-text"></i>
+                            <i class="ph ph-chat-text"></i>
                             Game Notes
                         </h5>
                     </div>
@@ -233,7 +233,7 @@
                 <div class="card">
                     <div class="card-header">
                         <h5 class="mb-0">
-                            <i class="bi bi-graph-up"></i>
+                            <i class="ph ph-trend-up"></i>
                             Game Statistics
                         </h5>
                     </div>
@@ -262,12 +262,12 @@
                         {% if game.season %}
                             <a href="{{ url_for('portal.season_schedule', season_id=game.season.id) }}"
                                class="btn btn-outline-primary">
-                                <i class="bi bi-calendar-event"></i>
+                                <i class="ph ph-calendar-dots"></i>
                                 View Schedule
                             </a>
                             <a href="{{ url_for('portal.season_standings', season_id=game.season.id) }}"
                                class="btn btn-outline-secondary">
-                                <i class="bi bi-list-ol"></i>
+                                <i class="ph ph-list-numbers"></i>
                                 View Standings
                             </a>
                         {% endif %}
@@ -280,7 +280,7 @@
                 <div class="card">
                     <div class="card-header">
                         <h6 class="mb-0">
-                            <i class="bi bi-clock-history"></i>
+                            <i class="ph ph-clock-countdown"></i>
                             Recent Matchups
                         </h6>
                     </div>

@@ -15,7 +15,7 @@
             <span class="text-muted small">No change vs {{ previous_year }}</span>
         {% else %}
             {% set direction_class = 'text-success' if delta > 0 else 'text-danger' %}
-            {% set icon = 'bi-arrow-up-right' if delta > 0 else 'bi-arrow-down-right' %}
+            {% set icon = 'ph ph-trending-up' if delta > 0 else 'ph ph-trending-down' %}
             {% if is_currency %}
                 {% set delta_display = format_currency_cents(delta) %}
                 {% if delta > 0 %}
@@ -25,7 +25,7 @@
                 {% set delta_display = delta if delta < 0 else '+' ~ delta %}
             {% endif %}
             <span class="{{ direction_class }} small">
-                <i class="bi {{ icon }}"></i>
+                <i class="{{ icon }}"></i>
                 {{ delta_display }}
                 {% if pct is not none %}
                     ({{ pct|round(1) }}%)
@@ -40,8 +40,8 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">Admin Dashboard</h1>
         <div class="d-flex gap-2">
-            <a href="{{ url_for('admin.site_settings') }}" class="btn btn-outline-primary"><i class="bi bi-gear"></i> Site Settings</a>
-            <a href="{{ url_for('admin.manage_navigation') }}" class="btn btn-primary"><i class="bi bi-compass"></i> Navigation</a>
+            <a href="{{ url_for('admin.site_settings') }}" class="btn btn-outline-primary"><i class="ph ph-gear-six"></i> Site Settings</a>
+            <a href="{{ url_for('admin.manage_navigation') }}" class="btn btn-primary"><i class="ph ph-compass"></i> Navigation</a>
         </div>
     </div>
 
@@ -64,7 +64,7 @@
                 <div class="col-sm-6 col-lg-3">
                     <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_users') }}">
                         <div class="card-body d-flex align-items-center">
-                            <i class="bi bi-people fs-3 text-primary me-3"></i>
+                            <i class="ph ph-users-three fs-3 text-primary me-3"></i>
                             <div>
                                 <div class="fw-semibold">Users</div>
                                 <small class="text-muted">Manage users & roles</small>
@@ -75,7 +75,7 @@
                 <div class="col-sm-6 col-lg-3">
                     <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_leagues') }}">
                         <div class="card-body d-flex align-items-center">
-                            <i class="bi bi-trophy fs-3 text-primary me-3"></i>
+                            <i class="ph ph-trophy fs-3 text-primary me-3"></i>
                             <div>
                                 <div class="fw-semibold">Leagues</div>
                                 <small class="text-muted">Leagues & seasons</small>
@@ -86,7 +86,7 @@
                 <div class="col-sm-6 col-lg-3">
                     <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_teams') }}">
                         <div class="card-body d-flex align-items-center">
-                            <i class="bi bi-shield fs-3 text-primary me-3"></i>
+                            <i class="ph ph-shield fs-3 text-primary me-3"></i>
                             <div>
                                 <div class="fw-semibold">Teams</div>
                                 <small class="text-muted">Teams & coaches</small>
@@ -97,7 +97,7 @@
                 <div class="col-sm-6 col-lg-3">
                     <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_players') }}">
                         <div class="card-body d-flex align-items-center">
-                            <i class="bi bi-person-badge fs-3 text-primary me-3"></i>
+                            <i class="ph ph-identification-badge fs-3 text-primary me-3"></i>
                             <div>
                                 <div class="fw-semibold">Players</div>
                                 <small class="text-muted">Rosters & profiles</small>
@@ -107,9 +107,33 @@
                 </div>
 
                 <div class="col-sm-6 col-lg-3">
+                    <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_news') }}">
+                        <div class="card-body d-flex align-items-center">
+                            <i class="ph ph-newspaper fs-3 text-primary me-3"></i>
+                            <div>
+                                <div class="fw-semibold">News</div>
+                                <small class="text-muted">Articles & updates</small>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-sm-6 col-lg-3">
+                    <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_sponsors') }}">
+                        <div class="card-body d-flex align-items-center">
+                            <i class="ph ph-handshake fs-3 text-primary me-3"></i>
+                            <div>
+                                <div class="fw-semibold">Sponsors</div>
+                                <small class="text-muted">CRM & partnerships</small>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-sm-6 col-lg-3">
                     <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_matches') }}">
                         <div class="card-body d-flex align-items-center">
-                            <i class="bi bi-calendar-event fs-3 text-primary me-3"></i>
+                            <i class="ph ph-calendar-dots fs-3 text-primary me-3"></i>
                             <div>
                                 <div class="fw-semibold">Matches</div>
                                 <small class="text-muted">Schedule & score</small>
@@ -120,7 +144,7 @@
                 <div class="col-sm-6 col-lg-3">
                     <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_scores') }}">
                         <div class="card-body d-flex align-items-center">
-                            <i class="bi bi-clipboard-data fs-3 text-primary me-3"></i>
+                            <i class="ph ph-clipboard fs-3 text-primary me-3"></i>
                             <div>
                                 <div class="fw-semibold">Scores</div>
                                 <small class="text-muted">Manage results</small>
@@ -131,7 +155,7 @@
                 <div class="col-sm-6 col-lg-3">
                     <a class="card h-100 text-decoration-none" href="{{ url_for('admin.generate_fixtures') }}">
                         <div class="card-body d-flex align-items-center">
-                            <i class="bi bi-magic fs-3 text-primary me-3"></i>
+                            <i class="ph ph-magic-wand fs-3 text-primary me-3"></i>
                             <div>
                                 <div class="fw-semibold">Generate Fixtures</div>
                                 <small class="text-muted">Auto-schedule</small>
@@ -142,7 +166,7 @@
                 <div class="col-sm-6 col-lg-3">
                     <a class="card h-100 text-decoration-none" href="{{ url_for('admin.recalculate_standings') }}">
                         <div class="card-body d-flex align-items-center">
-                            <i class="bi bi-arrow-repeat fs-3 text-primary me-3"></i>
+                            <i class="ph ph-arrow-clockwise fs-3 text-primary me-3"></i>
                             <div>
                                 <div class="fw-semibold">Recalculate</div>
                                 <small class="text-muted">Standings</small>
@@ -152,12 +176,12 @@
                 </div>
 
                 <div class="col-sm-6 col-lg-3">
-                    <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_league_fees') }}">
+                    <a class="card h-100 text-decoration-none" href="{{ url_for('admin.league_finance_hub') }}">
                         <div class="card-body d-flex align-items-center">
-                            <i class="bi bi-cash-coin fs-3 text-primary me-3"></i>
+                            <i class="ph ph-chart-line-up fs-3 text-primary me-3"></i>
                             <div>
-                                <div class="fw-semibold">League Fees</div>
-                                <small class="text-muted">Plans &amp; installments</small>
+                                <div class="fw-semibold">Finance Hub</div>
+                                <small class="text-muted">Revenue & financial management</small>
                             </div>
                         </div>
                     </a>
@@ -165,7 +189,7 @@
                 <div class="col-sm-6 col-lg-3">
                     <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_league_homepage') }}">
                         <div class="card-body d-flex align-items-center">
-                            <i class="bi bi-layout-text-window fs-3 text-primary me-3"></i>
+                            <i class="ph ph-browser fs-3 text-primary me-3"></i>
                             <div>
                                 <div class="fw-semibold">League Homepage</div>
                                 <small class="text-muted">Hero &amp; highlights</small>
@@ -176,7 +200,7 @@
                 <div class="col-sm-6 col-lg-3">
                     <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_navigation') }}">
                         <div class="card-body d-flex align-items-center">
-                            <i class="bi bi-compass fs-3 text-primary me-3"></i>
+                            <i class="ph ph-compass fs-3 text-primary me-3"></i>
                             <div>
                                 <div class="fw-semibold">Navigation</div>
                                 <small class="text-muted">Menus & layout</small>
@@ -187,7 +211,7 @@
                 <div class="col-sm-6 col-lg-3">
                     <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_league_rules') }}">
                         <div class="card-body d-flex align-items-center">
-                            <i class="bi bi-sliders fs-3 text-primary me-3"></i>
+                            <i class="ph ph-sliders fs-3 text-primary me-3"></i>
                             <div>
                                 <div class="fw-semibold">League Rules</div>
                                 <small class="text-muted">Points & tie-breakers</small>
@@ -198,7 +222,7 @@
                 <div class="col-sm-6 col-lg-3">
                     <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_seasons') }}">
                         <div class="card-body d-flex align-items-center">
-                            <i class="bi bi-calendar3 fs-3 text-primary me-3"></i>
+                            <i class="ph ph-calendar fs-3 text-primary me-3"></i>
                             <div>
                                 <div class="fw-semibold">Seasons</div>
                                 <small class="text-muted">Lifecycle</small>
@@ -209,7 +233,7 @@
                 <div class="col-sm-6 col-lg-3">
                     <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_stadiums') }}">
                         <div class="card-body d-flex align-items-center">
-                            <i class="bi bi-geo-alt fs-3 text-primary me-3"></i>
+                            <i class="ph ph-map-pin fs-3 text-primary me-3"></i>
                             <div>
                                 <div class="fw-semibold">Venues</div>
                                 <small class="text-muted">Stadiums</small>
@@ -220,7 +244,7 @@
                 <div class="col-sm-6 col-lg-3">
                     <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_standings') }}">
                         <div class="card-body d-flex align-items-center">
-                            <i class="bi bi-list-ol fs-3 text-primary me-3"></i>
+                            <i class="ph ph-list-numbers fs-3 text-primary me-3"></i>
                             <div>
                                 <div class="fw-semibold">Standings</div>
                                 <small class="text-muted">Table</small>
@@ -231,7 +255,7 @@
                 <div class="col-sm-6 col-lg-3">
                     <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_scorers') }}">
                         <div class="card-body d-flex align-items-center">
-                            <i class="bi bi-star fs-3 text-primary me-3"></i>
+                            <i class="ph ph-star fs-3 text-primary me-3"></i>
                             <div>
                                 <div class="fw-semibold">Scorers</div>
                                 <small class="text-muted">Top lists</small>
@@ -242,7 +266,7 @@
                 <div class="col-sm-6 col-lg-3">
                     <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_countries') }}">
                         <div class="card-body d-flex align-items-center">
-                            <i class="bi bi-flag fs-3 text-primary me-3"></i>
+                            <i class="ph ph-flag fs-3 text-primary me-3"></i>
                             <div>
                                 <div class="fw-semibold">Countries</div>
                                 <small class="text-muted">Metadata</small>
@@ -253,7 +277,7 @@
                 <div class="col-sm-6 col-lg-3">
                     <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_referees') }}">
                         <div class="card-body d-flex align-items-center">
-                            <i class="bi bi-whistle fs-3 text-primary me-3"></i>
+                            <i class="ph ph-gavel fs-3 text-primary me-3"></i>
                             <div>
                                 <div class="fw-semibold">Referees</div>
                                 <small class="text-muted">Officials</small>

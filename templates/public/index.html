@@ -8,8 +8,43 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+    <style>
+        /* Phosphor Icons Font Face with absolute URLs */
+        @font-face {
+            font-family: "Phosphor";
+            src: url("https://unpkg.com/@phosphor-icons/web@2.1.2/src/regular/Phosphor.woff2") format("woff2"),
+                 url("https://unpkg.com/@phosphor-icons/web@2.1.2/src/regular/Phosphor.woff") format("woff"),
+                 url("https://unpkg.com/@phosphor-icons/web@2.1.2/src/regular/Phosphor.ttf") format("truetype");
+            font-weight: normal;
+            font-style: normal;
+            font-display: block;
+        }
+        /* Phosphor Icons Base Class */
+        .ph {
+            font-family: "Phosphor" !important;
+            speak: never;
+            font-style: normal;
+            font-weight: normal;
+            font-variant: normal;
+            text-transform: none;
+            line-height: 1;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .ph:before, .ph::before {
+            display: inline-block !important;
+            font-family: "Phosphor" !important;
+            font-style: normal;
+            font-variant: normal;
+            text-rendering: auto;
+        }
+        /* Disable any potential Bootstrap Icons */
+        .bi:before, .bi::before {
+            display: none !important;
+        }
+    </style>
+    <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.2/src/regular/style.css">
 </head>
 <body class="bg-surface text-body">
     {% set ns = namespace(first_season=None) %}
@@ -121,7 +156,7 @@
                                                 <small class="text-white-50">Check back soon</small>
                                             {% endif %}
                                         </div>
-                                        <i class="bi bi-lightning-charge text-white opacity-75 fs-1"></i>
+                                        <i class="ph ph-lightning text-white opacity-75 fs-1"></i>
                                     </div>
                                 </div>
                             </div>
@@ -165,7 +200,7 @@
                                     </ul>
                                 {% else %}
                                     <div class="empty-state">
-                                        <i class="bi bi-calendar2-week"></i>
+                                        <i class="ph ph-calendar-dots"></i>
                                         <p class="mb-0">Season details coming soon.</p>
                                     </div>
                                 {% endif %}
@@ -175,7 +210,7 @@
                 {% else %}
                     <div class="col-12">
                         <div class="empty-state">
-                            <i class="bi bi-flag"></i>
+                            <i class="ph ph-flag"></i>
                             <h3 class="h5">No active leagues yet</h3>
                             <p class="mb-0 text-muted">Start building your first competition from the management portal.</p>
                         </div>
@@ -208,7 +243,7 @@
                                 <h3 class="h6 mb-1">{{ team.name }}</h3>
                                 <p class="mb-0 text-muted small">{{ team.tagline }}</p>
                             </div>
-                            <i class="bi bi-chevron-right text-muted"></i>
+                            <i class="ph ph-caret-right text-muted"></i>
                         </article>
                     {% endfor %}
                 </div>
@@ -238,7 +273,7 @@
                         <tr>
                             <td>
                                 <div class="d-flex align-items-center gap-3">
-                                    <div class="fixture-badge"><i class="bi bi-calendar-week"></i></div>
+                                    <div class="fixture-badge"><i class="ph ph-calendar-dots"></i></div>
                                     <div>
                                         <p class="mb-0 fw-medium">{{ game.home_team.name if game.home_team else 'TBD' }} vs {{ game.away_team.name if game.away_team else 'TBD' }}</p>
                                         <small class="text-muted">{{ game.start_time.strftime('%b %d, %Y - %I:%M %p') if game.start_time else 'To be scheduled' }}</small>

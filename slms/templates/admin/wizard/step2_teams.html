@@ -233,7 +233,7 @@
         <div class="wizard-progress">
             <div class="d-flex">
                 <div class="progress-step completed">
-                    <div class="step-circle"><i class="bi bi-check"></i></div>
+                    <div class="step-circle"><i class="ph ph-check"></i></div>
                     <div class="step-label">Season Info</div>
                 </div>
                 <div class="progress-step active">
@@ -258,7 +258,7 @@
         <!-- Step 2 Form -->
         <div class="wizard-card">
             <div class="wizard-header">
-                <h1><i class="bi bi-people"></i> Step 2: Teams</h1>
+                <h1><i class="ph ph-users"></i> Step 2: Teams</h1>
                 <p class="mb-0">Add teams to your season by creating them manually or importing from CSV</p>
             </div>
 
@@ -274,7 +274,7 @@
                                 <div class="method-option" data-method="manual" onclick="selectTeamMethod('manual')">
                                     <div class="text-center">
                                         <div class="method-icon">
-                                            <i class="bi bi-plus-circle"></i>
+                                            <i class="ph ph-plus-circle"></i>
                                         </div>
                                         <h5>Create Manually</h5>
                                         <p class="text-muted mb-0">Add teams one by one with custom details</p>
@@ -285,7 +285,7 @@
                                 <div class="method-option" data-method="csv" onclick="selectTeamMethod('csv')">
                                     <div class="text-center">
                                         <div class="method-icon">
-                                            <i class="bi bi-file-earmark-spreadsheet"></i>
+                                            <i class="ph ph-file-csv"></i>
                                         </div>
                                         <h5>Import from CSV</h5>
                                         <p class="text-muted mb-0">Upload a CSV file with team data</p>
@@ -302,7 +302,7 @@
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h5>Teams</h5>
                             <button type="button" class="btn btn-outline-primary" onclick="addTeamRow()">
-                                <i class="bi bi-plus"></i> Add Team
+                                <i class="ph ph-plus"></i> Add Team
                             </button>
                         </div>
 
@@ -325,7 +325,7 @@
                                         </div>
                                         <div class="col-md-2">
                                             <button type="button" class="btn btn-outline-danger" onclick="removeTeamRow(this)">
-                                                <i class="bi bi-trash"></i>
+                                                <i class="ph ph-trash"></i>
                                             </button>
                                         </div>
                                     </div>
@@ -349,7 +349,7 @@
                                         </div>
                                         <div class="col-md-2">
                                             <button type="button" class="btn btn-outline-danger" onclick="removeTeamRow(this)">
-                                                <i class="bi bi-trash"></i>
+                                                <i class="ph ph-trash"></i>
                                             </button>
                                         </div>
                                     </div>
@@ -370,7 +370,7 @@
                                         </div>
                                         <div class="col-md-2">
                                             <button type="button" class="btn btn-outline-danger" onclick="removeTeamRow(this)">
-                                                <i class="bi bi-trash"></i>
+                                                <i class="ph ph-trash"></i>
                                             </button>
                                         </div>
                                     </div>
@@ -379,7 +379,7 @@
                         </div>
 
                         <div class="alert alert-info mt-3">
-                            <h6><i class="bi bi-lightbulb"></i> Tips for Manual Entry:</h6>
+                            <h6><i class="ph ph-lightbulb"></i> Tips for Manual Entry:</h6>
                             <ul class="mb-0">
                                 <li>Team names must be unique within the season</li>
                                 <li>Team codes are useful for abbreviations (max 5 characters)</li>
@@ -393,7 +393,7 @@
                         <div class="form-group">
                             <label class="form-label">Upload CSV File</label>
                             <div class="csv-drop-zone" onclick="document.getElementById('csv_file').click()">
-                                <i class="bi bi-cloud-upload" style="font-size: 3rem; color: #6c757d;"></i>
+                                <i class="ph ph-cloud-arrow-up" style="font-size: 3rem; color: #6c757d;"></i>
                                 <h5 class="mt-3">Drop CSV file here or click to browse</h5>
                                 <p class="text-muted">Maximum file size: 5MB</p>
                                 <input type="file" id="csv_file" name="csv_file" accept=".csv" style="display: none;" onchange="handleCsvUpload(this)">
@@ -403,7 +403,7 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="alert alert-info">
-                                    <h6><i class="bi bi-info-circle"></i> CSV Format Requirements:</h6>
+                                    <h6><i class="ph ph-info"></i> CSV Format Requirements:</h6>
                                     <p class="mb-2">Your CSV should have these columns (in any order):</p>
                                     <ul class="mb-0">
                                         <li><strong>name</strong> - Team name (required)</li>
@@ -414,11 +414,11 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="alert alert-success">
-                                    <h6><i class="bi bi-download"></i> Sample CSV:</h6>
+                                    <h6><i class="ph ph-download-simple"></i> Sample CSV:</h6>
                                     <p class="mb-2">Download a sample file to get started:</p>
                                     <a href="{{ url_for('admin.download_sample_csv', type='teams') }}"
                                        class="btn btn-sm btn-outline-success">
-                                        <i class="bi bi-download"></i> Download Sample
+                                        <i class="ph ph-download-simple"></i> Download Sample
                                     </a>
                                 </div>
                             </div>
@@ -434,10 +434,10 @@
 
                 <div class="wizard-footer">
                     <a href="{{ url_for('admin.season_wizard_step', step=1) }}" class="btn btn-outline-secondary btn-wizard">
-                        <i class="bi bi-arrow-left"></i> Back
+                        <i class="ph ph-arrow-left"></i> Back
                     </a>
                     <button type="submit" class="btn btn-primary btn-wizard">
-                        Next: Venues <i class="bi bi-arrow-right"></i>
+                        Next: Venues <i class="ph ph-arrow-right"></i>
                     </button>
                 </div>
             </form>
@@ -490,7 +490,7 @@ function addTeamRow() {
             </div>
             <div class="col-md-2">
                 <button type="button" class="btn btn-outline-danger" onclick="removeTeamRow(this)">
-                    <i class="bi bi-trash"></i>
+                    <i class="ph ph-trash"></i>
                 </button>
             </div>
         </div>

@@ -7,44 +7,9 @@
             <h1 class="h3 mb-0">Navigation Builder</h1>
             <p class="text-muted mb-0">Control the links that appear in the main navigation bar.</p>
         </div>
-        <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to Admin</a>
+        <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-outline-secondary"><i class="ph ph-arrow-left"></i> Back to Admin</a>
     </div>
 
-    
-<style>
-    .icon-picker-popover {
-        position: absolute;
-        z-index: 1055;
-        background: #ffffff;
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        border-radius: 0.5rem;
-        padding: 0.5rem;
-        display: none;
-        max-width: 320px;
-        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
-    }
-    .icon-picker-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-        gap: 0.4rem;
-    }
-    .icon-picker-option {
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-        border: 1px solid transparent;
-        border-radius: 0.45rem;
-        padding: 0.35rem 0.5rem;
-        font-size: 0.85rem;
-        background: #f8fafc;
-    }
-    .icon-picker-option:hover,
-    .icon-picker-option:focus {
-        background: #e2e8f0;
-        border-color: #cbd5f5;
-    }
-</style>
-
 
 <style>
     .icon-picker-popover {
@@ -52,29 +17,57 @@
         z-index: 1055;
         background: #ffffff;
         border: 1px solid rgba(0, 0, 0, 0.1);
-        border-radius: 0.5rem;
-        padding: 0.5rem;
+        border-radius: 0.75rem;
+        padding: 0;
         display: none;
-        max-width: 320px;
+        width: 480px;
         box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+    }
+    .icon-picker-header {
+        background: #f8fafc;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #e2e8f0;
+        border-radius: 0.75rem 0.75rem 0 0;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: #374151;
+    }
+    .icon-picker-body {
+        padding: 0.75rem;
     }
     .icon-picker-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-        gap: 0.45rem;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 0.3rem;
+        max-height: 400px;
+        overflow-y: auto;
     }
     .icon-picker-option {
         display: flex;
+        flex-direction: column;
         align-items: center;
-        gap: 0.45rem;
+        justify-content: center;
+        gap: 0.25rem;
         border: 1px solid transparent;
         border-radius: 0.5rem;
-        padding: 0.35rem 0.55rem;
-        font-size: 0.85rem;
+        padding: 0.5rem;
+        font-size: 0.7rem;
         background: #f8fafc;
+        text-align: center;
+        min-height: 60px;
+        cursor: pointer;
+        transition: all 0.2s ease;
     }
     .icon-picker-option i {
-        font-size: 1.1rem;
+        font-size: 1.2rem;
+        color: #6366f1;
+    }
+    .icon-picker-option span {
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
     }
     .icon-picker-option:hover,
     .icon-picker-option:focus {
@@ -100,7 +93,7 @@
                     </div>
                     <div class="col-md-8">
                         <div class="alert alert-light border d-flex align-items-start gap-3 mb-0">
-                            <i class="bi bi-lightbulb text-warning fs-4"></i>
+                            <i class="ph ph-lightbulb text-warning fs-4"></i>
                             <div>
                                 <strong>Tip:</strong> choose <em>Sidebar Navigation</em> for busy dashboards. Links can target either full URLs (e.g. <code>/portal</code>) or Flask endpoints (e.g. <code>portal.index</code>).
                             </div>
@@ -113,7 +106,7 @@
         <div class="card shadow-sm border-0">
             <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
                 <h2 class="h6 mb-0">Navigation Links</h2>
-                <button type="button" class="btn btn-outline-secondary btn-sm" id="add-nav-row"><i class="bi bi-plus-lg"></i> Add Link</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="add-nav-row"><i class="ph ph-plus"></i> Add Link</button>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -145,7 +138,10 @@
                                     <input type="text" name="nav_value[]" class="form-control" value="{{ item.value }}" placeholder="/portal or portal.index" required>
                                 </td>
                                 <td>
-                                    <input type="text" name="nav_icon[]" class="form-control" value="{{ item.icon or '' }}" placeholder="bi-collection">
+                                    <div class="input-group">
+                                        <input type="text" name="nav_icon[]" class="form-control icon-input" id="nav-icon-{{ loop.index0 }}" value="{{ item.icon or '' }}" placeholder="ph ph-squares-four">
+                                        <button class="btn btn-outline-secondary icon-picker-btn" type="button" data-target-input="nav-icon-{{ loop.index0 }}" title="Choose icon"><i class="ph ph-squares-four"></i></button>
+                                    </div>
                                 </td>
                                 <td>
                                     <select name="nav_audience[]" class="form-select">
@@ -158,7 +154,7 @@
                                     <input class="form-check-input" type="checkbox" name="nav_newtab_{{ loop.index0 }}" value="1" {% if item.open_in_new %}checked{% endif %}>
                                 </td>
                                 <td class="text-end">
-                                    <button type="button" class="btn btn-light btn-sm text-danger remove-nav-row"><i class="bi bi-x-lg"></i></button>
+                                    <button type="button" class="btn btn-light btn-sm text-danger remove-nav-row"><i class="ph ph-x"></i></button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -190,51 +186,82 @@
     let nextIndex = tableBody.querySelectorAll('tr').length;
 
     const ICON_CHOICES = [
-        { value: 'ph ph-squares-four', label: 'Squares Four' },
-        { value: 'ph ph-dots-nine', label: 'Dots Nine' },
+        // Sports & Games
         { value: 'ph ph-football', label: 'Football' },
-        { value: 'ph ph-football-helmet', label: 'Football Helmet' },
-        { value: 'ph ph-soccer-ball', label: 'Soccer Ball' },
-        { value: 'ph ph-cricket', label: 'Cricket' },
-        { value: 'ph ph-golf', label: 'Golf' },
-        { value: 'ph ph-baseball', label: 'Baseball' },
+        { value: 'ph ph-soccer-ball', label: 'Soccer' },
         { value: 'ph ph-basketball', label: 'Basketball' },
+        { value: 'ph ph-baseball', label: 'Baseball' },
+        { value: 'ph ph-tennis-ball', label: 'Tennis' },
         { value: 'ph ph-volleyball', label: 'Volleyball' },
-        { value: 'ph ph-tennis-ball', label: 'Tennis Ball' },
-        { value: 'ph ph-bowling-ball', label: 'Bowling Ball' },
-        { value: 'ph ph-court-basketball', label: 'Court Basketball' },
-        { value: 'ph ph-tennis-racket', label: 'Tennis Racket' },
-        { value: 'ph ph-gavel', label: 'Gavel' },
-        { value: 'ph ph-flag', label: 'Flag' },
-        { value: 'ph ph-globe', label: 'Globe' },
+        { value: 'ph ph-golf', label: 'Golf' },
+        { value: 'ph ph-cricket', label: 'Cricket' },
         { value: 'ph ph-hockey', label: 'Hockey' },
-        { value: 'ph ph-boxing-glove', label: 'Boxing Glove' },
-        { value: 'ph ph-speedometer', label: 'Speedometer' },
-        { value: 'ph ph-clipboard', label: 'Clipboard' },
-        { value: 'ph ph-archive', label: 'Archive' },
-        { value: 'ph ph-cards-three', label: 'Cards Three' },
-        { value: 'ph ph-compass', label: 'Compass' },
-        { value: 'ph ph-lightning', label: 'Lightning' },
-        { value: 'ph ph-star', label: 'Star' },
-        { value: 'ph ph-user', label: 'User' },
-        { value: 'ph ph-users-three', label: 'Users' },
-        { value: 'ph ph-calendar-dots', label: 'Calendar Dots' },
-        { value: 'ph ph-clock', label: 'Clock' },
+        { value: 'ph ph-boxing-glove', label: 'Boxing' },
+        { value: 'ph ph-bowling-ball', label: 'Bowling' },
+        { value: 'ph ph-court-basketball', label: 'Court' },
+        { value: 'ph ph-tennis-racket', label: 'Racket' },
+
+        // Management & League
         { value: 'ph ph-trophy', label: 'Trophy' },
+        { value: 'ph ph-medal', label: 'Medal' },
+        { value: 'ph ph-flag', label: 'Flag' },
+        { value: 'ph ph-crown', label: 'Crown' },
+        { value: 'ph ph-shield', label: 'Shield' },
+        { value: 'ph ph-speedometer', label: 'Dashboard' },
+        { value: 'ph ph-clipboard', label: 'Clipboard' },
+        { value: 'ph ph-calendar-dots', label: 'Schedule' },
+        { value: 'ph ph-clock', label: 'Time' },
+        { value: 'ph ph-chart-line', label: 'Stats' },
+        { value: 'ph ph-chart-bar', label: 'Charts' },
+        { value: 'ph ph-ranking', label: 'Rankings' },
+
+        // Navigation & Interface
+        { value: 'ph ph-house', label: 'Home' },
+        { value: 'ph ph-squares-four', label: 'Dashboard' },
+        { value: 'ph ph-dots-nine', label: 'Grid' },
+        { value: 'ph ph-compass', label: 'Navigate' },
+        { value: 'ph ph-map-pin', label: 'Location' },
         { value: 'ph ph-info', label: 'Info' },
-        { value: 'ph ph-question', label: 'Question' },
-        { value: 'ph ph-house', label: 'House' },
-        { value: 'ph ph-gear-six', label: 'Gear' },
+        { value: 'ph ph-question', label: 'Help' },
+        { value: 'ph ph-gear-six', label: 'Settings' },
+        { value: 'ph ph-bell', label: 'Alerts' },
+        { value: 'ph ph-envelope', label: 'Messages' },
+
+        // People & Teams
+        { value: 'ph ph-user', label: 'User' },
+        { value: 'ph ph-users-three', label: 'Team' },
+        { value: 'ph ph-identification-badge', label: 'Badge' },
+        { value: 'ph ph-handshake', label: 'Partners' },
+        { value: 'ph ph-user-circle', label: 'Profile' },
+        { value: 'ph ph-address-book', label: 'Contacts' },
+
+        // Business & Organization
+        { value: 'ph ph-building-office', label: 'Office' },
+        { value: 'ph ph-bank', label: 'Finance' },
+        { value: 'ph ph-coins', label: 'Fees' },
+        { value: 'ph ph-credit-card', label: 'Payment' },
+        { value: 'ph ph-receipt', label: 'Receipt' },
+        { value: 'ph ph-invoice', label: 'Invoice' },
+
+        // Communication & Social
         { value: 'ph ph-facebook-logo', label: 'Facebook' },
         { value: 'ph ph-instagram-logo', label: 'Instagram' },
-        { value: 'ph ph-tiktok-logo', label: 'TikTok' },
-        { value: 'ph ph-x-logo', label: 'X' },
+        { value: 'ph ph-x-logo', label: 'X/Twitter' },
         { value: 'ph ph-youtube-logo', label: 'YouTube' },
-        { value: 'ph ph-chart-line', label: 'Chart Line' },
-        { value: 'ph ph-tree-structure', label: 'Tree Structure' },
-        { value: 'ph ph-envelope', label: 'Envelope' },
-        { value: 'ph ph-arrow-circle-down', label: 'Arrow Circle Down' },
-        { value: 'ph ph-building-office', label: 'Building Office' }
+        { value: 'ph ph-tiktok-logo', label: 'TikTok' },
+        { value: 'ph ph-phone', label: 'Phone' },
+
+        // General
+        { value: 'ph ph-star', label: 'Star' },
+        { value: 'ph ph-lightning', label: 'Lightning' },
+        { value: 'ph ph-fire', label: 'Fire' },
+        { value: 'ph ph-heart', label: 'Heart' },
+        { value: 'ph ph-thumbs-up', label: 'Like' },
+        { value: 'ph ph-download', label: 'Download' },
+        { value: 'ph ph-upload', label: 'Upload' },
+        { value: 'ph ph-link', label: 'Link' },
+        { value: 'ph ph-globe', label: 'Web' },
+        { value: 'ph ph-archive', label: 'Archive' }
     ];
 
     let iconPopover = null;
@@ -243,6 +270,14 @@
     const buildIconGrid = () => {
         const wrapper = document.createElement('div');
         wrapper.className = 'icon-picker-popover';
+
+        const header = document.createElement('div');
+        header.className = 'icon-picker-header';
+        header.textContent = 'Choose an Icon';
+
+        const body = document.createElement('div');
+        body.className = 'icon-picker-body';
+
         const grid = document.createElement('div');
         grid.className = 'icon-picker-grid';
         ICON_CHOICES.forEach(({ value, label }) => {
@@ -253,7 +288,10 @@
             btn.innerHTML = `<i class="${value}"></i><span>${label}</span>`;
             grid.appendChild(btn);
         });
-        wrapper.appendChild(grid);
+
+        body.appendChild(grid);
+        wrapper.appendChild(header);
+        wrapper.appendChild(body);
         document.body.appendChild(wrapper);
         return wrapper;
     };

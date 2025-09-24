@@ -116,16 +116,16 @@
         <div class="row align-items-center">
             <div class="col-md-8">
                 <h1 class="mb-0">
-                    <i class="bi bi-calendar-event"></i> Games Management
+                    <i class="ph ph-calendar"></i> Games Management
                 </h1>
                 <p class="mb-0 mt-2 opacity-75">Schedule, track, and manage all games</p>
             </div>
             <div class="col-md-4 text-end">
                 <a href="{{ url_for('admin.create_game') }}" class="btn btn-light">
-                    <i class="bi bi-plus"></i> Schedule Game
+                    <i class="ph ph-plus"></i> Schedule Game
                 </a>
                 <a href="{{ url_for('admin.bulk_schedule') }}" class="btn btn-outline-light">
-                    <i class="bi bi-calendar-plus"></i> Bulk Schedule
+                    <i class="ph ph-calendar-plus"></i> Bulk Schedule
                 </a>
             </div>
         </div>
@@ -168,25 +168,25 @@
                 <h6 class="mb-2">Quick Actions</h6>
                 <div class="action-group">
                     <button class="btn btn-outline-primary btn-sm" onclick="showTodaysGames()">
-                        <i class="bi bi-calendar-day"></i> Today's Games
+                        <i class="ph ph-calendar"></i> Today's Games
                     </button>
                     <button class="btn btn-outline-success btn-sm" onclick="showLiveGames()">
-                        <i class="bi bi-broadcast"></i> Live Games
+                        <i class="ph ph-broadcast"></i> Live Games
                     </button>
                     <button class="btn btn-outline-warning btn-sm" onclick="showPendingResults()">
-                        <i class="bi bi-clock-history"></i> Pending Results
+                        <i class="ph ph-clock-countdown"></i> Pending Results
                     </button>
                     <button class="btn btn-outline-info btn-sm" onclick="showConflicts()">
-                        <i class="bi bi-exclamation-triangle"></i> Scheduling Conflicts
+                        <i class="ph ph-warning"></i> Scheduling Conflicts
                     </button>
                 </div>
             </div>
             <div>
                 <button class="btn btn-outline-secondary btn-sm" onclick="exportSchedule()">
-                    <i class="bi bi-download"></i> Export Schedule
+                    <i class="ph ph-download"></i> Export Schedule
                 </button>
                 <button class="btn btn-outline-secondary btn-sm" onclick="printSchedule()">
-                    <i class="bi bi-printer"></i> Print
+                    <i class="ph ph-printer"></i> Print
                 </button>
             </div>
         </div>
@@ -315,7 +315,7 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary" onclick="submitScore()">
-                    <i class="bi bi-check"></i> Save Score
+                    <i class="ph ph-check"></i> Save Score
                 </button>
             </div>
         </div>

@@ -1,123 +1,573 @@
 {% extends "base.html" %}
 {% block title %}Manage Matches - Admin Panel{% endblock %}
 {% block content %}
-<div class="container mt-4">
-    <h1 class="mb-4">Manage Matches</h1>
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin.admin_dashboard') }}">Admin</a></li>
+                    <li class="breadcrumb-item active">Manage Matches</li>
+                </ol>
+            </nav>
+
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1>Manage Matches</h1>
+                    <p class="text-muted">Create, edit, and manage match schedules</p>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addMatchModal">
+                        <i class="ph ph-plus"></i> Add New Match
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="text-primary">{{ matches|length }}</h3>
+                    <small class="text-muted">Total Matches</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="text-success">{{ matches|selectattr(8, 'equalto', 'scheduled')|list|length }}</h3>
+                    <small class="text-muted">Scheduled</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="text-warning">{{ matches|selectattr(8, 'equalto', 'live')|list|length }}</h3>
+                    <small class="text-muted">Live</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="text-info">{{ matches|selectattr(8, 'equalto', 'completed')|list|length }}</h3>
+                    <small class="text-muted">Completed</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="ph ph-funnel"></i> Filters
+                        </h5>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearFilters()">
+                            <i class="ph ph-x"></i> Clear
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="filter-season" class="form-label">Season</label>
+                            <select class="form-select" id="filter-season" onchange="filterMatches()">
+                                <option value="">All Seasons</option>
+                                {% for season in seasons %}
+                                <option value="{{ season[1] }}">{{ season[1] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="filter-league" class="form-label">League</label>
+                            <select class="form-select" id="filter-league" onchange="filterMatches()">
+                                <option value="">All Leagues</option>
+                                {% for league in leagues %}
+                                <option value="{{ league[1] }}">{{ league[1] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="filter-status" class="form-label">Status</label>
+                            <select class="form-select" id="filter-status" onchange="filterMatches()">
+                                <option value="">All Status</option>
+                                <option value="scheduled">Scheduled</option>
+                                <option value="live">Live</option>
+                                <option value="completed">Completed</option>
+                                <option value="postponed">Postponed</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="filter-search" class="form-label">Search</label>
+                            <input type="text" class="form-control" id="filter-search" placeholder="Team names..." onkeyup="filterMatches()">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Matches Table -->
     <div class="row">
-        <div class="col-md-6">
-            <h2 id="form-title">Add Match</h2>
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="ph ph-list"></i> Matches <span class="badge bg-secondary" id="match-count">{{ matches|length }}</span>
+                        </h5>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleView('table')" id="table-view-btn">
+                                <i class="ph ph-list"></i> Table
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleView('cards')" id="cards-view-btn">
+                                <i class="ph ph-grid-four"></i> Cards
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <!-- Table View -->
+                    <div id="table-view">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0" id="matches-table">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Date & Time</th>
+                                        <th>Match</th>
+                                        <th>Venue</th>
+                                        <th>Season</th>
+                                        <th>League</th>
+                                        <th>Status</th>
+                                        <th>Score</th>
+                                        <th class="text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for match in matches %}
+                                    <tr class="match-row"
+                                        data-season="{{ match[4] }}"
+                                        data-league="{{ match[5] }}"
+                                        data-status="{{ match[10] if match[10] else 'scheduled' }}"
+                                        data-teams="{{ match[2] }} {{ match[3] }}">
+                                        <td>
+                                            <div>
+                                                <strong>{{ match[1] }}</strong>
+                                                {% if match[11] %}
+                                                <br><small class="text-muted">{{ match[11] }}</small>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="text-end me-2" style="min-width: 100px;">
+                                                    <strong>{{ match[2] }}</strong>
+                                                </div>
+                                                <div class="text-center mx-2">
+                                                    <span class="text-muted">vs</span>
+                                                </div>
+                                                <div class="text-start ms-2" style="min-width: 100px;">
+                                                    <strong>{{ match[3] }}</strong>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% if match[12] %}
+                                                <span class="venue-pill">
+                                                    <i class="ph ph-map-pin"></i>
+                                                    {{ match[12] }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">TBD</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ match[4] }}</td>
+                                        <td>{{ match[5] }}</td>
+                                        <td>
+                                            {% set status = match[10] if match[10] else 'scheduled' %}
+                                            <span class="badge match-status-badge
+                                                {% if status == 'completed' %}bg-success
+                                                {% elif status == 'live' %}bg-danger
+                                                {% elif status == 'scheduled' %}bg-secondary
+                                                {% elif status == 'postponed' %}bg-warning
+                                                {% elif status == 'cancelled' %}bg-dark
+                                                {% else %}bg-light text-dark{% endif %}">
+                                                {{ status.title() if status else 'Scheduled' }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if match[13] and match[14] %}
+                                                <span class="badge bg-light text-dark fs-6">
+                                                    {{ match[13] }} - {{ match[14] }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="btn-group" role="group">
+                                                <button class="btn btn-sm btn-outline-primary"
+                                                        onclick="editMatch('{{ match[0] }}', '{{ match[1] }}', '{{ match[6] }}', '{{ match[7] }}', '{{ match[4] }}', '{{ match[5] }}', '{{ match[8] or '' }}', '{{ match[11] or '' }}', '{{ match[12] or '' }}', '{{ match[10] or 'scheduled' }}', '{{ match[13] or '' }}', '{{ match[14] or '' }}')"
+                                                        title="Edit Match">
+                                                    <i class="ph ph-pencil"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-success"
+                                                        onclick="quickStatusUpdate('{{ match[0] }}')"
+                                                        title="Update Status">
+                                                    <i class="ph ph-clock"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-info"
+                                                        onclick="viewMatchDetails('{{ match[0] }}')"
+                                                        title="View Details">
+                                                    <i class="ph ph-eye"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#deleteModal"
+                                                        data-id="{{ match[0] }}"
+                                                        data-action="{{ url_for('admin.manage_matches') }}"
+                                                        title="Delete Match">
+                                                    <i class="ph ph-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Cards View (Hidden by default) -->
+                    <div id="cards-view" style="display: none;">
+                        <div class="p-3">
+                            <div class="row" id="match-cards">
+                                {% for match in matches %}
+                                <div class="col-lg-4 col-md-6 mb-3 match-card"
+                                     data-season="{{ match[4] }}"
+                                     data-league="{{ match[5] }}"
+                                     data-status="{{ match[10] if match[10] else 'scheduled' }}"
+                                     data-teams="{{ match[2] }} {{ match[3] }}">
+                                    <div class="card">
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                            <small class="text-muted">{{ match[1] }}</small>
+                                            {% set status = match[10] if match[10] else 'scheduled' %}
+                                            <span class="badge match-status-badge
+                                                {% if status == 'completed' %}bg-success
+                                                {% elif status == 'live' %}bg-danger
+                                                {% elif status == 'scheduled' %}bg-secondary
+                                                {% elif status == 'postponed' %}bg-warning
+                                                {% elif status == 'cancelled' %}bg-dark
+                                                {% else %}bg-light text-dark{% endif %}">
+                                                {{ status.title() if status else 'Scheduled' }}
+                                            </span>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="text-center mb-3">
+                                                <div class="d-flex align-items-center justify-content-center">
+                                                    <div class="text-end me-3">
+                                                        <strong>{{ match[2] }}</strong>
+                                                    </div>
+                                                    <div class="mx-3">
+                                                        {% if match[13] and match[14] %}
+                                                            <span class="badge bg-light text-dark fs-6">
+                                                                {{ match[13] }} - {{ match[14] }}
+                                                            </span>
+                                                        {% else %}
+                                                            <span class="text-muted">vs</span>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="text-start ms-3">
+                                                        <strong>{{ match[3] }}</strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="text-center text-muted mb-3">
+                                                {% if match[12] %}
+                                                    <i class="ph ph-map-pin"></i> {{ match[12] }}
+                                                {% else %}
+                                                    <i class="ph ph-clock"></i> Venue TBD
+                                                {% endif %}
+                                            </div>
+
+                                            <div class="text-center">
+                                                <small class="text-muted">{{ match[4] }} • {{ match[5] }}</small>
+                                            </div>
+                                        </div>
+                                        <div class="card-footer text-center">
+                                            <div class="btn-group" role="group">
+                                                <button class="btn btn-sm btn-outline-primary"
+                                                        onclick="editMatch('{{ match[0] }}', '{{ match[1] }}', '{{ match[6] }}', '{{ match[7] }}', '{{ match[4] }}', '{{ match[5] }}', '{{ match[8] or '' }}', '{{ match[11] or '' }}', '{{ match[12] or '' }}', '{{ match[10] or 'scheduled' }}', '{{ match[13] or '' }}', '{{ match[14] or '' }}')"
+                                                        title="Edit">
+                                                    <i class="ph ph-pencil"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-success"
+                                                        onclick="quickStatusUpdate('{{ match[0] }}')"
+                                                        title="Status">
+                                                    <i class="ph ph-clock"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-info"
+                                                        onclick="viewMatchDetails('{{ match[0] }}')"
+                                                        title="Details">
+                                                    <i class="ph ph-eye"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if not matches %}
+                    <div class="p-5 text-center text-muted">
+                        <i class="ph ph-calendar-x" style="font-size: 3rem;"></i>
+                        <h5 class="mt-3">No matches found</h5>
+                        <p>Start by creating your first match.</p>
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addMatchModal">
+                            <i class="ph ph-plus"></i> Add Match
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Match Modal -->
+<div class="modal fade" id="addMatchModal" tabindex="-1" aria-labelledby="addMatchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
             <form action="{{ url_for('admin.manage_matches') }}" method="POST">
-                <input type="hidden" id="match_id" name="match_id">
-                <div class="form-group">
-                    <label for="date">Date:</label>
-                    <input type="date" class="form-control" id="date" name="date" required>
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addMatchModalLabel">Add Match</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="form-group">
-                    <label for="team1_id">Team 1:</label>
-                    <select class="form-control" id="team1_id" name="team1_id" required>
-                        {% for team in teams %}
-                        <option value="{{ team[0] }}">{{ team[1] }}</option>
-                        {% endfor %}
-                    </select>
+                <div class="modal-body">
+                    <input type="hidden" id="match_id" name="match_id">
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="date" class="form-label">Date *</label>
+                                <input type="date" class="form-control" id="date" name="date" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="time" class="form-label">Time</label>
+                                <input type="time" class="form-control" id="time" name="time">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="team1_id" class="form-label">Home Team *</label>
+                                <select class="form-select" id="team1_id" name="team1_id" required>
+                                    <option value="">Select Team</option>
+                                    {% for team in teams %}
+                                    <option value="{{ team[0] }}">{{ team[1] }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="team2_id" class="form-label">Away Team *</label>
+                                <select class="form-select" id="team2_id" name="team2_id" required>
+                                    <option value="">Select Team</option>
+                                    {% for team in teams %}
+                                    <option value="{{ team[0] }}">{{ team[1] }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="season_id" class="form-label">Season *</label>
+                                <select class="form-select" id="season_id" name="season_id" required>
+                                    <option value="">Select Season</option>
+                                    {% for season in seasons %}
+                                    <option value="{{ season[0] }}">{{ season[1] }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="league_id" class="form-label">League *</label>
+                                <select class="form-select" id="league_id" name="league_id" required>
+                                    <option value="">Select League</option>
+                                    {% for league in leagues %}
+                                    <option value="{{ league[0] }}">{{ league[1] }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="venue" class="form-label">Venue</label>
+                                <input type="text" class="form-control" id="venue" name="venue" placeholder="Stadium/Field name">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="tournament_id" class="form-label">Tournament</label>
+                                <select class="form-select" id="tournament_id" name="tournament_id">
+                                    <option value="">None</option>
+                                    {% for t in tournaments %}
+                                    <option value="{{ t[0] }}">{{ t[1] }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="status" class="form-label">Status</label>
+                                <select class="form-select" id="status" name="status">
+                                    <option value="scheduled">Scheduled</option>
+                                    <option value="live">Live</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="postponed">Postponed</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="home_score" class="form-label">Home Score</label>
+                                <input type="number" class="form-control" id="home_score" name="home_score" min="0">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="away_score" class="form-label">Away Score</label>
+                                <input type="number" class="form-control" id="away_score" name="away_score" min="0">
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="team2_id">Team 2:</label>
-                    <select class="form-control" id="team2_id" name="team2_id" required>
-                        {% for team in teams %}
-                        <option value="{{ team[0] }}">{{ team[1] }}</option>
-                        {% endfor %}
-                    </select>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" name="submit" class="btn btn-primary" id="submit-button">
+                        <i class="ph ph-plus"></i> Add Match
+                    </button>
                 </div>
-                <div class="form-group">
-                    <label for="season_id">Season:</label>
-                    <select class="form-control" id="season_id" name="season_id" required>
-                        {% for season in seasons %}
-                        <option value="{{ season[0] }}">{{ season[1] }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="league_id">League:</label>
-                    <select class="form-control" id="league_id" name="league_id" required>
-                        {% for league in leagues %}
-                        <option value="{{ league[0] }}">{{ league[1] }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="tournament_id">Tournament (optional):</label>
-                    <select class="form-control" id="tournament_id" name="tournament_id">
-                        <option value="">None</option>
-                        {% for t in tournaments %}
-                        <option value="{{ t[0] }}">{{ t[1] }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <button type="submit" name="submit" class="btn btn-primary" id="submit-button">Add Match</button>
             </form>
         </div>
-        <div class="col-md-6">
-            <h2>Existing Matches</h2>
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Date</th>
-                        <th>Team 1</th>
-                        <th>Team 2</th>
-                        <th>Season</th>
-                        <th>League</th>
-                        <th>Tournament</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for match in matches %}
-                    <tr>
-                        <td>{{ match[0] }}</td>
-                        <td>{{ match[1] }}</td>
-                        <td>{{ match[2] }}</td>
-                        <td>{{ match[3] }}</td>
-                        <td>{{ match[4] }}</td>
-                        <td>{{ match[5] }}</td>
-                        <td>{{ match[9] }}</td>
-                        <td>
-                            <button class="btn btn-success btn-sm" onclick="editMatch('{{ match[0] }}', '{{ match[1] }}', '{{ match[6] }}', '{{ match[7] }}', '{{ match[4] }}', '{{ match[5] }}', '{{ match[8] or '' }}')">
-                                <i class="fa fa-pencil-alt"></i>
-                            </button>
-                        </td>
-                        <td>
-                            <button class="btn btn-danger btn-sm" data-toggle="modal" data-target="#deleteModal" data-id="{{ match[0] }}" data-action="{{ url_for('admin.manage_matches') }}">
-                                <i class="fa fa-minus"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    </div>
+</div>
+
+<!-- Quick Status Update Modal -->
+<div class="modal fade" id="statusUpdateModal" tabindex="-1" aria-labelledby="statusUpdateModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.manage_matches') }}">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="statusUpdateModalLabel">Update Match Status</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="status_match_id" name="match_id">
+                    <input type="hidden" name="quick_status_update" value="1">
+
+                    <div class="mb-3">
+                        <label for="quick_status" class="form-label">Match Status</label>
+                        <select class="form-select" id="quick_status" name="status" required>
+                            <option value="scheduled">Scheduled</option>
+                            <option value="live">Live</option>
+                            <option value="completed">Completed</option>
+                            <option value="postponed">Postponed</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+
+                    <div class="row" id="score-fields" style="display: none;">
+                        <div class="col-6">
+                            <div class="mb-3">
+                                <label for="quick_home_score" class="form-label">Home Score</label>
+                                <input type="number" class="form-control" id="quick_home_score" name="home_score" min="0">
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="mb-3">
+                                <label for="quick_away_score" class="form-label">Away Score</label>
+                                <input type="number" class="form-control" id="quick_away_score" name="away_score" min="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="ph ph-check"></i> Update Status
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Match Details Modal -->
+<div class="modal fade" id="matchDetailsModal" tabindex="-1" aria-labelledby="matchDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="matchDetailsModalLabel">Match Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="match-details-content">
+                <!-- Content will be loaded dynamically -->
+            </div>
         </div>
     </div>
 </div>
 
 <!-- Delete Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
         <div class="modal-content">
             <form id="deleteForm" method="POST" action="">
                 <div class="modal-header">
                     <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    Are you sure you want to delete this item?
+                    <div class="alert alert-warning">
+                        <i class="ph ph-warning"></i>
+                        Are you sure you want to delete this match? This action cannot be undone.
+                    </div>
                     <input type="hidden" id="deleteItemId" name="deleteEntityId">
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="submit" name="delete" class="btn btn-danger">Delete</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" name="delete" class="btn btn-danger">
+                        <i class="ph ph-trash"></i> Delete Match
+                    </button>
                 </div>
             </form>
         </div>
@@ -125,7 +575,103 @@
 </div>
 
 <script>
-    function editMatch(id, date, team1_id, team2_id, season_id, league_id, tournament_id) {
+    // Current view state
+    let currentView = 'table';
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set active view button
+        document.getElementById('table-view-btn').classList.add('active');
+    });
+
+    // Toggle between table and cards view
+    function toggleView(view) {
+        currentView = view;
+        const tableView = document.getElementById('table-view');
+        const cardsView = document.getElementById('cards-view');
+        const tableBtn = document.getElementById('table-view-btn');
+        const cardsBtn = document.getElementById('cards-view-btn');
+
+        if (view === 'table') {
+            tableView.style.display = 'block';
+            cardsView.style.display = 'none';
+            tableBtn.classList.add('active');
+            cardsBtn.classList.remove('active');
+        } else {
+            tableView.style.display = 'none';
+            cardsView.style.display = 'block';
+            cardsBtn.classList.add('active');
+            tableBtn.classList.remove('active');
+        }
+    }
+
+    // Filter matches
+    function filterMatches() {
+        const seasonFilter = document.getElementById('filter-season').value.toLowerCase();
+        const leagueFilter = document.getElementById('filter-league').value.toLowerCase();
+        const statusFilter = document.getElementById('filter-status').value.toLowerCase();
+        const searchFilter = document.getElementById('filter-search').value.toLowerCase();
+
+        const rows = document.querySelectorAll('.match-row');
+        const cards = document.querySelectorAll('.match-card');
+        let visibleCount = 0;
+
+        // Filter table rows
+        rows.forEach(row => {
+            const season = row.dataset.season.toLowerCase();
+            const league = row.dataset.league.toLowerCase();
+            const status = row.dataset.status.toLowerCase();
+            const teams = row.dataset.teams.toLowerCase();
+
+            const matchesFilters =
+                (seasonFilter === '' || season.includes(seasonFilter)) &&
+                (leagueFilter === '' || league.includes(leagueFilter)) &&
+                (statusFilter === '' || status === statusFilter) &&
+                (searchFilter === '' || teams.includes(searchFilter));
+
+            if (matchesFilters) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        // Filter cards
+        cards.forEach(card => {
+            const season = card.dataset.season.toLowerCase();
+            const league = card.dataset.league.toLowerCase();
+            const status = card.dataset.status.toLowerCase();
+            const teams = card.dataset.teams.toLowerCase();
+
+            const matchesFilters =
+                (seasonFilter === '' || season.includes(seasonFilter)) &&
+                (leagueFilter === '' || league.includes(leagueFilter)) &&
+                (statusFilter === '' || status === statusFilter) &&
+                (searchFilter === '' || teams.includes(searchFilter));
+
+            if (matchesFilters) {
+                card.style.display = '';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        // Update count
+        document.getElementById('match-count').textContent = visibleCount;
+    }
+
+    // Clear all filters
+    function clearFilters() {
+        document.getElementById('filter-season').value = '';
+        document.getElementById('filter-league').value = '';
+        document.getElementById('filter-status').value = '';
+        document.getElementById('filter-search').value = '';
+        filterMatches();
+    }
+
+    // Edit match function
+    function editMatch(id, date, team1_id, team2_id, season_id, league_id, tournament_id, time, venue, status, home_score, away_score) {
         document.getElementById('match_id').value = id;
         document.getElementById('date').value = date;
         document.getElementById('team1_id').value = team1_id;
@@ -133,16 +679,104 @@
         document.getElementById('season_id').value = season_id;
         document.getElementById('league_id').value = league_id;
         document.getElementById('tournament_id').value = tournament_id || '';
-        document.getElementById('submit-button').innerText = 'Update Match';
-        document.getElementById('form-title').innerText = 'Edit Match';
+        document.getElementById('time').value = time || '';
+        document.getElementById('venue').value = venue || '';
+        document.getElementById('status').value = status || 'scheduled';
+        document.getElementById('home_score').value = home_score || '';
+        document.getElementById('away_score').value = away_score || '';
+
+        document.getElementById('submit-button').innerHTML = '<i class="ph ph-check"></i> Update Match';
+        document.getElementById('addMatchModalLabel').textContent = 'Edit Match';
+
+        const modal = new bootstrap.Modal(document.getElementById('addMatchModal'));
+        modal.show();
     }
 
-    $('#deleteModal').on('show.bs.modal', function (event) {
-        var button = $(event.relatedTarget);
-        var id = button.data('id');
-        var action = button.data('action');
+    // Quick status update
+    function quickStatusUpdate(matchId) {
+        document.getElementById('status_match_id').value = matchId;
+        const modal = new bootstrap.Modal(document.getElementById('statusUpdateModal'));
+        modal.show();
+    }
+
+    // View match details
+    function viewMatchDetails(matchId) {
+        const modal = new bootstrap.Modal(document.getElementById('matchDetailsModal'));
+
+        // Show loading content
+        document.getElementById('match-details-content').innerHTML = `
+            <div class="text-center py-4">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading match details...</p>
+            </div>
+        `;
+
+        modal.show();
+
+        // Simulate loading match details (replace with actual AJAX call)
+        setTimeout(() => {
+            document.getElementById('match-details-content').innerHTML = `
+                <div class="alert alert-info">
+                    <i class="ph ph-info"></i>
+                    Match details would be loaded here. Implement backend endpoint to fetch full match details.
+                </div>
+            `;
+        }, 1000);
+    }
+
+    // Status change handler for score fields
+    document.getElementById('quick_status').addEventListener('change', function() {
+        const scoreFields = document.getElementById('score-fields');
+        if (this.value === 'completed') {
+            scoreFields.style.display = 'block';
+            document.getElementById('quick_home_score').required = true;
+            document.getElementById('quick_away_score').required = true;
+        } else {
+            scoreFields.style.display = 'none';
+            document.getElementById('quick_home_score').required = false;
+            document.getElementById('quick_away_score').required = false;
+        }
+    });
+
+    // Reset modal when opening for new match
+    document.getElementById('addMatchModal').addEventListener('show.bs.modal', function(event) {
+        if (!event.relatedTarget || !event.relatedTarget.onclick) {
+            // Reset form for new match
+            document.getElementById('match_id').value = '';
+            document.getElementById('submit-button').innerHTML = '<i class="ph ph-plus"></i> Add Match';
+            document.getElementById('addMatchModalLabel').textContent = 'Add Match';
+            this.querySelector('form').reset();
+        }
+    });
+
+    // Delete modal handler
+    document.getElementById('deleteModal').addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        const id = button.getAttribute('data-id');
+        const action = button.getAttribute('data-action');
         document.getElementById('deleteItemId').value = id;
         document.getElementById('deleteForm').action = action;
+    });
+
+    // Team selection validation
+    document.getElementById('team1_id').addEventListener('change', function() {
+        const team2Select = document.getElementById('team2_id');
+        const team2Options = team2Select.querySelectorAll('option');
+
+        team2Options.forEach(option => {
+            option.disabled = (option.value === this.value && option.value !== '');
+        });
+    });
+
+    document.getElementById('team2_id').addEventListener('change', function() {
+        const team1Select = document.getElementById('team1_id');
+        const team1Options = team1Select.querySelectorAll('option');
+
+        team1Options.forEach(option => {
+            option.disabled = (option.value === this.value && option.value !== '');
+        });
     });
 </script>
 {% endblock %}
