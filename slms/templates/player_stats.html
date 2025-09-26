@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Scoring Leaderboard - Admin Panel{% endblock %}
+{% block title %}Player Stats - Admin Panel{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -7,7 +7,14 @@
 .leaderboard-page .stat-label{font-size:0.85rem;text-transform:uppercase;letter-spacing:0.06em;}
 .leaderboard-card{border:none;border-radius:1rem;box-shadow:0 18px 44px rgba(15,23,42,0.08);} 
 .leaderboard-card .card-header{border-bottom:1px solid rgba(15,23,42,0.05);} 
-.leaderboard-table th{font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;border-top:none;border-bottom:1px solid rgba(148,163,184,0.35);} 
+.leaderboard-table th{font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;border-top:none;border-bottom:1px solid rgba(148,163,184,0.35);}
+.sortable-header{cursor:pointer;user-select:none;transition:background-color 0.2s ease;}
+.sortable-header:hover{background-color:rgba(37,99,235,0.08);}
+.sort-icon{margin-left:0.25rem;opacity:0.6;transition:opacity 0.2s ease;}
+.sortable-header:hover .sort-icon{opacity:1;}
+.sort-asc .sort-icon::before{content:'↑';}
+.sort-desc .sort-icon::before{content:'↓';}
+.sort-icon::before{content:'↕';} 
 .leaderboard-table td{vertical-align:middle;border-bottom:1px solid rgba(148,163,184,0.15);} 
 .rank-pill{display:inline-flex;align-items:center;justify-content:center;width:2.5rem;height:2.5rem;border-radius:0.85rem;font-weight:600;background:linear-gradient(135deg,var(--slms-gradient-start,#2563eb),var(--slms-gradient-end,#1d4ed8));color:#fff;} 
 .momentum-meter{height:0.5rem;border-radius:999px;background-color:rgba(148,163,184,0.25);overflow:hidden;} 
@@ -29,7 +36,7 @@
 <div class="container-fluid py-4 leaderboard-page">
     <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4">
         <div>
-            <h1 class="h3 mb-1">Scoring Leaderboard</h1>
+            <h1 class="h3 mb-1">Player Stats</h1>
             <p class="text-muted mb-0">Compare top performers, reveal momentum, and manage advanced analytics across every competition.</p>
         </div>
         <div class="d-flex flex-wrap align-items-center gap-2">
@@ -117,8 +124,8 @@
         <div class="card-header bg-white py-3">
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                 <div>
-                    <h2 class="h5 mb-0">Leaderboard</h2>
-                    <small class="text-muted">Sorted by composite momentum score.</small>
+                    <h2 class="h5 mb-0">Player Statistics</h2>
+                    <small class="text-muted">Click column headers to sort by that statistic.</small>
                 </div>
                 <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis">{{ leaderboard|length }} entries</span>
             </div>
@@ -128,23 +135,37 @@
                 <thead>
                     <tr>
                         <th scope="col">Rank</th>
-                        <th scope="col">Player</th>
-                        <th scope="col">League / Season</th>
-                        <th scope="col">Goals</th>
-                        <th scope="col">Assists</th>
-                        <th scope="col">G + A</th>
-                        <th scope="col">Per Match</th>
-                        <th scope="col">Per 90</th>
-                        <th scope="col">Shot %</th>
-                        <th scope="col">Pass %</th>
-                        <th scope="col">Rating</th>
-                        <th scope="col" style="width:160px;">Momentum</th>
+                        <th scope="col" class="sortable-header" data-sort="player">Player<span class="sort-icon"></span></th>
+                        <th scope="col" class="sortable-header" data-sort="league">League / Season<span class="sort-icon"></span></th>
+                        <th scope="col" class="sortable-header" data-sort="goals">Goals<span class="sort-icon"></span></th>
+                        <th scope="col" class="sortable-header" data-sort="assists">Assists<span class="sort-icon"></span></th>
+                        <th scope="col" class="sortable-header" data-sort="contributions">G + A<span class="sort-icon"></span></th>
+                        <th scope="col" class="sortable-header" data-sort="per-match">Per Match<span class="sort-icon"></span></th>
+                        <th scope="col" class="sortable-header" data-sort="per-90">Per 90<span class="sort-icon"></span></th>
+                        <th scope="col" class="sortable-header" data-sort="shot-accuracy">Shot %<span class="sort-icon"></span></th>
+                        <th scope="col" class="sortable-header" data-sort="pass-accuracy">Pass %<span class="sort-icon"></span></th>
+                        <th scope="col" class="sortable-header" data-sort="rating">Rating<span class="sort-icon"></span></th>
+                        <th scope="col" class="sortable-header" data-sort="momentum" style="width:160px;">Momentum<span class="sort-icon"></span></th>
                         <th scope="col" class="text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for entry in leaderboard %}
-                    <tr data-player="{{ entry.player_name|lower }}" data-league="{{ entry.league_id }}" data-season="{{ entry.season_id }}" data-rating="{{ entry.rating or '' }}">
+                    <tr data-player="{{ entry.player_name|lower }}"
+                        data-league="{{ entry.league_id }}"
+                        data-season="{{ entry.season_id }}"
+                        data-rating="{{ entry.rating or '' }}"
+                        data-goals="{{ entry.goals }}"
+                        data-assists="{{ entry.assists }}"
+                        data-contributions="{{ entry.goal_contributions }}"
+                        data-per-match="{{ entry.per_game_contribution or 0 }}"
+                        data-per-90="{{ entry.per_90_contribution or 0 }}"
+                        data-shot-accuracy="{{ entry.shot_accuracy or 0 }}"
+                        data-pass-accuracy="{{ entry.pass_accuracy or 0 }}"
+                        data-momentum="{{ entry.momentum or 0 }}"
+                        data-player-name="{{ entry.player_name }}"
+                        data-league-name="{{ entry.league_name }}"
+                        data-season-year="{{ entry.season_year }}">
                         <td>
                             <div class="rank-pill{% if entry.rank == 1 %} shadow{% endif %}">{{ entry.rank }}</div>
                         </td>
@@ -557,5 +578,106 @@ function applyLeaderboardFilters(){
 });
 
 applyLeaderboardFilters();
+
+// Sorting functionality
+let currentSort = { column: null, direction: 'asc' };
+
+function sortTable(column) {
+    const tbody = document.querySelector('#leaderboardTable tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+    // Determine sort direction
+    if (currentSort.column === column) {
+        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSort.direction = 'asc';
+    }
+    currentSort.column = column;
+
+    // Update header styling
+    document.querySelectorAll('.sortable-header').forEach(header => {
+        header.classList.remove('sort-asc', 'sort-desc');
+    });
+    const activeHeader = document.querySelector(`[data-sort="${column}"]`);
+    activeHeader.classList.add(currentSort.direction === 'asc' ? 'sort-asc' : 'sort-desc');
+
+    // Sort rows
+    rows.sort((a, b) => {
+        let aVal, bVal;
+
+        switch (column) {
+            case 'player':
+                aVal = a.dataset.playerName || '';
+                bVal = b.dataset.playerName || '';
+                return currentSort.direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+
+            case 'league':
+                aVal = (a.dataset.leagueName || '') + ' ' + (a.dataset.seasonYear || '');
+                bVal = (b.dataset.leagueName || '') + ' ' + (b.dataset.seasonYear || '');
+                return currentSort.direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+
+            case 'goals':
+            case 'assists':
+            case 'contributions':
+            case 'momentum':
+                aVal = parseFloat(a.dataset[column.replace('-', '')]) || 0;
+                bVal = parseFloat(b.dataset[column.replace('-', '')]) || 0;
+                break;
+
+            case 'per-match':
+                aVal = parseFloat(a.dataset.perMatch) || 0;
+                bVal = parseFloat(b.dataset.perMatch) || 0;
+                break;
+
+            case 'per-90':
+                aVal = parseFloat(a.dataset.per90) || 0;
+                bVal = parseFloat(b.dataset.per90) || 0;
+                break;
+
+            case 'shot-accuracy':
+                aVal = parseFloat(a.dataset.shotAccuracy) || 0;
+                bVal = parseFloat(b.dataset.shotAccuracy) || 0;
+                break;
+
+            case 'pass-accuracy':
+                aVal = parseFloat(a.dataset.passAccuracy) || 0;
+                bVal = parseFloat(b.dataset.passAccuracy) || 0;
+                break;
+
+            case 'rating':
+                aVal = parseFloat(a.dataset.rating) || 0;
+                bVal = parseFloat(b.dataset.rating) || 0;
+                break;
+
+            default:
+                return 0;
+        }
+
+        return currentSort.direction === 'asc' ? aVal - bVal : bVal - aVal;
+    });
+
+    // Re-append sorted rows and update rank numbers
+    rows.forEach((row, index) => {
+        tbody.appendChild(row);
+        // Update rank pill
+        const rankPill = row.querySelector('.rank-pill');
+        if (rankPill) {
+            rankPill.textContent = index + 1;
+            // Remove special styling from rank 1
+            rankPill.classList.remove('shadow');
+            if (index === 0) {
+                rankPill.classList.add('shadow');
+            }
+        }
+    });
+}
+
+// Add click event listeners to sortable headers
+document.querySelectorAll('.sortable-header').forEach(header => {
+    header.addEventListener('click', () => {
+        const column = header.dataset.sort;
+        sortTable(column);
+    });
+});
 </script>
 {% endblock %}

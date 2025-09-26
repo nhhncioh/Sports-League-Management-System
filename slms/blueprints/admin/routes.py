@@ -2961,9 +2961,9 @@ def manage_referees():
 
 
 
-@admin_bp.route('/manage_scorers', methods=['GET', 'POST'])
+@admin_bp.route('/player_stats', methods=['GET', 'POST'])
 @admin_required
-def manage_scorers():
+def player_stats():
     db = get_db()
     _ensure_scorer_metrics_table(db)
 
@@ -3064,7 +3064,7 @@ def manage_scorers():
             db.commit()
         finally:
             post_cur.close()
-        return redirect(url_for('admin.manage_scorers'))
+        return redirect(url_for('admin.player_stats'))
 
     cur = db.cursor()
     cur.execute("""
@@ -3254,7 +3254,7 @@ def manage_scorers():
             }
 
     return render_template(
-        'manage_scorers.html',
+        'player_stats.html',
         leaderboard=leaderboard,
         players=players,
         seasons=seasons,
