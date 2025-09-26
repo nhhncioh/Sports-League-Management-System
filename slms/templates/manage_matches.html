@@ -1,360 +1,796 @@
 {% extends "base.html" %}
-{% block title %}Manage Matches - Admin Panel{% endblock %}
+{% block title %}Match Management Hub - Admin Panel{% endblock %}
+
+{% block head %}
+<style>
+    .view-selector {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 50px;
+        padding: 4px;
+    }
+    .view-selector .btn {
+        border-radius: 50px;
+        border: none;
+        padding: 8px 20px;
+        margin: 0 2px;
+        color: rgba(255,255,255,0.7);
+        background: transparent;
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+    .view-selector .btn.active {
+        background: rgba(255,255,255,0.2);
+        color: white;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .view-selector .btn:hover {
+        color: white;
+        background: rgba(255,255,255,0.1);
+    }
+
+    .match-card {
+        transition: all 0.3s ease;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    .match-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        border-color: #007bff;
+    }
+
+    .match-card-modern {
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        border: none;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+
+    .match-card-compact {
+        border-radius: 8px;
+        background: white;
+    }
+
+    .match-card-elegant {
+        border: 2px solid #f1f3f4;
+        background: #fefefe;
+        border-radius: 16px;
+    }
+
+    .status-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .status-live {
+        background: linear-gradient(135deg, #dc3545, #c82333);
+        color: white;
+        animation: pulse-glow 2s infinite;
+    }
+    .status-scheduled {
+        background: linear-gradient(135deg, #17a2b8, #138496);
+        color: white;
+    }
+    .status-completed {
+        background: linear-gradient(135deg, #28a745, #1e7e34);
+        color: white;
+    }
+    .status-postponed {
+        background: linear-gradient(135deg, #ffc107, #e0a800);
+        color: #212529;
+    }
+    .status-cancelled {
+        background: linear-gradient(135deg, #6c757d, #545b62);
+        color: white;
+    }
+
+    @keyframes pulse-glow {
+        0%, 100% { box-shadow: 0 0 5px rgba(220, 53, 69, 0.5); }
+        50% { box-shadow: 0 0 20px rgba(220, 53, 69, 0.8); }
+    }
+
+    .calendar-view {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+
+    .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #f1f3f4;
+    }
+
+    .calendar-nav {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .calendar-nav .btn {
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        background: #f8f9fa;
+        color: #495057;
+        transition: all 0.2s ease;
+    }
+
+    .calendar-nav .btn:hover {
+        background: #007bff;
+        color: white;
+        transform: scale(1.1);
+    }
+
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 1px;
+        background: #dee2e6;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .calendar-day {
+        background: white;
+        min-height: 120px;
+        padding: 8px;
+        position: relative;
+        transition: background-color 0.2s ease;
+    }
+
+    .calendar-day:hover {
+        background: #f8f9fa;
+    }
+
+    .calendar-day.other-month {
+        background: #fafbfc;
+        color: #adb5bd;
+    }
+
+    .calendar-day.today {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        color: white;
+    }
+
+    .calendar-day-number {
+        font-weight: bold;
+        margin-bottom: 4px;
+    }
+
+    .calendar-match {
+        background: linear-gradient(135deg, #28a745, #1e7e34);
+        color: white;
+        border-radius: 4px;
+        padding: 2px 6px;
+        font-size: 0.7rem;
+        margin-bottom: 2px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .calendar-match:hover {
+        transform: scale(1.05);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .timeline-view {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+
+    .timeline-item {
+        display: flex;
+        align-items: center;
+        padding: 20px;
+        border-bottom: 1px solid #f1f3f4;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    .timeline-item:hover {
+        background: #f8f9fa;
+        padding-left: 25px;
+    }
+
+    .timeline-item:last-child {
+        border-bottom: none;
+    }
+
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+
+    .timeline-item:hover::before {
+        opacity: 1;
+    }
+
+    .timeline-date {
+        min-width: 120px;
+        text-align: center;
+        padding: 10px;
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border-radius: 8px;
+        margin-right: 20px;
+    }
+
+    .timeline-content {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .customization-panel {
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        border: 1px solid #dee2e6;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .customization-section {
+        margin-bottom: 20px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #f1f3f4;
+    }
+
+    .customization-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        border: none;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stats-card::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        transform: rotate(45deg);
+    }
+
+    .stats-card h3 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .bulk-actions {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 20px;
+        display: none;
+    }
+
+    .bulk-actions.show {
+        display: block;
+        animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .floating-fab {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        z-index: 1050;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #28a745, #1e7e34);
+        border: none;
+        box-shadow: 0 8px 20px rgba(40, 167, 69, 0.3);
+        color: white;
+        font-size: 24px;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .floating-fab:hover {
+        transform: scale(1.1);
+        box-shadow: 0 12px 30px rgba(40, 167, 69, 0.4);
+        background: linear-gradient(135deg, #1e7e34, #155724);
+    }
+
+    .team-logo {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        object-fit: cover;
+        margin-right: 10px;
+        border: 2px solid #f8f9fa;
+    }
+
+    .vs-divider {
+        font-weight: bold;
+        color: #6c757d;
+        margin: 0 15px;
+        position: relative;
+    }
+
+    .vs-divider::before,
+    .vs-divider::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        width: 20px;
+        height: 1px;
+        background: #dee2e6;
+    }
+
+    .vs-divider::before {
+        left: -25px;
+    }
+
+    .vs-divider::after {
+        right: -25px;
+    }
+
+    @media (max-width: 768px) {
+        .floating-fab {
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            font-size: 20px;
+        }
+
+        .calendar-day {
+            min-height: 80px;
+            padding: 4px;
+        }
+
+        .timeline-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .timeline-date {
+            margin-right: 0;
+            margin-bottom: 10px;
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid py-4">
-    <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ url_for('admin.admin_dashboard') }}">Admin</a></li>
-                    <li class="breadcrumb-item active">Manage Matches</li>
-                </ol>
-            </nav>
+<div class="container-fluid mt-4">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-2">
+                <i class="ph ph-calendar me-2 text-primary"></i>Match Management Hub
+            </h1>
+            <p class="text-muted mb-0">Comprehensive match scheduling with customizable displays</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#customizeModal">
+                <i class="ph ph-gear me-2"></i>Customize Display
+            </button>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addMatchModal">
+                <i class="ph ph-plus me-2"></i>Add Match
+            </button>
+        </div>
+    </div>
 
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1>Manage Matches</h1>
-                    <p class="text-muted">Create, edit, and manage match schedules</p>
+    <!-- Statistics Dashboard -->
+    {% if match_stats %}
+    <div class="row mb-4">
+        <div class="col-xl-2 col-lg-4 col-md-6 mb-3">
+            <div class="card stats-card h-100">
+                <div class="card-body">
+                    <h3>{{ match_stats[0] or 0 }}</h3>
+                    <div>Total</div>
                 </div>
-                <div>
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addMatchModal">
-                        <i class="ph ph-plus"></i> Add New Match
-                    </button>
+            </div>
+        </div>
+        <div class="col-xl-2 col-lg-4 col-md-6 mb-3">
+            <div class="card h-100" style="background: linear-gradient(135deg, #17a2b8, #138496); color: white; border-radius: 12px;">
+                <div class="card-body text-center">
+                    <h3>{{ match_stats[1] or 0 }}</h3>
+                    <div>Scheduled</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-lg-4 col-md-6 mb-3">
+            <div class="card h-100" style="background: linear-gradient(135deg, #dc3545, #c82333); color: white; border-radius: 12px;">
+                <div class="card-body text-center">
+                    <h3>{{ match_stats[2] or 0 }}</h3>
+                    <div>Live</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-lg-4 col-md-6 mb-3">
+            <div class="card h-100" style="background: linear-gradient(135deg, #28a745, #1e7e34); color: white; border-radius: 12px;">
+                <div class="card-body text-center">
+                    <h3>{{ match_stats[3] or 0 }}</h3>
+                    <div>Completed</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-lg-4 col-md-6 mb-3">
+            <div class="card h-100" style="background: linear-gradient(135deg, #ffc107, #e0a800); color: #212529; border-radius: 12px;">
+                <div class="card-body text-center">
+                    <h3>{{ match_stats[4] or 0 }}</h3>
+                    <div>Postponed</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-lg-4 col-md-6 mb-3">
+            <div class="card h-100" style="background: linear-gradient(135deg, #6c757d, #545b62); color: white; border-radius: 12px;">
+                <div class="card-body text-center">
+                    <h3>{{ match_stats[5] or 0 }}</h3>
+                    <div>Cancelled</div>
                 </div>
             </div>
         </div>
     </div>
+    {% endif %}
 
-    <!-- Quick Stats -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body text-center">
-                    <h3 class="text-primary">{{ matches|length }}</h3>
-                    <small class="text-muted">Total Matches</small>
-                </div>
+    <!-- Bulk Actions Bar -->
+    <div class="bulk-actions" id="bulkActions">
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <strong id="selectedCount">0</strong> matches selected
             </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body text-center">
-                    <h3 class="text-success">{{ matches|selectattr(8, 'equalto', 'scheduled')|list|length }}</h3>
-                    <small class="text-muted">Scheduled</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body text-center">
-                    <h3 class="text-warning">{{ matches|selectattr(8, 'equalto', 'live')|list|length }}</h3>
-                    <small class="text-muted">Live</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body text-center">
-                    <h3 class="text-info">{{ matches|selectattr(8, 'equalto', 'completed')|list|length }}</h3>
-                    <small class="text-muted">Completed</small>
-                </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-primary" onclick="showBulkReschedule()">
+                    <i class="ph ph-calendar me-1"></i>Reschedule
+                </button>
+                <button class="btn btn-sm btn-outline-info" onclick="showBulkStatusUpdate()">
+                    <i class="ph ph-clock me-1"></i>Update Status
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="showBulkDelete()">
+                    <i class="ph ph-trash me-1"></i>Delete
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="clearSelection()">
+                    <i class="ph ph-x me-1"></i>Clear
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Filters -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <i class="ph ph-funnel"></i> Filters
-                        </h5>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearFilters()">
-                            <i class="ph ph-x"></i> Clear
+    <!-- View Selector and Filters -->
+    <div class="card mb-4">
+        <div class="card-body py-3">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <div class="view-selector d-inline-flex">
+                        <button class="btn active" data-view="cards" onclick="switchView('cards')">
+                            <i class="ph ph-grid-four me-2"></i>Cards
+                        </button>
+                        <button class="btn" data-view="list" onclick="switchView('list')">
+                            <i class="ph ph-list me-2"></i>List
+                        </button>
+                        <button class="btn" data-view="calendar" onclick="switchView('calendar')">
+                            <i class="ph ph-calendar me-2"></i>Calendar
+                        </button>
+                        <button class="btn" data-view="timeline" onclick="switchView('timeline')">
+                            <i class="ph ph-timeline me-2"></i>Timeline
                         </button>
                     </div>
                 </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-3">
-                            <label for="filter-season" class="form-label">Season</label>
-                            <select class="form-select" id="filter-season" onchange="filterMatches()">
-                                <option value="">All Seasons</option>
-                                {% for season in seasons %}
-                                <option value="{{ season[1] }}">{{ season[1] }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="filter-league" class="form-label">League</label>
-                            <select class="form-select" id="filter-league" onchange="filterMatches()">
-                                <option value="">All Leagues</option>
-                                {% for league in leagues %}
-                                <option value="{{ league[1] }}">{{ league[1] }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="filter-status" class="form-label">Status</label>
-                            <select class="form-select" id="filter-status" onchange="filterMatches()">
-                                <option value="">All Status</option>
-                                <option value="scheduled">Scheduled</option>
-                                <option value="live">Live</option>
-                                <option value="completed">Completed</option>
-                                <option value="postponed">Postponed</option>
-                                <option value="cancelled">Cancelled</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="filter-search" class="form-label">Search</label>
-                            <input type="text" class="form-control" id="filter-search" placeholder="Team names..." onkeyup="filterMatches()">
-                        </div>
+                <div class="col-lg-6">
+                    <div class="d-flex gap-2">
+                        <select class="form-select form-select-sm" id="filterLeague" onchange="applyFilters()">
+                            <option value="">All Leagues</option>
+                            {% for league in leagues %}
+                            <option value="{{ league[1] }}">{{ league[1] }}</option>
+                            {% endfor %}
+                        </select>
+                        <select class="form-select form-select-sm" id="filterStatus" onchange="applyFilters()">
+                            <option value="">All Status</option>
+                            <option value="scheduled">Scheduled</option>
+                            <option value="live">Live</option>
+                            <option value="completed">Completed</option>
+                            <option value="postponed">Postponed</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                        <input type="text" class="form-control form-control-sm" id="searchInput" placeholder="Search teams..." onkeyup="applyFilters()">
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Matches Table -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <i class="ph ph-list"></i> Matches <span class="badge bg-secondary" id="match-count">{{ matches|length }}</span>
-                        </h5>
+    <!-- Cards View -->
+    <div id="cardsView" class="view-container">
+        <div class="row" id="matchCards">
+            {% for match in matches %}
+            <div class="col-xl-4 col-lg-6 col-md-6 col-sm-12 mb-4 match-item"
+                 data-league="{{ match[5] }}"
+                 data-status="{{ match[10] or 'scheduled' }}"
+                 data-search="{{ match[2] }} {{ match[3] }}">
+                <div class="card match-card match-card-modern h-100">
+                    <!-- Selection checkbox -->
+                    <div class="position-absolute" style="top: 10px; left: 10px; z-index: 10;">
+                        <input type="checkbox" class="form-check-input match-checkbox" value="{{ match[0] }}" onchange="updateSelection()">
+                    </div>
+
+                    <!-- Match Header -->
+                    <div class="card-header bg-transparent border-0 text-end">
+                        <span class="status-badge status-{{ match[10] or 'scheduled' }}">
+                            {{ (match[10] or 'scheduled').title() }}
+                        </span>
+                    </div>
+
+                    <!-- Match Content -->
+                    <div class="card-body text-center">
+                        <!-- Date and Time -->
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-1">
+                                <i class="ph ph-calendar me-1"></i>
+                                {{ match[1].strftime('%B %d, %Y') if match[1] else 'TBD' }}
+                            </h6>
+                            {% if match[11] %}
+                            <small class="text-muted">
+                                <i class="ph ph-clock me-1"></i>
+                                {{ match[11].strftime('%I:%M %p') }}
+                            </small>
+                            {% endif %}
+                        </div>
+
+                        <!-- Teams -->
+                        <div class="row align-items-center mb-3">
+                            <div class="col-5 text-end">
+                                <h5 class="mb-0 fw-bold">{{ match[2] }}</h5>
+                            </div>
+                            <div class="col-2">
+                                {% if match[13] is not none and match[14] is not none %}
+                                <div class="badge bg-primary fs-6">{{ match[13] }} - {{ match[14] }}</div>
+                                {% else %}
+                                <span class="vs-divider">VS</span>
+                                {% endif %}
+                            </div>
+                            <div class="col-5 text-start">
+                                <h5 class="mb-0 fw-bold">{{ match[3] }}</h5>
+                            </div>
+                        </div>
+
+                        <!-- Venue -->
+                        {% if match[9] %}
+                        <div class="mb-3">
+                            <small class="text-muted">
+                                <i class="ph ph-map-pin me-1"></i>{{ match[9] }}
+                            </small>
+                        </div>
+                        {% endif %}
+
+                        <!-- League and Season -->
+                        <div class="mb-3">
+                            <small class="badge bg-light text-dark me-1">{{ match[5] }}</small>
+                            <small class="badge bg-light text-dark">{{ match[4] }}</small>
+                        </div>
+                    </div>
+
+                    <!-- Match Actions -->
+                    <div class="card-footer bg-transparent text-center">
                         <div class="btn-group" role="group">
-                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleView('table')" id="table-view-btn">
-                                <i class="ph ph-list"></i> Table
+                            <button class="btn btn-sm btn-outline-primary" onclick="editMatch({{ match[0] }})">
+                                <i class="ph ph-pencil"></i>
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleView('cards')" id="cards-view-btn">
-                                <i class="ph ph-grid-four"></i> Cards
+                            <button class="btn btn-sm btn-outline-success" onclick="quickStatus({{ match[0] }})">
+                                <i class="ph ph-clock"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-info" onclick="viewDetails({{ match[0] }})">
+                                <i class="ph ph-eye"></i>
                             </button>
                         </div>
                     </div>
                 </div>
-                <div class="card-body p-0">
-                    <!-- Table View -->
-                    <div id="table-view">
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0" id="matches-table">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Date & Time</th>
-                                        <th>Match</th>
-                                        <th>Venue</th>
-                                        <th>Season</th>
-                                        <th>League</th>
-                                        <th>Status</th>
-                                        <th>Score</th>
-                                        <th class="text-center">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for match in matches %}
-                                    <tr class="match-row"
-                                        data-season="{{ match[4] }}"
-                                        data-league="{{ match[5] }}"
-                                        data-status="{{ match[10] if match[10] else 'scheduled' }}"
-                                        data-teams="{{ match[2] }} {{ match[3] }}">
-                                        <td>
-                                            <div>
-                                                <strong>{{ match[1] }}</strong>
-                                                {% if match[11] %}
-                                                <br><small class="text-muted">{{ match[11] }}</small>
-                                                {% endif %}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                <div class="text-end me-2" style="min-width: 100px;">
-                                                    <strong>{{ match[2] }}</strong>
-                                                </div>
-                                                <div class="text-center mx-2">
-                                                    <span class="text-muted">vs</span>
-                                                </div>
-                                                <div class="text-start ms-2" style="min-width: 100px;">
-                                                    <strong>{{ match[3] }}</strong>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            {% if match[12] %}
-                                                <span class="venue-pill">
-                                                    <i class="ph ph-map-pin"></i>
-                                                    {{ match[12] }}
-                                                </span>
-                                            {% else %}
-                                                <span class="text-muted">TBD</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>{{ match[4] }}</td>
-                                        <td>{{ match[5] }}</td>
-                                        <td>
-                                            {% set status = match[10] if match[10] else 'scheduled' %}
-                                            <span class="badge match-status-badge
-                                                {% if status == 'completed' %}bg-success
-                                                {% elif status == 'live' %}bg-danger
-                                                {% elif status == 'scheduled' %}bg-secondary
-                                                {% elif status == 'postponed' %}bg-warning
-                                                {% elif status == 'cancelled' %}bg-dark
-                                                {% else %}bg-light text-dark{% endif %}">
-                                                {{ status.title() if status else 'Scheduled' }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            {% if match[13] and match[14] %}
-                                                <span class="badge bg-light text-dark fs-6">
-                                                    {{ match[13] }} - {{ match[14] }}
-                                                </span>
-                                            {% else %}
-                                                <span class="text-muted">-</span>
-                                            {% endif %}
-                                        </td>
-                                        <td class="text-center">
-                                            <div class="btn-group" role="group">
-                                                <button class="btn btn-sm btn-outline-primary"
-                                                        onclick="editMatch('{{ match[0] }}', '{{ match[1] }}', '{{ match[6] }}', '{{ match[7] }}', '{{ match[4] }}', '{{ match[5] }}', '{{ match[8] or '' }}', '{{ match[11] or '' }}', '{{ match[12] or '' }}', '{{ match[10] or 'scheduled' }}', '{{ match[13] or '' }}', '{{ match[14] or '' }}')"
-                                                        title="Edit Match">
-                                                    <i class="ph ph-pencil"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-success"
-                                                        onclick="quickStatusUpdate('{{ match[0] }}')"
-                                                        title="Update Status">
-                                                    <i class="ph ph-clock"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-info"
-                                                        onclick="viewMatchDetails('{{ match[0] }}')"
-                                                        title="View Details">
-                                                    <i class="ph ph-eye"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-danger"
-                                                        data-bs-toggle="modal"
-                                                        data-bs-target="#deleteModal"
-                                                        data-id="{{ match[0] }}"
-                                                        data-action="{{ url_for('admin.manage_matches') }}"
-                                                        title="Delete Match">
-                                                    <i class="ph ph-trash"></i>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
 
-                    <!-- Cards View (Hidden by default) -->
-                    <div id="cards-view" style="display: none;">
-                        <div class="p-3">
-                            <div class="row" id="match-cards">
-                                {% for match in matches %}
-                                <div class="col-lg-4 col-md-6 mb-3 match-card"
-                                     data-season="{{ match[4] }}"
-                                     data-league="{{ match[5] }}"
-                                     data-status="{{ match[10] if match[10] else 'scheduled' }}"
-                                     data-teams="{{ match[2] }} {{ match[3] }}">
-                                    <div class="card">
-                                        <div class="card-header d-flex justify-content-between align-items-center">
-                                            <small class="text-muted">{{ match[1] }}</small>
-                                            {% set status = match[10] if match[10] else 'scheduled' %}
-                                            <span class="badge match-status-badge
-                                                {% if status == 'completed' %}bg-success
-                                                {% elif status == 'live' %}bg-danger
-                                                {% elif status == 'scheduled' %}bg-secondary
-                                                {% elif status == 'postponed' %}bg-warning
-                                                {% elif status == 'cancelled' %}bg-dark
-                                                {% else %}bg-light text-dark{% endif %}">
-                                                {{ status.title() if status else 'Scheduled' }}
-                                            </span>
-                                        </div>
-                                        <div class="card-body">
-                                            <div class="text-center mb-3">
-                                                <div class="d-flex align-items-center justify-content-center">
-                                                    <div class="text-end me-3">
-                                                        <strong>{{ match[2] }}</strong>
-                                                    </div>
-                                                    <div class="mx-3">
-                                                        {% if match[13] and match[14] %}
-                                                            <span class="badge bg-light text-dark fs-6">
-                                                                {{ match[13] }} - {{ match[14] }}
-                                                            </span>
-                                                        {% else %}
-                                                            <span class="text-muted">vs</span>
-                                                        {% endif %}
-                                                    </div>
-                                                    <div class="text-start ms-3">
-                                                        <strong>{{ match[3] }}</strong>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div class="text-center text-muted mb-3">
-                                                {% if match[12] %}
-                                                    <i class="ph ph-map-pin"></i> {{ match[12] }}
-                                                {% else %}
-                                                    <i class="ph ph-clock"></i> Venue TBD
-                                                {% endif %}
-                                            </div>
-
-                                            <div class="text-center">
-                                                <small class="text-muted">{{ match[4] }} • {{ match[5] }}</small>
-                                            </div>
-                                        </div>
-                                        <div class="card-footer text-center">
-                                            <div class="btn-group" role="group">
-                                                <button class="btn btn-sm btn-outline-primary"
-                                                        onclick="editMatch('{{ match[0] }}', '{{ match[1] }}', '{{ match[6] }}', '{{ match[7] }}', '{{ match[4] }}', '{{ match[5] }}', '{{ match[8] or '' }}', '{{ match[11] or '' }}', '{{ match[12] or '' }}', '{{ match[10] or 'scheduled' }}', '{{ match[13] or '' }}', '{{ match[14] or '' }}')"
-                                                        title="Edit">
-                                                    <i class="ph ph-pencil"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-success"
-                                                        onclick="quickStatusUpdate('{{ match[0] }}')"
-                                                        title="Status">
-                                                    <i class="ph ph-clock"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-info"
-                                                        onclick="viewMatchDetails('{{ match[0] }}')"
-                                                        title="Details">
-                                                    <i class="ph ph-eye"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
+    <!-- List View -->
+    <div id="listView" class="view-container" style="display: none;">
+        <div class="card">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="30"><input type="checkbox" class="form-check-input" id="selectAll" onchange="toggleSelectAll()"></th>
+                            <th>Date & Time</th>
+                            <th>Match</th>
+                            <th>Venue</th>
+                            <th>League</th>
+                            <th>Status</th>
+                            <th>Score</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="matchTableBody">
+                        {% for match in matches %}
+                        <tr class="match-row" data-league="{{ match[5] }}" data-status="{{ match[10] or 'scheduled' }}" data-search="{{ match[2] }} {{ match[3] }}">
+                            <td><input type="checkbox" class="form-check-input match-checkbox" value="{{ match[0] }}" onchange="updateSelection()"></td>
+                            <td>
+                                <div>
+                                    <strong>{{ match[1].strftime('%m/%d/%Y') if match[1] else 'TBD' }}</strong>
+                                    {% if match[11] %}
+                                    <br><small class="text-muted">{{ match[11].strftime('%I:%M %p') }}</small>
+                                    {% endif %}
                                 </div>
-                                {% endfor %}
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center justify-content-center">
+                                    <strong>{{ match[2] }}</strong>
+                                    <span class="mx-3 text-muted">vs</span>
+                                    <strong>{{ match[3] }}</strong>
+                                </div>
+                            </td>
+                            <td>{{ match[9] or 'TBD' }}</td>
+                            <td>{{ match[5] }}</td>
+                            <td>
+                                <span class="status-badge status-{{ match[10] or 'scheduled' }}">
+                                    {{ (match[10] or 'scheduled').title() }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                {% if match[13] is not none and match[14] is not none %}
+                                <span class="badge bg-light text-dark">{{ match[13] }} - {{ match[14] }}</span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editMatch({{ match[0] }})">
+                                        <i class="ph ph-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success" onclick="quickStatus({{ match[0] }})">
+                                        <i class="ph ph-clock"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-info" onclick="viewDetails({{ match[0] }})">
+                                        <i class="ph ph-eye"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendar View -->
+    <div id="calendarView" class="view-container" style="display: none;">
+        <div class="calendar-view">
+            <div class="calendar-header">
+                <h4 id="calendarMonth" class="mb-0">Loading...</h4>
+                <div class="calendar-nav">
+                    <button class="btn" onclick="previousMonth()">
+                        <i class="ph ph-caret-left"></i>
+                    </button>
+                    <button class="btn" onclick="nextMonth()">
+                        <i class="ph ph-caret-right"></i>
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm" onclick="goToToday()">Today</button>
+                </div>
+            </div>
+            <div class="calendar-grid" id="calendarGrid">
+                <!-- Calendar will be generated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeline View -->
+    <div id="timelineView" class="view-container" style="display: none;">
+        <div class="timeline-view">
+            {% for match in matches %}
+            <div class="timeline-item match-timeline-item" data-league="{{ match[5] }}" data-status="{{ match[10] or 'scheduled' }}" data-search="{{ match[2] }} {{ match[3] }}">
+                <div class="timeline-date">
+                    <div class="fw-bold">{{ match[1].strftime('%b %d') if match[1] else 'TBD' }}</div>
+                    {% if match[11] %}
+                    <small class="text-muted">{{ match[11].strftime('%I:%M %p') }}</small>
+                    {% endif %}
+                </div>
+                <div class="timeline-content">
+                    <div class="d-flex align-items-center">
+                        <input type="checkbox" class="form-check-input match-checkbox me-3" value="{{ match[0] }}" onchange="updateSelection()">
+                        <div>
+                            <h6 class="mb-1">{{ match[2] }} vs {{ match[3] }}</h6>
+                            <div class="d-flex align-items-center gap-2">
+                                <small class="badge bg-light text-dark">{{ match[5] }}</small>
+                                {% if match[9] %}
+                                <small class="text-muted">
+                                    <i class="ph ph-map-pin me-1"></i>{{ match[9] }}
+                                </small>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
-
-                    {% if not matches %}
-                    <div class="p-5 text-center text-muted">
-                        <i class="ph ph-calendar-x" style="font-size: 3rem;"></i>
-                        <h5 class="mt-3">No matches found</h5>
-                        <p>Start by creating your first match.</p>
-                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addMatchModal">
-                            <i class="ph ph-plus"></i> Add Match
-                        </button>
+                    <div class="d-flex align-items-center gap-3">
+                        {% if match[13] is not none and match[14] is not none %}
+                        <span class="badge bg-primary">{{ match[13] }} - {{ match[14] }}</span>
+                        {% endif %}
+                        <span class="status-badge status-{{ match[10] or 'scheduled' }}">
+                            {{ (match[10] or 'scheduled').title() }}
+                        </span>
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-outline-primary" onclick="editMatch({{ match[0] }})">
+                                <i class="ph ph-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-success" onclick="quickStatus({{ match[0] }})">
+                                <i class="ph ph-clock"></i>
+                            </button>
+                        </div>
                     </div>
-                    {% endif %}
                 </div>
             </div>
+            {% endfor %}
         </div>
     </div>
+
+    <!-- Floating Action Button -->
+    <button class="floating-fab" data-bs-toggle="modal" data-bs-target="#addMatchModal" title="Add New Match">
+        <i class="ph ph-plus"></i>
+    </button>
 </div>
 
 <!-- Add/Edit Match Modal -->
-<div class="modal fade" id="addMatchModal" tabindex="-1" aria-labelledby="addMatchModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+<div class="modal fade" id="addMatchModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <form action="{{ url_for('admin.manage_matches') }}" method="POST">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="addMatchModalLabel">Add Match</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title" id="matchModalTitle">
+                        <i class="ph ph-plus me-2"></i>Add New Match
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="match_id" name="match_id">
@@ -379,7 +815,7 @@
                             <div class="mb-3">
                                 <label for="team1_id" class="form-label">Home Team *</label>
                                 <select class="form-select" id="team1_id" name="team1_id" required>
-                                    <option value="">Select Team</option>
+                                    <option value="">Select Home Team</option>
                                     {% for team in teams %}
                                     <option value="{{ team[0] }}">{{ team[1] }}</option>
                                     {% endfor %}
@@ -390,7 +826,7 @@
                             <div class="mb-3">
                                 <label for="team2_id" class="form-label">Away Team *</label>
                                 <select class="form-select" id="team2_id" name="team2_id" required>
-                                    <option value="">Select Team</option>
+                                    <option value="">Select Away Team</option>
                                     {% for team in teams %}
                                     <option value="{{ team[0] }}">{{ team[1] }}</option>
                                     {% endfor %}
@@ -400,17 +836,6 @@
                     </div>
 
                     <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="season_id" class="form-label">Season *</label>
-                                <select class="form-select" id="season_id" name="season_id" required>
-                                    <option value="">Select Season</option>
-                                    {% for season in seasons %}
-                                    <option value="{{ season[0] }}">{{ season[1] }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="league_id" class="form-label">League *</label>
@@ -422,22 +847,13 @@
                                 </select>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="venue" class="form-label">Venue</label>
-                                <input type="text" class="form-control" id="venue" name="venue" placeholder="Stadium/Field name">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="tournament_id" class="form-label">Tournament</label>
-                                <select class="form-select" id="tournament_id" name="tournament_id">
-                                    <option value="">None</option>
-                                    {% for t in tournaments %}
-                                    <option value="{{ t[0] }}">{{ t[1] }}</option>
+                                <label for="season_id" class="form-label">Season *</label>
+                                <select class="form-select" id="season_id" name="season_id" required>
+                                    <option value="">Select Season</option>
+                                    {% for season in seasons %}
+                                    <option value="{{ season[0] }}">{{ season[1] }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
@@ -445,6 +861,12 @@
                     </div>
 
                     <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="venue" class="form-label">Venue</label>
+                                <input type="text" class="form-control" id="venue" name="venue" placeholder="Stadium/Field">
+                            </div>
+                        </div>
                         <div class="col-md-4">
                             <div class="mb-3">
                                 <label for="status" class="form-label">Status</label>
@@ -459,22 +881,46 @@
                         </div>
                         <div class="col-md-4">
                             <div class="mb-3">
+                                <label for="matchday" class="form-label">Matchday</label>
+                                <input type="number" class="form-control" id="matchday" name="matchday" min="1">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
                                 <label for="home_score" class="form-label">Home Score</label>
                                 <input type="number" class="form-control" id="home_score" name="home_score" min="0">
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="away_score" class="form-label">Away Score</label>
                                 <input type="number" class="form-control" id="away_score" name="away_score" min="0">
                             </div>
                         </div>
                     </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="public_notes" class="form-label">Public Notes</label>
+                                <textarea class="form-control" id="public_notes" name="public_notes" rows="3" placeholder="Notes visible to fans"></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="ticket_url" class="form-label">Ticket URL</label>
+                                <input type="url" class="form-control" id="ticket_url" name="ticket_url" placeholder="https://tickets.example.com">
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" name="submit" class="btn btn-primary" id="submit-button">
-                        <i class="ph ph-plus"></i> Add Match
+                    <button type="submit" name="submit" class="btn btn-primary" id="submitButton">
+                        <i class="ph ph-plus me-2"></i>Add Match
                     </button>
                 </div>
             </form>
@@ -482,301 +928,412 @@
     </div>
 </div>
 
-<!-- Quick Status Update Modal -->
-<div class="modal fade" id="statusUpdateModal" tabindex="-1" aria-labelledby="statusUpdateModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form method="POST" action="{{ url_for('admin.manage_matches') }}">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="statusUpdateModalLabel">Update Match Status</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <input type="hidden" id="status_match_id" name="match_id">
-                    <input type="hidden" name="quick_status_update" value="1">
-
-                    <div class="mb-3">
-                        <label for="quick_status" class="form-label">Match Status</label>
-                        <select class="form-select" id="quick_status" name="status" required>
-                            <option value="scheduled">Scheduled</option>
-                            <option value="live">Live</option>
-                            <option value="completed">Completed</option>
-                            <option value="postponed">Postponed</option>
-                            <option value="cancelled">Cancelled</option>
-                        </select>
-                    </div>
-
-                    <div class="row" id="score-fields" style="display: none;">
-                        <div class="col-6">
-                            <div class="mb-3">
-                                <label for="quick_home_score" class="form-label">Home Score</label>
-                                <input type="number" class="form-control" id="quick_home_score" name="home_score" min="0">
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="mb-3">
-                                <label for="quick_away_score" class="form-label">Away Score</label>
-                                <input type="number" class="form-control" id="quick_away_score" name="away_score" min="0">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="ph ph-check"></i> Update Status
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Match Details Modal -->
-<div class="modal fade" id="matchDetailsModal" tabindex="-1" aria-labelledby="matchDetailsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+<!-- Customization Modal -->
+<div class="modal fade" id="customizeModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="matchDetailsModalLabel">Match Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title">
+                    <i class="ph ph-gear me-2"></i>Customize Display Settings
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body" id="match-details-content">
-                <!-- Content will be loaded dynamically -->
-            </div>
-        </div>
-    </div>
-</div>
+            <div class="modal-body">
+                <form action="{{ url_for('admin.manage_matches') }}" method="POST" id="settingsForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <input type="hidden" name="update_display_settings" value="1">
+                    <input type="hidden" name="intentional_save" value="0" id="intentionalSave">
 
-<!-- Delete Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form id="deleteForm" method="POST" action="">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="alert alert-warning">
-                        <i class="ph ph-warning"></i>
-                        Are you sure you want to delete this match? This action cannot be undone.
+                    <div class="customization-panel">
+                        <div class="customization-section">
+                            <h6><i class="ph ph-target me-2"></i>League Selection</h6>
+                            <select class="form-select" name="settings_league_id" required>
+                                <option value="">Select League to Customize</option>
+                                {% for league in leagues %}
+                                <option value="{{ league[0] }}">{{ league[1] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="customization-section">
+                            <h6><i class="ph ph-eye me-2"></i>Default View</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <select class="form-select" name="default_view">
+                                        <option value="cards">Cards View</option>
+                                        <option value="list">List View</option>
+                                        <option value="calendar">Calendar View</option>
+                                        <option value="timeline">Timeline View</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="customization-section">
+                            <h6><i class="ph ph-toggle-left me-2"></i>Display Elements</h6>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="show_venue" id="show_venue" checked>
+                                        <label class="form-check-label" for="show_venue">Show Venue</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="show_time" id="show_time" checked>
+                                        <label class="form-check-label" for="show_time">Show Time</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="show_scores" id="show_scores" checked>
+                                        <label class="form-check-label" for="show_scores">Show Scores</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="show_status" id="show_status" checked>
+                                        <label class="form-check-label" for="show_status">Show Status</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="customization-section">
+                            <h6><i class="ph ph-users me-2"></i>Public Views Enabled</h6>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="public_calendar_enabled" id="public_calendar_enabled" checked>
+                                        <label class="form-check-label" for="public_calendar_enabled">Public Calendar</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="public_list_enabled" id="public_list_enabled" checked>
+                                        <label class="form-check-label" for="public_list_enabled">Public List</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="public_cards_enabled" id="public_cards_enabled" checked>
+                                        <label class="form-check-label" for="public_cards_enabled">Public Cards</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="public_timeline_enabled" id="public_timeline_enabled">
+                                        <label class="form-check-label" for="public_timeline_enabled">Public Timeline</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="customization-section">
+                            <h6><i class="ph ph-palette me-2"></i>Style Settings</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label class="form-label">Calendar Theme</label>
+                                    <select class="form-select" name="calendar_theme">
+                                        <option value="default">Default</option>
+                                        <option value="dark">Dark</option>
+                                        <option value="colorful">Colorful</option>
+                                        <option value="minimal">Minimal</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Card Style</label>
+                                    <select class="form-select" name="card_style">
+                                        <option value="modern">Modern</option>
+                                        <option value="compact">Compact</option>
+                                        <option value="elegant">Elegant</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Timezone</label>
+                                    <select class="form-select" name="timezone">
+                                        <option value="UTC">UTC</option>
+                                        <option value="America/New_York">Eastern Time</option>
+                                        <option value="America/Chicago">Central Time</option>
+                                        <option value="America/Denver">Mountain Time</option>
+                                        <option value="America/Los_Angeles">Pacific Time</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="customization-section">
+                            <h6><i class="ph ph-calendar-dots me-2"></i>Format Settings</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">Date Format</label>
+                                    <select class="form-select" name="date_format">
+                                        <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                                        <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                                        <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                                        <option value="Month DD, YYYY">Month DD, YYYY</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Time Format</label>
+                                    <select class="form-select" name="time_format">
+                                        <option value="12h">12 Hour (AM/PM)</option>
+                                        <option value="24h">24 Hour</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <input type="hidden" id="deleteItemId" name="deleteEntityId">
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" name="delete" class="btn btn-danger">
-                        <i class="ph ph-trash"></i> Delete Match
-                    </button>
-                </div>
-            </form>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveSettings()">
+                    <i class="ph ph-check me-2"></i>Save Settings
+                </button>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-    // Current view state
-    let currentView = 'table';
+let currentView = 'cards';
+let currentDate = new Date();
+let selectedMatches = new Set();
+let matches = {{ matches_json|tojson }};
 
-    // Initialize page
-    document.addEventListener('DOMContentLoaded', function() {
-        // Set active view button
-        document.getElementById('table-view-btn').classList.add('active');
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize default view
+    switchView('cards');
+
+    // Initialize calendar if needed
+    if (currentView === 'calendar') {
+        generateCalendar();
+    }
+});
+
+// View switching functionality
+function switchView(view) {
+    currentView = view;
+
+    // Update buttons
+    document.querySelectorAll('.view-selector .btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelector(`[data-view="${view}"]`).classList.add('active');
+
+    // Show/hide views
+    document.querySelectorAll('.view-container').forEach(container => {
+        container.style.display = 'none';
     });
 
-    // Toggle between table and cards view
-    function toggleView(view) {
-        currentView = view;
-        const tableView = document.getElementById('table-view');
-        const cardsView = document.getElementById('cards-view');
-        const tableBtn = document.getElementById('table-view-btn');
-        const cardsBtn = document.getElementById('cards-view-btn');
+    document.getElementById(view + 'View').style.display = 'block';
 
-        if (view === 'table') {
-            tableView.style.display = 'block';
-            cardsView.style.display = 'none';
-            tableBtn.classList.add('active');
-            cardsBtn.classList.remove('active');
+    // Special handling for calendar
+    if (view === 'calendar') {
+        generateCalendar();
+    }
+
+    applyFilters();
+}
+
+// Filter functionality
+function applyFilters() {
+    const league = document.getElementById('filterLeague').value.toLowerCase();
+    const status = document.getElementById('filterStatus').value.toLowerCase();
+    const search = document.getElementById('searchInput').value.toLowerCase();
+
+    let visibleCount = 0;
+
+    // Filter items based on current view
+    const selector = currentView === 'cards' ? '.match-item' :
+                    currentView === 'list' ? '.match-row' : '.match-timeline-item';
+
+    document.querySelectorAll(selector).forEach(item => {
+        const itemLeague = item.dataset.league.toLowerCase();
+        const itemStatus = item.dataset.status.toLowerCase();
+        const itemSearch = item.dataset.search.toLowerCase();
+
+        const matches = (!league || itemLeague.includes(league)) &&
+                       (!status || itemStatus === status) &&
+                       (!search || itemSearch.includes(search));
+
+        if (matches) {
+            item.style.display = '';
+            visibleCount++;
         } else {
-            tableView.style.display = 'none';
-            cardsView.style.display = 'block';
-            cardsBtn.classList.add('active');
-            tableBtn.classList.remove('active');
-        }
-    }
-
-    // Filter matches
-    function filterMatches() {
-        const seasonFilter = document.getElementById('filter-season').value.toLowerCase();
-        const leagueFilter = document.getElementById('filter-league').value.toLowerCase();
-        const statusFilter = document.getElementById('filter-status').value.toLowerCase();
-        const searchFilter = document.getElementById('filter-search').value.toLowerCase();
-
-        const rows = document.querySelectorAll('.match-row');
-        const cards = document.querySelectorAll('.match-card');
-        let visibleCount = 0;
-
-        // Filter table rows
-        rows.forEach(row => {
-            const season = row.dataset.season.toLowerCase();
-            const league = row.dataset.league.toLowerCase();
-            const status = row.dataset.status.toLowerCase();
-            const teams = row.dataset.teams.toLowerCase();
-
-            const matchesFilters =
-                (seasonFilter === '' || season.includes(seasonFilter)) &&
-                (leagueFilter === '' || league.includes(leagueFilter)) &&
-                (statusFilter === '' || status === statusFilter) &&
-                (searchFilter === '' || teams.includes(searchFilter));
-
-            if (matchesFilters) {
-                row.style.display = '';
-                visibleCount++;
-            } else {
-                row.style.display = 'none';
-            }
-        });
-
-        // Filter cards
-        cards.forEach(card => {
-            const season = card.dataset.season.toLowerCase();
-            const league = card.dataset.league.toLowerCase();
-            const status = card.dataset.status.toLowerCase();
-            const teams = card.dataset.teams.toLowerCase();
-
-            const matchesFilters =
-                (seasonFilter === '' || season.includes(seasonFilter)) &&
-                (leagueFilter === '' || league.includes(leagueFilter)) &&
-                (statusFilter === '' || status === statusFilter) &&
-                (searchFilter === '' || teams.includes(searchFilter));
-
-            if (matchesFilters) {
-                card.style.display = '';
-            } else {
-                card.style.display = 'none';
-            }
-        });
-
-        // Update count
-        document.getElementById('match-count').textContent = visibleCount;
-    }
-
-    // Clear all filters
-    function clearFilters() {
-        document.getElementById('filter-season').value = '';
-        document.getElementById('filter-league').value = '';
-        document.getElementById('filter-status').value = '';
-        document.getElementById('filter-search').value = '';
-        filterMatches();
-    }
-
-    // Edit match function
-    function editMatch(id, date, team1_id, team2_id, season_id, league_id, tournament_id, time, venue, status, home_score, away_score) {
-        document.getElementById('match_id').value = id;
-        document.getElementById('date').value = date;
-        document.getElementById('team1_id').value = team1_id;
-        document.getElementById('team2_id').value = team2_id;
-        document.getElementById('season_id').value = season_id;
-        document.getElementById('league_id').value = league_id;
-        document.getElementById('tournament_id').value = tournament_id || '';
-        document.getElementById('time').value = time || '';
-        document.getElementById('venue').value = venue || '';
-        document.getElementById('status').value = status || 'scheduled';
-        document.getElementById('home_score').value = home_score || '';
-        document.getElementById('away_score').value = away_score || '';
-
-        document.getElementById('submit-button').innerHTML = '<i class="ph ph-check"></i> Update Match';
-        document.getElementById('addMatchModalLabel').textContent = 'Edit Match';
-
-        const modal = new bootstrap.Modal(document.getElementById('addMatchModal'));
-        modal.show();
-    }
-
-    // Quick status update
-    function quickStatusUpdate(matchId) {
-        document.getElementById('status_match_id').value = matchId;
-        const modal = new bootstrap.Modal(document.getElementById('statusUpdateModal'));
-        modal.show();
-    }
-
-    // View match details
-    function viewMatchDetails(matchId) {
-        const modal = new bootstrap.Modal(document.getElementById('matchDetailsModal'));
-
-        // Show loading content
-        document.getElementById('match-details-content').innerHTML = `
-            <div class="text-center py-4">
-                <div class="spinner-border" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-                <p class="mt-2">Loading match details...</p>
-            </div>
-        `;
-
-        modal.show();
-
-        // Simulate loading match details (replace with actual AJAX call)
-        setTimeout(() => {
-            document.getElementById('match-details-content').innerHTML = `
-                <div class="alert alert-info">
-                    <i class="ph ph-info"></i>
-                    Match details would be loaded here. Implement backend endpoint to fetch full match details.
-                </div>
-            `;
-        }, 1000);
-    }
-
-    // Status change handler for score fields
-    document.getElementById('quick_status').addEventListener('change', function() {
-        const scoreFields = document.getElementById('score-fields');
-        if (this.value === 'completed') {
-            scoreFields.style.display = 'block';
-            document.getElementById('quick_home_score').required = true;
-            document.getElementById('quick_away_score').required = true;
-        } else {
-            scoreFields.style.display = 'none';
-            document.getElementById('quick_home_score').required = false;
-            document.getElementById('quick_away_score').required = false;
+            item.style.display = 'none';
         }
     });
+}
 
-    // Reset modal when opening for new match
-    document.getElementById('addMatchModal').addEventListener('show.bs.modal', function(event) {
-        if (!event.relatedTarget || !event.relatedTarget.onclick) {
-            // Reset form for new match
-            document.getElementById('match_id').value = '';
-            document.getElementById('submit-button').innerHTML = '<i class="ph ph-plus"></i> Add Match';
-            document.getElementById('addMatchModalLabel').textContent = 'Add Match';
-            this.querySelector('form').reset();
+// Calendar functionality
+function generateCalendar() {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+
+    // Update header
+    document.getElementById('calendarMonth').textContent =
+        new Date(year, month).toLocaleDateString('en-US', {
+            month: 'long',
+            year: 'numeric'
+        });
+
+    // Generate calendar grid
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - firstDay.getDay());
+
+    const calendarGrid = document.getElementById('calendarGrid');
+    calendarGrid.innerHTML = '';
+
+    // Day headers
+    const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    dayHeaders.forEach(day => {
+        const header = document.createElement('div');
+        header.className = 'calendar-day-header p-2 text-center fw-bold bg-light';
+        header.textContent = day;
+        calendarGrid.appendChild(header);
+    });
+
+    // Calendar days
+    const currentDate = new Date(startDate);
+    for (let i = 0; i < 42; i++) {
+        const dayElement = document.createElement('div');
+        dayElement.className = 'calendar-day';
+
+        if (currentDate.getMonth() !== month) {
+            dayElement.classList.add('other-month');
         }
-    });
 
-    // Delete modal handler
-    document.getElementById('deleteModal').addEventListener('show.bs.modal', function (event) {
-        const button = event.relatedTarget;
-        const id = button.getAttribute('data-id');
-        const action = button.getAttribute('data-action');
-        document.getElementById('deleteItemId').value = id;
-        document.getElementById('deleteForm').action = action;
-    });
+        if (currentDate.toDateString() === new Date().toDateString()) {
+            dayElement.classList.add('today');
+        }
 
-    // Team selection validation
-    document.getElementById('team1_id').addEventListener('change', function() {
-        const team2Select = document.getElementById('team2_id');
-        const team2Options = team2Select.querySelectorAll('option');
+        dayElement.innerHTML = `<div class="calendar-day-number">${currentDate.getDate()}</div>`;
 
-        team2Options.forEach(option => {
-            option.disabled = (option.value === this.value && option.value !== '');
+        // Add matches for this day
+        const dayMatches = matches.filter(match => {
+            if (!match[1]) return false;
+            const matchDate = new Date(match[1]);
+            return matchDate.toDateString() === currentDate.toDateString();
         });
-    });
 
-    document.getElementById('team2_id').addEventListener('change', function() {
-        const team1Select = document.getElementById('team1_id');
-        const team1Options = team1Select.querySelectorAll('option');
-
-        team1Options.forEach(option => {
-            option.disabled = (option.value === this.value && option.value !== '');
+        dayMatches.forEach(match => {
+            const matchElement = document.createElement('div');
+            matchElement.className = 'calendar-match';
+            matchElement.textContent = `${match[2]} vs ${match[3]}`;
+            matchElement.onclick = () => viewDetails(match[0]);
+            dayElement.appendChild(matchElement);
         });
+
+        calendarGrid.appendChild(dayElement);
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+}
+
+function previousMonth() {
+    currentDate.setMonth(currentDate.getMonth() - 1);
+    generateCalendar();
+}
+
+function nextMonth() {
+    currentDate.setMonth(currentDate.getMonth() + 1);
+    generateCalendar();
+}
+
+function goToToday() {
+    currentDate = new Date();
+    generateCalendar();
+}
+
+// Selection functionality
+function updateSelection() {
+    selectedMatches.clear();
+    document.querySelectorAll('.match-checkbox:checked').forEach(checkbox => {
+        selectedMatches.add(parseInt(checkbox.value));
     });
+
+    const count = selectedMatches.size;
+    document.getElementById('selectedCount').textContent = count;
+
+    if (count > 0) {
+        document.getElementById('bulkActions').classList.add('show');
+    } else {
+        document.getElementById('bulkActions').classList.remove('show');
+    }
+}
+
+function toggleSelectAll() {
+    const selectAll = document.getElementById('selectAll').checked;
+    document.querySelectorAll('.match-checkbox').forEach(checkbox => {
+        checkbox.checked = selectAll;
+    });
+    updateSelection();
+}
+
+function clearSelection() {
+    document.querySelectorAll('.match-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    updateSelection();
+}
+
+// Match actions
+function editMatch(matchId) {
+    // Implementation for editing matches
+    console.log('Edit match:', matchId);
+}
+
+function quickStatus(matchId) {
+    // Implementation for quick status update
+    console.log('Quick status:', matchId);
+}
+
+function viewDetails(matchId) {
+    // Implementation for viewing match details
+    console.log('View details:', matchId);
+}
+
+// Bulk actions
+function showBulkReschedule() {
+    if (selectedMatches.size === 0) return;
+    // Implementation for bulk reschedule
+    console.log('Bulk reschedule:', Array.from(selectedMatches));
+}
+
+function showBulkStatusUpdate() {
+    if (selectedMatches.size === 0) return;
+    // Implementation for bulk status update
+    console.log('Bulk status update:', Array.from(selectedMatches));
+}
+
+function showBulkDelete() {
+    if (selectedMatches.size === 0) return;
+    // Implementation for bulk delete
+    console.log('Bulk delete:', Array.from(selectedMatches));
+}
+
+// Settings
+function saveSettings() {
+    document.getElementById('intentionalSave').value = '1';
+    document.getElementById('settingsForm').submit();
+}
+
+// Team selection validation
+document.getElementById('team1_id').addEventListener('change', function() {
+    const team2Select = document.getElementById('team2_id');
+    team2Select.querySelectorAll('option').forEach(option => {
+        option.disabled = option.value === this.value && option.value !== '';
+    });
+});
+
+document.getElementById('team2_id').addEventListener('change', function() {
+    const team1Select = document.getElementById('team1_id');
+    team1Select.querySelectorAll('option').forEach(option => {
+        option.disabled = option.value === this.value && option.value !== '';
+    });
+});
 </script>
 {% endblock %}

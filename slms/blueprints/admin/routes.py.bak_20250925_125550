@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, g, jsonify
+﻿from flask import Blueprint, render_template, request, redirect, url_for, flash, session, g, jsonify
 from functools import wraps
 from datetime import datetime, date, timedelta
 from decimal import Decimal, InvalidOperation
@@ -203,33 +203,6 @@ def _ensure_finance_hub_tables(db_wrapper):
         raise
     finally:
         cur.close()
-
-
-def _ensure_scorer_metrics_table(db_wrapper):
-    """Ensure supporting table for extended scorer analytics exists."""
-    try:
-        from sqlalchemy import text
-        from slms.extensions import db
-
-        engine = db.engine
-        with engine.begin() as conn:
-            conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS scorer_metrics (
-                    scorer_id INTEGER PRIMARY KEY REFERENCES scorers(scorer_id) ON DELETE CASCADE,
-                    games_played INTEGER DEFAULT 0,
-                    minutes_played INTEGER DEFAULT 0,
-                    shots_on_target INTEGER DEFAULT 0,
-                    shot_attempts INTEGER DEFAULT 0,
-                    passes_completed INTEGER DEFAULT 0,
-                    passes_attempted INTEGER DEFAULT 0,
-                    saves INTEGER DEFAULT 0,
-                    rating REAL,
-                    custom_metrics TEXT
-                )
-            """))
-    except Exception:
-        # Don't block the page if table creation fails - the error will be caught later
-        pass
 
 
 def _get_comprehensive_finance_data(db, league_id_int):
@@ -2965,305 +2938,58 @@ def manage_referees():
 @admin_required
 def manage_scorers():
     db = get_db()
-    _ensure_scorer_metrics_table(db)
+    cur = db.cursor()
 
     if request.method == 'POST':
-        action = request.form.get('action', 'basic').lower()
-        post_cur = db.cursor()
-
-        def _to_int(value, default=0):
-            try:
-                return int(value)
-            except (TypeError, ValueError):
-                return default
-
-        def _to_float(value, default=None):
-            try:
-                if value is None or value == '':
-                    return default
-                return float(value)
-            except (TypeError, ValueError):
-                return default
-
         try:
-            if 'delete' in request.form:
-                scorer_id = request.form.get('deleteEntityId')
+            scorer_id = request.form.get('scorer_id')
+            player_id = request.form['player_id']
+            season_id = request.form['season_id']
+            league_id = request.form['league_id']
+            goals = request.form['goals']
+            assists = request.form['assists']
+            penalties = request.form['penalties']
+
+            if 'submit' in request.form:
                 if scorer_id:
-                    post_cur.execute('DELETE FROM scorer_metrics WHERE scorer_id = %s', (scorer_id,))
-                    post_cur.execute('DELETE FROM scorers WHERE scorer_id = %s', (scorer_id,))
-                    flash('Scorer entry removed.', 'success')
+                    cur.execute('UPDATE scorers SET player_id = %s, season_id = %s, league_id = %s, goals = %s, assists = %s, penalties = %s WHERE scorer_id = %s',
+                                (player_id, season_id, league_id, goals, assists, penalties, scorer_id))
+                    flash('Scorer updated successfully', 'success')
                 else:
-                    flash('Unable to determine scorer record to delete.', 'error')
-            elif action == 'advanced':
-                scorer_id = request.form.get('scorer_id')
-                if not scorer_id:
-                    raise ValueError('Scorer record is required for advanced statistics.')
-
-                games_played = _to_int(request.form.get('games_played'))
-                minutes_played = _to_int(request.form.get('minutes_played'))
-                shots_on_target = _to_int(request.form.get('shots_on_target'))
-                shot_attempts = _to_int(request.form.get('shot_attempts'))
-                passes_completed = _to_int(request.form.get('passes_completed'))
-                passes_attempted = _to_int(request.form.get('passes_attempted'))
-                saves = _to_int(request.form.get('saves'))
-                rating = _to_float(request.form.get('rating'))
-
-                custom_metrics_raw = request.form.get('custom_metrics_json') or '{}'
-                try:
-                    custom_metrics = json.loads(custom_metrics_raw)
-                    if not isinstance(custom_metrics, dict):
-                        custom_metrics = {}
-                except json.JSONDecodeError:
-                    custom_metrics = {}
-
-                post_cur.execute("""
-                    INSERT INTO scorer_metrics (scorer_id, games_played, minutes_played, shots_on_target, shot_attempts, passes_completed, passes_attempted, saves, rating, custom_metrics)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (scorer_id) DO UPDATE SET
-                        games_played = EXCLUDED.games_played,
-                        minutes_played = EXCLUDED.minutes_played,
-                        shots_on_target = EXCLUDED.shots_on_target,
-                        shot_attempts = EXCLUDED.shot_attempts,
-                        passes_completed = EXCLUDED.passes_completed,
-                        passes_attempted = EXCLUDED.passes_attempted,
-                        saves = EXCLUDED.saves,
-                        rating = EXCLUDED.rating,
-                        custom_metrics = EXCLUDED.custom_metrics
-                """,
-                    (scorer_id, games_played, minutes_played, shots_on_target, shot_attempts, passes_completed, passes_attempted, saves, rating, json.dumps(custom_metrics) if custom_metrics else None)
-                )
-                flash('Advanced statistics saved.', 'success')
-            else:
-                scorer_id = request.form.get('scorer_id')
-                player_id = request.form.get('player_id')
-                season_id = request.form.get('season_id')
-                league_id = request.form.get('league_id')
-                goals = _to_int(request.form.get('goals'))
-                assists = _to_int(request.form.get('assists'))
-                penalties = _to_int(request.form.get('penalties'))
-
-                if not player_id or not season_id or not league_id:
-                    raise ValueError('Player, season, and league are required.')
-
-                if scorer_id:
-                    post_cur.execute(
-                        'UPDATE scorers SET player_id = %s, season_id = %s, league_id = %s, goals = %s, assists = %s, penalties = %s WHERE scorer_id = %s',
-                        (player_id, season_id, league_id, goals, assists, penalties, scorer_id)
-                    )
-                    flash('Scorer updated successfully.', 'success')
-                else:
-                    post_cur.execute(
-                        'INSERT INTO scorers (player_id, season_id, league_id, goals, assists, penalties) VALUES (%s, %s, %s, %s, %s, %s)',
-                        (player_id, season_id, league_id, goals, assists, penalties)
-                    )
-                    flash('Scorer added successfully.', 'success')
+                    cur.execute('INSERT INTO scorers (player_id, season_id, league_id, goals, assists, penalties) VALUES (%s, %s, %s, %s, %s, %s)',
+                                (player_id, season_id, league_id, goals, assists, penalties))
+                    flash('Scorer added successfully', 'success')
+            elif 'delete' in request.form:
+                scorer_id = request.form['deleteEntityId']
+                cur.execute('DELETE FROM scorers WHERE scorer_id = %s', (scorer_id,))
+                flash('Scorer deleted successfully', 'success')
+            db.commit()
         except Exception as e:
             db.rollback()
             flash('An error occurred: ' + str(e), 'error')
-        else:
-            db.commit()
         finally:
-            post_cur.close()
+            cur.close()
         return redirect(url_for('admin.manage_scorers'))
 
-    cur = db.cursor()
-    cur.execute("""
-        SELECT
-            s.scorer_id,
-            p.player_id,
-            p.name,
-            se.season_id,
-            se.year,
-            l.league_id,
-            l.name,
-            s.goals,
-            s.assists,
-            s.penalties,
-            COALESCE(sm.games_played, 0) AS games_played,
-            COALESCE(sm.minutes_played, 0) AS minutes_played,
-            COALESCE(sm.shots_on_target, 0) AS shots_on_target,
-            COALESCE(sm.shot_attempts, 0) AS shot_attempts,
-            COALESCE(sm.passes_completed, 0) AS passes_completed,
-            COALESCE(sm.passes_attempted, 0) AS passes_attempted,
-            COALESCE(sm.saves, 0) AS saves,
-            sm.rating,
-            sm.custom_metrics
-        FROM scorers s
-        JOIN players p ON s.player_id = p.player_id
-        JOIN seasons se ON s.season_id = se.season_id
+    cur.execute('''
+        SELECT s.scorer_id, p.name, se.year, l.name, s.goals, s.assists, s.penalties 
+        FROM scorers s 
+        JOIN players p ON s.player_id = p.player_id 
+        JOIN seasons se ON s.season_id = se.season_id 
         JOIN leagues l ON s.league_id = l.league_id
-        LEFT JOIN scorer_metrics sm ON sm.scorer_id = s.scorer_id
-    """)
-    scorer_rows = cur.fetchall()
-
-    cur.execute('SELECT player_id, name FROM players ORDER BY name ASC')
+    ''')
+    scorers = cur.fetchall()
+    cur.execute('SELECT player_id, name FROM players')
     players = cur.fetchall()
-    cur.execute('SELECT season_id, year FROM seasons ORDER BY year DESC')
+    cur.execute('SELECT season_id, year FROM seasons')
     seasons = cur.fetchall()
-    cur.execute('SELECT league_id, name FROM leagues ORDER BY name ASC')
+    cur.execute('SELECT league_id, name FROM leagues')
     leagues = cur.fetchall()
     cur.close()
+    return render_template('manage_scorers.html', scorers=scorers, players=players, seasons=seasons, leagues=leagues)
 
-    leaderboard = []
-    total_goals = 0
-    total_assists = 0
-    total_penalties = 0
-    ratings = []
-    custom_metric_keys = set()
 
-    for row in scorer_rows:
-        (scorer_id, player_id, player_name, season_id, season_year, league_id, league_name, goals, assists, penalties,
-         games_played, minutes_played, shots_on_target, shot_attempts, passes_completed, passes_attempted, saves, rating, custom_metrics_raw) = row
 
-        goals = goals or 0
-        assists = assists or 0
-        penalties = penalties or 0
-        games_played = games_played or 0
-        minutes_played = minutes_played or 0
-        shots_on_target = shots_on_target or 0
-        shot_attempts = shot_attempts or 0
-        passes_completed = passes_completed or 0
-        passes_attempted = passes_attempted or 0
-        saves = saves or 0
-
-        total_goals += goals
-        total_assists += assists
-        total_penalties += penalties
-        if rating is not None:
-            ratings.append(float(rating))
-
-        goal_contributions = goals + assists
-        per_game_contribution = goal_contributions / games_played if games_played else None
-        per_90_contribution = (goal_contributions * 90 / minutes_played) if minutes_played else None
-        shot_accuracy = (shots_on_target / shot_attempts) if shot_attempts else None
-        pass_accuracy = (passes_completed / passes_attempted) if passes_attempted else None
-        defensive_value = (saves / games_played) if games_played and saves else None
-
-        try:
-            custom_metrics = json.loads(custom_metrics_raw) if custom_metrics_raw else {}
-        except (TypeError, json.JSONDecodeError):
-            custom_metrics = {}
-        if isinstance(custom_metrics, dict):
-            custom_metric_keys.update(custom_metrics.keys())
-        else:
-            custom_metrics = {}
-
-        analytics_score = (goal_contributions * 3)
-        if per_game_contribution:
-            analytics_score += per_game_contribution * 5
-        if rating is not None:
-            analytics_score += float(rating) * 2
-        if shot_accuracy:
-            analytics_score += shot_accuracy * 10
-        if pass_accuracy:
-            analytics_score += pass_accuracy * 5
-
-        leaderboard.append({
-            'scorer_id': scorer_id,
-            'player_id': player_id,
-            'player_name': player_name,
-            'season_id': season_id,
-            'season_year': season_year,
-            'league_id': league_id,
-            'league_name': league_name,
-            'goals': goals,
-            'assists': assists,
-            'penalties': penalties,
-            'goal_contributions': goal_contributions,
-            'games_played': games_played,
-            'minutes_played': minutes_played,
-            'per_game_contribution': per_game_contribution,
-            'per_90_contribution': per_90_contribution,
-            'shot_accuracy': shot_accuracy,
-            'pass_accuracy': pass_accuracy,
-            'defensive_value': defensive_value,
-            'rating': float(rating) if rating is not None else None,
-            'shots_on_target': shots_on_target,
-            'shot_attempts': shot_attempts,
-            'passes_completed': passes_completed,
-            'passes_attempted': passes_attempted,
-            'saves': saves,
-            'custom_metrics': custom_metrics,
-            'analytics_score': analytics_score
-        })
-
-    leaderboard.sort(key=lambda item: (item['analytics_score'], item['goal_contributions'], item['goals'], item['assists']), reverse=True)
-    for idx, entry in enumerate(leaderboard, start=1):
-        entry['rank'] = idx
-        if leaderboard and leaderboard[0]['analytics_score']:
-            top_score = leaderboard[0]['analytics_score'] or 1
-            entry['momentum'] = min(100, round((entry['analytics_score'] / top_score) * 100, 2)) if entry['analytics_score'] else 0
-        else:
-            entry['momentum'] = 0
-
-    avg_rating = round(sum(ratings) / len(ratings), 2) if ratings else None
-    top_goal_scorer = max(leaderboard, key=lambda item: item['goals'], default=None)
-    top_assist_player = max(leaderboard, key=lambda item: item['assists'], default=None)
-    most_efficient = max((item for item in leaderboard if item['per_game_contribution']), key=lambda item: item['per_game_contribution'], default=None)
-    best_rating = max((item for item in leaderboard if item['rating'] is not None), key=lambda item: item['rating'], default=None)
-
-    analytics_summary = {
-        'avg_rating': avg_rating,
-        'top_goal_scorer': top_goal_scorer,
-        'top_assist_player': top_assist_player,
-        'most_efficient': most_efficient,
-        'best_rating': best_rating,
-        'total_players': len(leaderboard),
-        'total_goals': total_goals,
-        'total_assists': total_assists,
-        'total_penalties': total_penalties
-    }
-
-    advanced_metrics_map = {
-        entry['scorer_id']: {
-            'games_played': entry['games_played'],
-            'minutes_played': entry['minutes_played'],
-            'shots_on_target': entry['shots_on_target'],
-            'shot_attempts': entry['shot_attempts'],
-            'passes_completed': entry['passes_completed'],
-            'passes_attempted': entry['passes_attempted'],
-            'saves': entry['saves'],
-            'rating': entry['rating'],
-            'custom_metrics': entry['custom_metrics'],
-        }
-        for entry in leaderboard
-    }
-
-    custom_metric_summary = {}
-    for key in sorted(custom_metric_keys):
-        leader_entry = None
-        leader_value = None
-        numeric_values = []
-        for entry in leaderboard:
-            value = entry['custom_metrics'].get(key)
-            if value is None:
-                continue
-            try:
-                numeric_value = float(value)
-            except (TypeError, ValueError):
-                continue
-            numeric_values.append(numeric_value)
-            if leader_value is None or numeric_value > leader_value:
-                leader_value = numeric_value
-                leader_entry = entry
-        if numeric_values:
-            custom_metric_summary[key] = {
-                'average': round(sum(numeric_values) / len(numeric_values), 2),
-                'max': leader_value,
-                'leader': leader_entry['player_name'] if leader_entry else None
-            }
-
-    return render_template(
-        'manage_scorers.html',
-        leaderboard=leaderboard,
-        players=players,
-        seasons=seasons,
-        leagues=leagues,
-        analytics_summary=analytics_summary,
-        custom_metric_keys=sorted(custom_metric_keys),
-        advanced_metrics_map=advanced_metrics_map,
-        custom_metric_summary=custom_metric_summary
-    )
 @admin_bp.route('/recalculate_standings', methods=['GET', 'POST'])
 @admin_required
 def recalculate_standings():
@@ -3812,8 +3538,9 @@ def site_settings():
         cleaned = value.strip()
         if not cleaned:
             return fallback
-        cleaned = cleaned.replace('\r\n', ' ').replace('\r', ' ').replace('\n', ' ')
-        cleaned = ' '.join(cleaned.split())
+        cleaned = cleaned.replace("\r\n", "\n")
+', ' ').replace('
+', ' ')
         if len(cleaned) > max_length:
             cleaned = cleaned[:max_length]
         return cleaned
@@ -3821,12 +3548,12 @@ def site_settings():
     def _clean_multiline(value: str | None, fallback: str = '', limit: int = 12000) -> str:
         if value is None:
             return fallback
-        normalised = value.replace('\r\n', '\n').replace('\r', '\n').strip()
-        if not normalised:
+        stripped = value.strip()
+        if not stripped:
             return ''
-        if len(normalised) > limit:
-            normalised = normalised[:limit]
-        return normalised
+        if len(stripped) > limit:
+            stripped = stripped[:limit]
+        return stripped
 
     def _clean_email(value: str | None) -> str | None:
         cleaned = _clean_text(value, '', 255)
@@ -3875,44 +3602,10 @@ def site_settings():
             return maximum
         return number
 
-    def _clean_font(value: str | None, fallback: str, max_length: int = 200) -> str:
-        cleaned = _clean_text(value, fallback, max_length)
+    def _clean_font(value: str | None, fallback: str) -> str:
+        cleaned = _clean_text(value, fallback, 200)
         cleaned = cleaned.replace('{', '').replace('}', '').replace(';', '')
         return cleaned or fallback
-
-    def _normalise_font_stack(value: str | None) -> str:
-        if not value:
-            return ''
-        collapsed = value.replace('"', '').replace("'", '').replace(' ', '')
-        return collapsed.lower()
-
-    def _match_font_preset(value: str | None) -> str | None:
-        normalised = _normalise_font_stack(value)
-        if not normalised:
-            return None
-        for preset_key, preset_stack in font_preset_map.items():
-            if _normalise_font_stack(preset_stack) == normalised:
-                return preset_key
-        return None
-
-    def _select_font_preset(current_value: str | None, fallback_key: str | None = None) -> tuple[str, str | None]:
-        matched = _match_font_preset(current_value)
-        if matched:
-            return f"preset:{matched}", None
-        if fallback_key and fallback_key in font_preset_map:
-            return f"preset:{fallback_key}", None
-        return 'custom', current_value or ''
-
-    def _resolve_font_choice(choice: str | None, custom_value: str | None, fallback: str) -> str:
-        if not choice:
-            return fallback
-        choice = choice.strip().lower()
-        if choice.startswith('preset:'):
-            preset_key = choice.split(':', 1)[1]
-            return font_preset_map.get(preset_key, fallback)
-        if choice == 'custom':
-            return _clean_font(custom_value, fallback, 200)
-        return fallback
 
     def _clean_choice(value: str | None, fallback: str, allowed: set[str]) -> str:
         if not value:
@@ -3960,331 +3653,6 @@ def site_settings():
         'icon_weights': ['thin', 'light', 'regular', 'bold', 'fill', 'duotone'],
     }
 
-    font_presets = [
-        {
-            'key': 'inter',
-            'label': 'Inter (Regular)',
-            'stack': "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-            'body_weight': '400',
-            'heading_weight': '600',
-            'group': 'Sans Serif',
-        },
-        {
-            'key': 'inter-thin',
-            'label': 'Inter Thin (200)',
-            'stack': "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-            'body_weight': '200',
-            'heading_weight': '400',
-            'group': 'Sans Serif',
-        },
-        {
-            'key': 'inter-bold',
-            'label': 'Inter Bold (700)',
-            'stack': "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-            'body_weight': '600',
-            'heading_weight': '700',
-            'group': 'Sans Serif',
-        },
-        {
-            'key': 'poppins',
-            'label': 'Poppins',
-            'stack': "'Poppins', 'Segoe UI', sans-serif",
-            'body_weight': '400',
-            'heading_weight': '600',
-            'group': 'Sans Serif',
-        },
-        {
-            'key': 'poppins-semibold',
-            'label': 'Poppins SemiBold',
-            'stack': "'Poppins', 'Segoe UI', sans-serif",
-            'body_weight': '500',
-            'heading_weight': '700',
-            'group': 'Sans Serif',
-        },
-        {
-            'key': 'montserrat',
-            'label': 'Montserrat',
-            'stack': "'Montserrat', 'Segoe UI', sans-serif",
-            'body_weight': '400',
-            'heading_weight': '700',
-            'group': 'Sans Serif',
-        },
-        {
-            'key': 'roboto',
-            'label': 'Roboto',
-            'stack': "'Roboto', 'Segoe UI', sans-serif",
-            'body_weight': '400',
-            'heading_weight': '500',
-            'group': 'Sans Serif',
-        },
-        {
-            'key': 'nunito',
-            'label': 'Nunito',
-            'stack': "'Nunito', 'Segoe UI', sans-serif",
-            'body_weight': '400',
-            'heading_weight': '700',
-            'group': 'Sans Serif',
-        },
-        {
-            'key': 'nunito-extra-bold',
-            'label': 'Nunito ExtraBold',
-            'stack': "'Nunito', 'Segoe UI', sans-serif",
-            'body_weight': '500',
-            'heading_weight': '800',
-            'group': 'Sans Serif',
-        },
-        {
-            'key': 'raleway',
-            'label': 'Raleway',
-            'stack': "'Raleway', 'Segoe UI', sans-serif",
-            'body_weight': '300',
-            'heading_weight': '600',
-            'group': 'Sans Serif',
-        },
-        {
-            'key': 'work-sans',
-            'label': 'Work Sans',
-            'stack': "'Work Sans', 'Segoe UI', sans-serif",
-            'body_weight': '400',
-            'heading_weight': '600',
-            'group': 'Sans Serif',
-        },
-        {
-            'key': 'work-sans-light',
-            'label': 'Work Sans Light',
-            'stack': "'Work Sans', 'Segoe UI', sans-serif",
-            'body_weight': '300',
-            'heading_weight': '500',
-            'group': 'Sans Serif',
-        },
-        {
-            'key': 'source-sans',
-            'label': 'Source Sans Pro',
-            'stack': "'Source Sans Pro', 'Segoe UI', sans-serif",
-            'body_weight': '400',
-            'heading_weight': '600',
-            'group': 'Sans Serif',
-        },
-        {
-            'key': 'ibm-plex-sans',
-            'label': 'IBM Plex Sans',
-            'stack': "'IBM Plex Sans', 'Segoe UI', sans-serif",
-            'body_weight': '400',
-            'heading_weight': '600',
-            'group': 'Sans Serif',
-        },
-        {
-            'key': 'fira-sans',
-            'label': 'Fira Sans',
-            'stack': "'Fira Sans', 'Segoe UI', sans-serif",
-            'body_weight': '400',
-            'heading_weight': '600',
-            'group': 'Sans Serif',
-        },
-        {
-            'key': 'space-grotesk',
-            'label': 'Space Grotesk',
-            'stack': "'Space Grotesk', 'Segoe UI', sans-serif",
-            'body_weight': '400',
-            'heading_weight': '600',
-            'group': 'Sans Serif',
-        },
-        {
-            'key': 'roboto-slab',
-            'label': 'Roboto Slab',
-            'stack': "'Roboto Slab', 'Georgia', serif",
-            'body_weight': '400',
-            'heading_weight': '600',
-            'group': 'Serif & Display',
-        },
-        {
-            'key': 'playfair',
-            'label': 'Playfair Display',
-            'stack': "'Playfair Display', 'Georgia', serif",
-            'body_weight': '400',
-            'heading_weight': '700',
-            'group': 'Serif & Display',
-        },
-        {
-            'key': 'merriweather',
-            'label': 'Merriweather',
-            'stack': "'Merriweather', 'Georgia', serif",
-            'body_weight': '400',
-            'heading_weight': '700',
-            'group': 'Serif & Display',
-        },
-        {
-            'key': 'lora',
-            'label': 'Lora',
-            'stack': "'Lora', 'Georgia', serif",
-            'body_weight': '400',
-            'heading_weight': '600',
-            'group': 'Serif & Display',
-        },
-        {
-            'key': 'abril-fatface',
-            'label': 'Abril Fatface',
-            'stack': "'Abril Fatface', 'Georgia', serif",
-            'body_weight': '400',
-            'heading_weight': '700',
-            'group': 'Serif & Display',
-        },
-        {
-            'key': 'ibm-plex-serif',
-            'label': 'IBM Plex Serif',
-            'stack': "'IBM Plex Serif', 'Georgia', serif",
-            'body_weight': '400',
-            'heading_weight': '600',
-            'group': 'Serif & Display',
-        },
-        {
-            'key': 'space-mono',
-            'label': 'Space Mono',
-            'stack': "'Space Mono', 'Fira Code', monospace",
-            'body_weight': '400',
-            'heading_weight': '600',
-            'group': 'Monospace',
-        },
-    ]
-
-    weight_option_map = {
-        'inter': [
-            {'label': 'Thin', 'value': '200'},
-            {'label': 'Light', 'value': '300'},
-            {'label': 'Regular', 'value': '400'},
-            {'label': 'Medium', 'value': '500'},
-            {'label': 'SemiBold', 'value': '600'},
-            {'label': 'Bold', 'value': '700'},
-        ],
-        'poppins': [
-            {'label': 'Light', 'value': '300'},
-            {'label': 'Regular', 'value': '400'},
-            {'label': 'Medium', 'value': '500'},
-            {'label': 'SemiBold', 'value': '600'},
-            {'label': 'Bold', 'value': '700'},
-        ],
-        'montserrat': [
-            {'label': 'Light', 'value': '300'},
-            {'label': 'Regular', 'value': '400'},
-            {'label': 'Medium', 'value': '500'},
-            {'label': 'SemiBold', 'value': '600'},
-            {'label': 'Bold', 'value': '700'},
-        ],
-        'roboto': [
-            {'label': 'Light', 'value': '300'},
-            {'label': 'Regular', 'value': '400'},
-            {'label': 'Medium', 'value': '500'},
-            {'label': 'Bold', 'value': '700'},
-        ],
-        'nunito': [
-            {'label': 'Light', 'value': '300'},
-            {'label': 'Regular', 'value': '400'},
-            {'label': 'SemiBold', 'value': '600'},
-            {'label': 'Bold', 'value': '700'},
-            {'label': 'ExtraBold', 'value': '800'},
-        ],
-        'raleway': [
-            {'label': 'Thin', 'value': '200'},
-            {'label': 'Light', 'value': '300'},
-            {'label': 'Regular', 'value': '400'},
-            {'label': 'Medium', 'value': '500'},
-            {'label': 'SemiBold', 'value': '600'},
-            {'label': 'Bold', 'value': '700'},
-        ],
-        'work-sans': [
-            {'label': 'Light', 'value': '300'},
-            {'label': 'Regular', 'value': '400'},
-            {'label': 'Medium', 'value': '500'},
-            {'label': 'SemiBold', 'value': '600'},
-            {'label': 'Bold', 'value': '700'},
-        ],
-        'source-sans': [
-            {'label': 'Light', 'value': '300'},
-            {'label': 'Regular', 'value': '400'},
-            {'label': 'SemiBold', 'value': '600'},
-            {'label': 'Bold', 'value': '700'},
-        ],
-        'ibm-plex-sans': [
-            {'label': 'Light', 'value': '300'},
-            {'label': 'Regular', 'value': '400'},
-            {'label': 'Medium', 'value': '500'},
-            {'label': 'SemiBold', 'value': '600'},
-            {'label': 'Bold', 'value': '700'},
-        ],
-        'fira-sans': [
-            {'label': 'Light', 'value': '300'},
-            {'label': 'Regular', 'value': '400'},
-            {'label': 'Medium', 'value': '500'},
-            {'label': 'SemiBold', 'value': '600'},
-            {'label': 'Bold', 'value': '700'},
-        ],
-        'space-grotesk': [
-            {'label': 'Light', 'value': '300'},
-            {'label': 'Regular', 'value': '400'},
-            {'label': 'Medium', 'value': '500'},
-            {'label': 'SemiBold', 'value': '600'},
-            {'label': 'Bold', 'value': '700'},
-        ],
-        'roboto-slab': [
-            {'label': 'Light', 'value': '300'},
-            {'label': 'Regular', 'value': '400'},
-            {'label': 'Medium', 'value': '500'},
-            {'label': 'SemiBold', 'value': '600'},
-            {'label': 'Bold', 'value': '700'},
-        ],
-        'playfair': [
-            {'label': 'Regular', 'value': '400'},
-            {'label': 'Medium', 'value': '500'},
-            {'label': 'SemiBold', 'value': '600'},
-            {'label': 'Bold', 'value': '700'},
-        ],
-        'merriweather': [
-            {'label': 'Light', 'value': '300'},
-            {'label': 'Regular', 'value': '400'},
-            {'label': 'Bold', 'value': '700'},
-        ],
-        'lora': [
-            {'label': 'Regular', 'value': '400'},
-            {'label': 'Medium', 'value': '500'},
-            {'label': 'SemiBold', 'value': '600'},
-            {'label': 'Bold', 'value': '700'},
-        ],
-        'ibm-plex-serif': [
-            {'label': 'Light', 'value': '300'},
-            {'label': 'Regular', 'value': '400'},
-            {'label': 'Medium', 'value': '500'},
-            {'label': 'SemiBold', 'value': '600'},
-            {'label': 'Bold', 'value': '700'},
-        ],
-        'space-mono': [
-            {'label': 'Regular', 'value': '400'},
-            {'label': 'Bold', 'value': '700'},
-        ],
-    }
-    variant_weight_sources = {
-        'inter-thin': 'inter',
-        'inter-bold': 'inter',
-        'poppins-semibold': 'poppins',
-        'nunito-extra-bold': 'nunito',
-        'work-sans-light': 'work-sans',
-    }
-    for preset in font_presets:
-        source_key = variant_weight_sources.get(preset['key'], preset['key'])
-        options = weight_option_map.get(source_key)
-        if options:
-            preset['weights'] = [dict(option) for option in options]
-
-    font_preset_map = {item['key']: item['stack'] for item in font_presets}
-    font_preset_weights = {
-        item['key']: {
-            'body': item.get('body_weight'),
-            'heading': item.get('heading_weight'),
-            'options': [dict(option) for option in item.get('weights', [])],
-        }
-        for item in font_presets
-    }
-    font_preset_lookup = {item['key']: item for item in font_presets}
-
     if request.method == 'POST':
         form = request.form
 
@@ -4328,16 +3696,8 @@ def site_settings():
         palette['primary'] = primary_color
 
         typography = theme.setdefault('typography', {})
-        base_font_choice = form.get('font_family_base_select')
-        base_font_custom = form.get('font_family_base_custom')
-        default_base = typography.get('base_family', typography_defaults.get('base_family'))
-        typography['base_family'] = _resolve_font_choice(base_font_choice, base_font_custom, default_base)
-
-        heading_font_choice = form.get('font_family_heading_select')
-        heading_font_custom = form.get('font_family_heading_custom')
-        default_heading = typography.get('heading_family', typography_defaults.get('heading_family'))
-        typography['heading_family'] = _resolve_font_choice(heading_font_choice, heading_font_custom, default_heading or typography['base_family'])
-
+        typography['base_family'] = _clean_font(form.get('font_family_base'), typography.get('base_family', typography_defaults.get('base_family')))
+        typography['heading_family'] = _clean_font(form.get('font_family_heading'), typography.get('heading_family', typography_defaults.get('heading_family')))
         typography['base_weight'] = _clean_text(form.get('font_weight_body'), typography.get('base_weight', typography_defaults.get('base_weight')), 4)
         typography['heading_weight'] = _clean_text(form.get('font_weight_heading'), typography.get('heading_weight', typography_defaults.get('heading_weight')), 4)
         typography['letter_spacing'] = _clean_text(form.get('body_letter_spacing'), typography.get('letter_spacing', typography_defaults.get('letter_spacing')), 12)
@@ -4458,33 +3818,10 @@ def site_settings():
     social_labels = theme_for_display.setdefault('social_labels', {})
     social_labels.setdefault('custom_1', 'Custom Link 1')
     social_labels.setdefault('custom_2', 'Custom Link 2')
-    typography = theme_for_display.setdefault('typography', {})
-    typography_defaults = theme_template.get('typography', {})
-
-    base_font_value = typography.get('base_family') or typography_defaults.get('base_family') or font_presets[0]['stack']
-    heading_font_value = typography.get('heading_family') or typography_defaults.get('heading_family') or base_font_value
-
-    default_base_key = _match_font_preset(typography_defaults.get('base_family')) or font_presets[0]['key']
-    default_heading_key = _match_font_preset(typography_defaults.get('heading_family')) or default_base_key
-
-    base_font_choice, base_font_custom = _select_font_preset(base_font_value, default_base_key)
-    heading_font_choice, heading_font_custom = _select_font_preset(heading_font_value, default_heading_key)
-
-    if base_font_choice == 'custom':
-        base_font_custom = base_font_value or base_font_custom or ''
-    if heading_font_choice == 'custom':
-        heading_font_custom = heading_font_value or heading_font_custom or ''
-
 
     settings_for_template = copy.deepcopy(settings)
     settings_for_template['theme'] = theme_for_display
     settings_for_template['social_labels'] = social_labels
-    settings_for_template['font_selection'] = {
-        'base_choice': base_font_choice,
-        'base_custom': base_font_custom or '',
-        'heading_choice': heading_font_choice,
-        'heading_custom': heading_font_custom or '',
-    }
 
     return render_template(
         'manage_settings.html',
@@ -4492,7 +3829,5 @@ def site_settings():
         theme_options=theme_options,
         social_keys=social_keys,
         feature_flag_fields=feature_flag_fields,
-        font_presets=font_presets,
-        font_preset_weights=font_preset_weights,
-        font_preset_lookup=font_preset_lookup,
     )
+

@@ -16,7 +16,10 @@
 :root { --primary-color: var(--slms-primary); }
 
 /* Typography & spacing */
-body { background-color: #fff; }
+body {
+  background-color: #fff;
+  font-family: Inter, system-ui, sans-serif;
+}
 .section-title { margin-bottom: 1rem; }
 .content { padding-top: 1rem; padding-bottom: 1rem; }
 

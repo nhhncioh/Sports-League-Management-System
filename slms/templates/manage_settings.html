@@ -1,270 +1,2226 @@
 {% extends "base.html" %}
+
 {% block title %}Site Settings - Admin Panel{% endblock %}
-{% block content %}
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">Site Settings</h1>
-        <div class="d-flex gap-2">
-            <a href="{{ url_for('admin.manage_navigation') }}" class="btn btn-outline-primary">
-                <i class="ph ph-compass"></i> Manage Navigation
-            </a>
-            <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-secondary">
-                <i class="ph ph-speedometer"></i> Admin Dashboard
-            </a>
-        </div>
+
+{% macro color_input(field_id, label, value, fallback, allow_auto=False, helper=None) -%}
+
+<div class="col-md-6">
+
+    <label class="form-label" for="{{ field_id }}">{{ label }}</label>
+
+    <div class="color-input-group d-flex align-items-center gap-2 flex-wrap" data-color-field="{{ field_id }}"{% if allow_auto %} data-allow-auto="true"{% endif %}>
+
+        <input type="color" class="form-control form-control-color" value="{{ (value or fallback or '#000000') }}" data-color-picker>
+
+        <input type="text" class="form-control color-hex" id="{{ field_id }}" name="{{ field_id }}" value="{{ value or '' }}" placeholder="{% if allow_auto %}Auto{% else %}#000000{% endif %}">
+
     </div>
 
-    <div class="row g-3">
-        <div class="col-lg-7">
-            <div class="card">
-                <div class="card-body">
-                    <form method="POST" action="{{ url_for('admin.site_settings') }}">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <div class="mb-3">
-                            <label for="site_title" class="form-label">Site Title</label>
-                            <input type="text" id="site_title" name="site_title" class="form-control" value="{{ settings.site_title }}" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="brand_image_url" class="form-label">Brand Image URL (optional)</label>
-                            <input type="url" id="brand_image_url" name="brand_image_url" class="form-control" value="{{ settings.brand_image_url or '' }}" placeholder="https://example.com/logo.png">
-                            <small class="text-muted">Recommended size: 200x60px for best results</small>
-                        </div>
+    {% if helper %}<small class="text-muted">{{ helper }}</small>{% endif %}
 
-                        <div class="mb-3">
-                            <label for="favicon_url" class="form-label">Favicon URL (optional)</label>
-                            <input type="url" id="favicon_url" name="favicon_url" class="form-control" value="{{ settings.favicon_url or '' }}" placeholder="https://example.com/favicon.ico">
-                            <small class="text-muted">Shows in browser tabs. Recommended: 32x32px .ico or .png file</small>
-                        </div>
-
-                        <div class="row g-3 mb-3">
-                            <div class="col-6">
-                                <label for="primary_color" class="form-label">Primary Color</label>
-                                <input type="color" id="primary_color_picker" class="form-control form-control-color" value="{{ settings.primary_color }}" title="Choose your color">
-                            </div>
-                            <div class="col-6">
-                                <label for="primary_color" class="form-label">Hex Value</label>
-                                <input type="text" id="primary_color" name="primary_color" class="form-control" value="{{ settings.primary_color }}" placeholder="#0d6efd">
-                            </div>
-                        </div>
-
-                        <div class="row g-3 mb-3">
-                            <div class="col-6">
-                                <label for="secondary_color" class="form-label">Secondary Color</label>
-                                <input type="color" id="secondary_color_picker" class="form-control form-control-color" value="{{ settings.secondary_color or '#6c757d' }}" title="Choose secondary color">
-                            </div>
-                            <div class="col-6">
-                                <label for="secondary_color" class="form-label">Hex Value</label>
-                                <input type="text" id="secondary_color" name="secondary_color" class="form-control" value="{{ settings.secondary_color or '#6c757d' }}" placeholder="#6c757d">
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="league_tagline" class="form-label">League Tagline</label>
-                            <input type="text" id="league_tagline" name="league_tagline" class="form-control" value="{{ settings.league_tagline or '' }}" placeholder="Where Champions Are Made">
-                            <small class="text-muted">Appears in page headers and meta descriptions</small>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="contact_email" class="form-label">Contact Email</label>
-                            <input type="email" id="contact_email" name="contact_email" class="form-control" value="{{ settings.contact_email or '' }}" placeholder="info@yourleague.com">
-                            <small class="text-muted">Displayed on contact pages and forms</small>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="social_links" class="form-label">Social Media Links</label>
-                            <div class="row g-2">
-                                <div class="col-md-6">
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="ph ph-facebook-logo"></i></span>
-                                        <input type="url" name="facebook_url" class="form-control" value="{{ settings.facebook_url or '' }}" placeholder="https://facebook.com/yourleague">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="ph ph-instagram-logo"></i></span>
-                                        <input type="url" name="instagram_url" class="form-control" value="{{ settings.instagram_url or '' }}" placeholder="https://instagram.com/yourleague">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="ph ph-x-logo"></i></span>
-                                        <input type="url" name="twitter_url" class="form-control" value="{{ settings.twitter_url or '' }}" placeholder="https://x.com/yourleague">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="ph ph-youtube-logo"></i></span>
-                                        <input type="url" name="youtube_url" class="form-control" value="{{ settings.youtube_url or '' }}" placeholder="https://youtube.com/@yourleague">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Homepage Sections</label>
-                            <div class="row g-2">
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="show_hero" name="show_hero" {{ 'checked' if settings.show_hero != false else '' }}>
-                                        <label class="form-check-label" for="show_hero">Show Hero Section</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="show_stats" name="show_stats" {{ 'checked' if settings.show_stats != false else '' }}>
-                                        <label class="form-check-label" for="show_stats">Show Statistics Cards</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="show_leagues" name="show_leagues" {{ 'checked' if settings.show_leagues != false else '' }}>
-                                        <label class="form-check-label" for="show_leagues">Show Leagues & Seasons</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="show_recent_games" name="show_recent_games" {{ 'checked' if settings.show_recent_games != false else '' }}>
-                                        <label class="form-check-label" for="show_recent_games">Show Recent Games</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="show_cta_panel" name="show_cta_panel" {{ 'checked' if settings.show_cta_panel != false else '' }}>
-                                        <label class="form-check-label" for="show_cta_panel">Show Call-to-Action Panel</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="show_team_logos" name="show_team_logos" {{ 'checked' if settings.show_team_logos != false else '' }}>
-                                        <label class="form-check-label" for="show_team_logos">Show Team Logos in Cards</label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Navigation & Layout</label>
-                            <div class="row g-2">
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="show_breadcrumbs" name="show_breadcrumbs" {{ 'checked' if settings.show_breadcrumbs != false else '' }}>
-                                        <label class="form-check-label" for="show_breadcrumbs">Show Breadcrumb Navigation</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="show_footer_social" name="show_footer_social" {{ 'checked' if settings.show_footer_social != false else '' }}>
-                                        <label class="form-check-label" for="show_footer_social">Show Social Links in Footer</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="enable_dark_mode" name="enable_dark_mode" {{ 'checked' if settings.enable_dark_mode else '' }}>
-                                        <label class="form-check-label" for="enable_dark_mode">Enable Dark Mode Toggle</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="show_season_filter" name="show_season_filter" {{ 'checked' if settings.show_season_filter != false else '' }}>
-                                        <label class="form-check-label" for="show_season_filter">Show Season Filter Dropdown</label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Game & Schedule Display</label>
-                            <div class="row g-2">
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="show_live_scores" name="show_live_scores" {{ 'checked' if settings.show_live_scores != false else '' }}>
-                                        <label class="form-check-label" for="show_live_scores">Show Live Score Updates</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="show_venue_details" name="show_venue_details" {{ 'checked' if settings.show_venue_details != false else '' }}>
-                                        <label class="form-check-label" for="show_venue_details">Show Venue Information</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="show_player_stats" name="show_player_stats" {{ 'checked' if settings.show_player_stats != false else '' }}>
-                                        <label class="form-check-label" for="show_player_stats">Show Player Statistics</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="show_standings_preview" name="show_standings_preview" {{ 'checked' if settings.show_standings_preview != false else '' }}>
-                                        <label class="form-check-label" for="show_standings_preview">Show Standings Preview</label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mt-3 d-flex gap-2">
-                            <button type="submit" class="btn btn-primary">Save Settings</button>
-                            <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-outline-secondary">Cancel</a>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-5">
-            <div class="card h-100">
-                <div class="card-header">Preview</div>
-                <div class="card-body">
-                    <div id="themePreview" class="p-3 rounded text-white" style="background: {{ settings.primary_color }};">
-                        <strong>{{ settings.site_title }}</strong>
-                    </div>
-                    {% if settings.brand_image_url %}
-                    <div class="mt-3">
-                        <img src="{{ settings.brand_image_url }}" alt="Brand" style="max-height:80px;">
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
+
+{%- endmacro %}
+
+{% block content %}
+
+{% set theme = settings.theme or {} %}
+
+{% set palette = theme.get('palette', {}) %}
+
+{% set typography = theme.get('typography', {}) %}
+
+{% set iconography = theme.get('iconography', {}) %}
+
+{% set components = theme.get('components', {}) %}
+
+{% set social_labels = settings.social_labels or {} %}
+
+{% set preset_weights = font_preset_weights if font_preset_weights is defined else {} %}
+
+{% set font_selection = settings.font_selection if settings.font_selection is defined else {} %}
+
+{% set base_choice = font_selection.base_choice | default('custom') %}
+
+{% set base_custom_value = font_selection.base_custom | default(typography.base_family or 'Inter, system-ui, sans-serif') %}
+
+{% set heading_choice = font_selection.heading_choice | default('custom') %}
+
+{% set heading_custom_value = font_selection.heading_custom | default(typography.heading_family or typography.base_family or 'Inter, system-ui, sans-serif') %}
+
+{% set base_key = base_choice.split(':', 1)[1] if base_choice.startswith('preset:') else None %}
+
+{% set heading_key = heading_choice.split(':', 1)[1] if heading_choice.startswith('preset:') else None %}
+
+{% set base_preset = font_preset_lookup.get(base_key, {}) if font_preset_lookup is defined and base_key else {} %}
+
+{% set heading_preset = font_preset_lookup.get(heading_key, {}) if font_preset_lookup is defined and heading_key else {} %}
+
+{% set preview_start = palette.get('gradient_start') or palette.get('primary') or settings.primary_color or '#343a40' %}
+
+{% set preview_end = palette.get('gradient_end') or palette.get('accent') or settings.accent_color or preview_start %}
+
+{% set social_meta = {
+
+    'facebook': ('Facebook', 'https://facebook.com/yourleague', 'ph-facebook-logo'),
+
+    'instagram': ('Instagram', 'https://instagram.com/yourleague', 'ph-instagram-logo'),
+
+    'twitter': ('X / Twitter', 'https://x.com/yourleague', 'ph-twitter-logo'),
+
+    'youtube': ('YouTube', 'https://youtube.com/@yourleague', 'ph-youtube-logo'),
+
+    'tiktok': ('TikTok', 'https://www.tiktok.com/@yourleague', 'ph-tiktok-logo'),
+
+    'linkedin': ('LinkedIn', 'https://www.linkedin.com/company/yourleague', 'ph-linkedin-logo'),
+
+    'twitch': ('Twitch', 'https://www.twitch.tv/yourleague', 'ph-twitch-logo'),
+
+    'custom_1': (social_labels.get('custom_1', 'Custom Link 1'), 'https://yourleague.com/custom-link', 'ph-link'),
+
+    'custom_2': (social_labels.get('custom_2', 'Custom Link 2'), 'https://yourleague.com/custom-link', 'ph-link')
+
+} %}
+
+{% set feature_meta = {
+
+    'show_hero': ('Hero Spotlight', 'Display the hero band on the landing page'),
+
+    'show_stats': ('Hero Statistics', 'Expose statistic cards under the hero'),
+
+    'show_leagues': ('Leagues & Seasons', 'Highlight available leagues and seasons'),
+
+    'show_recent_games': ('Recent Games', 'Surface recent or upcoming fixtures'),
+
+    'show_cta_panel': ('Call to Action Panel', 'Show custom CTA buttons below feature areas'),
+
+    'show_team_logos': ('Team Logos', 'Render team logos in card and table views'),
+
+    'show_breadcrumbs': ('Breadcrumbs', 'Display breadcrumb navigation on inner pages'),
+
+    'show_footer_social': ('Footer Social Bar', 'Place social media icons in the site footer'),
+
+    'enable_dark_mode': ('Dark Mode Toggle', 'Allow users to toggle between light and dark themes'),
+
+    'show_season_filter': ('Season Filter', 'Expose season filters on schedules and standings'),
+
+    'show_live_scores': ('Live Scores', 'Animate live score updates on dashboards'),
+
+    'show_venue_details': ('Venue Details', 'List venue names and locations with fixtures'),
+
+    'show_player_stats': ('Player Statistics', 'Display player stat callouts on overview pages'),
+
+    'show_standings_preview': ('Standings Preview', 'Embed compact standings preview widgets'),
+
+    'show_featured_players': ('Featured Players', 'Highlight spotlight players on the homepage'),
+
+    'show_latest_results': ('Latest Results Strip', 'Show ticker with the latest final scores'),
+
+    'show_highlight_reel': ('Highlight Reel', 'Display highlight video carousel when available'),
+
+    'show_partner_logos': ('Partner Logos', 'Showcase league partners/sponsors ribbon'),
+
+    'show_match_filters': ('Match Filters', 'Enable advanced filtering on match listings'),
+
+    'enable_animated_icons': ('Animated Icons', 'Animate icons subtly on hover interactions'),
+
+    'enable_card_glow': ('Card Glow Effects', 'Apply glow outline to feature cards')
+
+} %}
+
+<div class="container py-4 site-settings-page">
+
+    <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center mb-4">
+
+        <div>
+
+            <h1 class="h3 mb-1">Site Settings</h1>
+
+            <p class="text-muted mb-0">Fine-tune branding, theming, typography, layout density, and experience toggles for the entire platform.</p>
+
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap">
+
+            <a href="{{ url_for('admin.manage_navigation') }}" class="btn btn-outline-primary">
+
+                <i class="{{ site_icon_class }} ph-compass"></i>
+
+                Manage Navigation
+
+            </a>
+
+            <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-secondary">
+
+                <i class="{{ site_icon_class }} ph-speedometer"></i>
+
+                Admin Dashboard
+
+            </a>
+
+        </div>
+
+    </div>
+
+
+
+    <div class="row g-4">
+
+        <div class="col-lg-8">
+
+            <div class="card shadow-sm">
+
+                <div class="card-body">
+
+                    <form method="POST" action="{{ url_for('admin.site_settings') }}" class="settings-form">
+
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <ul class="nav nav-pills flex-wrap gap-2 mb-4" id="settingsTab" role="tablist">
+
+                            <li class="nav-item" role="presentation">
+
+                                <button class="nav-link active" id="branding-tab" data-bs-toggle="pill" data-bs-target="#branding" type="button" role="tab" aria-controls="branding" aria-selected="true">Branding</button>
+
+                            </li>
+
+                            <li class="nav-item" role="presentation">
+
+                                <button class="nav-link" id="palette-tab" data-bs-toggle="pill" data-bs-target="#palette" type="button" role="tab" aria-controls="palette" aria-selected="false">Palette</button>
+
+                            </li>
+
+                            <li class="nav-item" role="presentation">
+
+                                <button class="nav-link" id="typography-tab" data-bs-toggle="pill" data-bs-target="#typography" type="button" role="tab" aria-controls="typography" aria-selected="false">Typography</button>
+
+                            </li>
+
+                            <li class="nav-item" role="presentation">
+
+                                <button class="nav-link" id="iconography-tab" data-bs-toggle="pill" data-bs-target="#iconography" type="button" role="tab" aria-controls="iconography" aria-selected="false">Iconography</button>
+
+                            </li>
+
+                            <li class="nav-item" role="presentation">
+
+                                <button class="nav-link" id="components-tab" data-bs-toggle="pill" data-bs-target="#components" type="button" role="tab" aria-controls="components" aria-selected="false">Components</button>
+
+                            </li>
+
+                            <li class="nav-item" role="presentation">
+
+                                <button class="nav-link" id="social-tab" data-bs-toggle="pill" data-bs-target="#social" type="button" role="tab" aria-controls="social" aria-selected="false">Social &amp; Contact</button>
+
+                            </li>
+
+                            <li class="nav-item" role="presentation">
+
+                                <button class="nav-link" id="features-tab" data-bs-toggle="pill" data-bs-target="#features" type="button" role="tab" aria-controls="features" aria-selected="false">Experience</button>
+
+                            </li>
+
+                            <li class="nav-item" role="presentation">
+
+                                <button class="nav-link" id="advanced-tab" data-bs-toggle="pill" data-bs-target="#advanced" type="button" role="tab" aria-controls="advanced" aria-selected="false">Advanced</button>
+
+                            </li>
+
+                        </ul>
+
+                        <div class="tab-content" id="settingsTabContent">
+
+                            <div class="tab-pane fade show active" id="branding" role="tabpanel" aria-labelledby="branding-tab">
+
+                                <div class="row g-3">
+
+                                    <div class="col-md-8">
+
+                                        <label for="site_title" class="form-label">Site Title</label>
+
+                                        <input type="text" id="site_title" name="site_title" class="form-control" value="{{ settings.site_title }}" required>
+
+                                    </div>
+
+                                    <div class="col-md-4">
+
+                                        <label for="league_tagline" class="form-label">Tagline</label>
+
+                                        <input type="text" id="league_tagline" name="league_tagline" class="form-control" value="{{ settings.league_tagline or '' }}" placeholder="Where champions are made">
+
+                                    </div>
+
+                                    <div class="col-md-6">
+
+                                        <label for="brand_image_url" class="form-label">Brand Image URL</label>
+
+                                        <input type="url" id="brand_image_url" name="brand_image_url" class="form-control" value="{{ settings.brand_image_url or '' }}" placeholder="https://example.com/logo.png">
+
+                                        <small class="text-muted">Ideal size ~200x60px PNG/SVG with transparent background.</small>
+
+                                    </div>
+
+                                    <div class="col-md-6">
+
+                                        <label for="favicon_url" class="form-label">Favicon URL</label>
+
+                                        <input type="url" id="favicon_url" name="favicon_url" class="form-control" value="{{ settings.favicon_url or '' }}" placeholder="https://example.com/favicon.ico">
+
+                                        <small class="text-muted">Use 32x32 or 64x64 .ico/.png for crisp browser tabs.</small>
+
+                                    </div>
+
+                                    <div class="col-md-6">
+
+                                        <label for="contact_email" class="form-label">Primary Contact Email</label>
+
+                                        <input type="email" id="contact_email" name="contact_email" class="form-control" value="{{ settings.contact_email or '' }}" placeholder="info@yourleague.com">
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                            <div class="tab-pane fade" id="palette" role="tabpanel" aria-labelledby="palette-tab">
+
+                                <h6 class="text-uppercase text-muted fw-semibold mb-3">Core Colours</h6>
+
+                                <div class="row g-3">
+
+                                    {{ color_input('primary_color', 'Primary Colour', settings.primary_color, palette.primary, False, 'Brand colour applied to CTAs, highlights, and accent surfaces.') }}
+
+                                    {{ color_input('secondary_color', 'Secondary Colour', settings.secondary_color, palette.secondary, False, 'Secondary accent used for contrast and supporting buttons.') }}
+
+                                    {{ color_input('accent_color', 'Accent Colour', settings.accent_color, palette.accent, False, 'Accent accentuates indicators, highlights, and key visuals.') }}
+
+                                    {{ color_input('highlight_color', 'Highlight Tint', settings.highlight_color, palette.highlight, False, 'Used for chips, status badges, and hover emphasises.') }}
+
+                                    {{ color_input('gradient_start_color', 'Gradient Start', settings.gradient_start_color, palette.gradient_start, False, 'Primary gradient start for hero and button overlays.') }}
+
+                                    {{ color_input('gradient_end_color', 'Gradient End', settings.gradient_end_color, palette.gradient_end, False, 'Primary gradient termination colour.') }}
+
+                                </div>
+
+                                <h6 class="text-uppercase text-muted fw-semibold mt-4 mb-3">Backgrounds &amp; Surfaces</h6>
+
+                                <div class="row g-3">
+
+                                    {{ color_input('background_color', 'Page Background', settings.background_color, palette.background, False, 'Global background for site body.') }}
+
+                                    {{ color_input('surface_color', 'Surface Colour', settings.surface_color, palette.surface, False, 'Card and panel background.') }}
+
+                                    {{ color_input('shadow_color', 'Shadow Colour', settings.shadow_color, palette.shadow, False, 'Applied to elevated shadows and overlays.') }}
+
+                                </div>
+
+                                <h6 class="text-uppercase text-muted fw-semibold mt-4 mb-3">Typography Palette</h6>
+
+                                <div class="row g-3">
+
+                                    {{ color_input('text_color', 'Body Text', settings.text_color, palette.text, False) }}
+
+                                    {{ color_input('muted_text_color', 'Muted Text', settings.muted_color, palette.muted, False, 'For helper text, placeholders, and subdued content.') }}
+
+                                    {{ color_input('heading_color', 'Heading Text', settings.heading_color, palette.heading, False) }}
+
+                                </div>
+
+                                <h6 class="text-uppercase text-muted fw-semibold mt-4 mb-3">Navigation &amp; Status</h6>
+
+                                <div class="row g-3">
+
+                                    {{ color_input('nav_background_color', 'Navigation Background', settings.nav_background_color, palette.nav_background or palette.primary, True, 'Leave blank for automatic styling based on nav style.') }}
+
+                                    {{ color_input('nav_text_color', 'Navigation Text', settings.nav_text_color, palette.nav_text, False) }}
+
+                                    {{ color_input('nav_hover_color', 'Navigation Hover', settings.nav_hover_color, palette.nav_hover, False) }}
+
+                                    {{ color_input('card_border_color', 'Card Border', settings.card_border_color, palette.card_border, False) }}
+
+                                    {{ color_input('success_color', 'Success', settings.success_color, palette.success, False) }}
+
+                                    {{ color_input('warning_color', 'Warning', settings.warning_color, palette.warning, False) }}
+
+                                    {{ color_input('danger_color', 'Danger', settings.danger_color, palette.danger, False) }}
+
+                                    {{ color_input('info_color', 'Info', settings.info_color, palette.info, False) }}
+
+                                </div>
+
+                            </div>
+
+                            <div class="tab-pane fade" id="typography" role="tabpanel" aria-labelledby="typography-tab">
+
+                                <div class="row g-3">
+
+                                    <div class="col-md-6">
+
+                                        <label class="form-label" for="font_family_base_select">Body Font</label>
+
+                                        
+
+                                        <select class="form-select font-select" id="font_family_base_select" name="font_family_base_select" data-default-stack="{{ typography.base_family or 'Inter, system-ui, sans-serif' }}">
+
+                                            {% set base_groups = namespace(current=None) %}
+
+
+
+                                            {% for preset in font_presets %}
+
+
+
+                                                {% if base_groups.current != preset.group %}
+
+
+
+                                                    {% if base_groups.current is not none %}</optgroup>{% endif %}
+
+
+
+                                                    <optgroup label="{{ preset.group }}">
+
+
+
+                                                    {% set base_groups.current = preset.group %}
+
+
+
+                                                {% endif %}
+
+
+
+                                                <option value="preset:{{ preset.key }}" data-stack="{{ preset.stack }}" style="font-family: {{ preset.stack }};" data-body-weight="{{ preset.body_weight or '' }}" data-heading-weight="{{ preset.heading_weight or '' }}" {% if base_choice == 'preset:' ~ preset.key %}selected{% endif %}>{{ preset.label }}</option>
+
+
+
+                                            {% endfor %}
+
+
+
+                                            {% if base_groups.current is not none %}</optgroup>{% endif %}
+
+
+
+
+
+
+
+                                           <option value="custom" {% if base_choice == 'custom' %}selected{% endif %}>Custom</option>
+
+                                        </select>
+
+                                        <div class="form-text small text-muted" id="font_family_base_hint">
+
+                                            {% if base_key %}
+
+                                                {{ base_preset.label or 'Preset' }} - {% if base_preset.body_weight %}Recommended weight: {{ base_preset.body_weight }}{% else %}Preset font stack{% endif %}
+
+                                            {% else %}
+
+                                                Using a custom font stack
+
+                                            {% endif %}
+
+                                        </div>
+
+                                        <div class="mt-2 {% if base_choice != 'custom' %}d-none{% endif %}" id="font_family_base_custom_group">
+
+                                            <input type="text" class="form-control" id="font_family_base_custom" name="font_family_base_custom" value="{{ base_custom_value }}" placeholder="'Open Sans', Arial, sans-serif">
+
+                                            <small class="text-muted">Provide a CSS font stack, e.g. <code>'Open Sans', Arial, sans-serif</code>.</small>
+
+                                        </div>
+
+                                    </div>
+
+                                    <div class="col-md-6">
+
+                                        <label class="form-label" for="font_family_heading_select">Heading Font</label>
+
+                                        
+
+                                        <select class="form-select font-select" id="font_family_heading_select" name="font_family_heading_select" data-default-stack="{{ typography.heading_family or typography.base_family or 'Inter, system-ui, sans-serif' }}">
+
+                                            {% set heading_groups = namespace(current=None) %}
+
+
+
+                                            {% for preset in font_presets %}
+
+
+
+                                                {% if heading_groups.current != preset.group %}
+
+
+
+                                                    {% if heading_groups.current is not none %}</optgroup>{% endif %}
+
+
+
+                                                    <optgroup label="{{ preset.group }}">
+
+
+
+                                                    {% set heading_groups.current = preset.group %}
+
+
+
+                                                {% endif %}
+
+
+
+                                                <option value="preset:{{ preset.key }}" data-stack="{{ preset.stack }}" style="font-family: {{ preset.stack }};" data-body-weight="{{ preset.body_weight or '' }}" data-heading-weight="{{ preset.heading_weight or '' }}" {% if heading_choice == 'preset:' ~ preset.key %}selected{% endif %}>{{ preset.label }}</option>
+
+
+
+                                            {% endfor %}
+
+
+
+                                            {% if heading_groups.current is not none %}</optgroup>{% endif %}
+
+
+
+
+
+
+
+                                           <option value="custom" {% if heading_choice == 'custom' %}selected{% endif %}>Custom</option>
+
+                                        </select>
+
+                                        <div class="form-text small text-muted" id="font_family_heading_hint">
+
+                                            {% if heading_key %}
+
+                                                {{ heading_preset.label or 'Preset' }} - {% if heading_preset.heading_weight %}Recommended weight: {{ heading_preset.heading_weight }}{% else %}Preset font stack{% endif %}
+
+                                            {% else %}
+
+                                                Using a custom font stack
+
+                                            {% endif %}
+
+                                        </div>
+
+                                        <div class="mt-2 {% if heading_choice != 'custom' %}d-none{% endif %}" id="font_family_heading_custom_group">
+
+                                            <input type="text" class="form-control" id="font_family_heading_custom" name="font_family_heading_custom" value="{{ heading_custom_value }}" placeholder="'Playfair Display', Georgia, serif">
+
+                                            <small class="text-muted">Heading stack overrides the body font. Leave blank to reuse the body font.</small>
+
+                                        </div>
+
+                                    </div>
+
+                                    <div class="col-12">
+
+                                        <div class="card shadow-sm border-0 bg-light-subtle typography-preview" id="fontPreviewCard">
+
+                                            <div class="card-body py-3">
+
+                                                <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+
+                                                    <div>
+
+                                                        <div class="fw-semibold small text-muted text-uppercase">Live Typography Preview</div>
+
+                                                        <div class="preview-heading fs-4" id="previewHeadingSample">League Championship Finals</div>
+
+                                                        <div class="preview-body text-muted" id="previewBodySample">Build consistent typography across the entire platform with a couple of clicks.</div>
+
+                                                    </div>
+
+                                                    <div class="badge rounded-pill bg-primary text-white px-3 py-2" id="previewBadgeSample">Aa</div>
+
+                                                </div>
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                    <div class="col-md-4">
+
+                                        <label class="form-label" for="font_size_base">Base Font Size</label>
+
+                                        {% set base_size_numeric = (typography.base_size or '16px').replace('px','') %}
+
+                                        <input type="range" class="form-range setting-range" id="font_size_base" name="font_size_base" min="12" max="24" step="1" value="{{ base_size_numeric }}" data-range-output="#fontSizeValue">
+
+                                        <div class="form-text">Current: <span id="fontSizeValue">{{ base_size_numeric }}px</span></div>
+
+                                    </div>
+
+                                    <div class="col-md-4">
+
+                                        <label class="form-label" for="font_scale">Type Scale</label>
+
+                                        <input type="range" class="form-range setting-range" id="font_scale" name="font_scale" min="0.6" max="1.8" step="0.05" value="{{ typography.scale or 1.0 }}" data-range-output="#fontScaleValue">
+
+                                        <div class="form-text">Multiplier: <span id="fontScaleValue">{{ typography.scale or 1.0 }}</span>x</div>
+
+                                    </div>
+
+                                    <div class="col-md-4">
+
+                                        <label class="form-label" for="line_height">Line Height</label>
+
+                                        <input type="range" class="form-range setting-range" id="line_height" name="line_height" min="1.2" max="2.0" step="0.05" value="{{ typography.line_height or 1.6 }}" data-range-output="#lineHeightValue">
+
+                                        <div class="form-text">Body line height: <span id="lineHeightValue">{{ typography.line_height or 1.6 }}</span></div>
+
+                                    </div>
+
+                                    <div class="col-md-4">
+
+                                        <label class="form-label" for="heading_line_height">Heading Line Height</label>
+
+                                        <input type="range" class="form-range setting-range" id="heading_line_height" name="heading_line_height" min="1.0" max="1.8" step="0.05" value="{{ typography.heading_line_height or 1.3 }}" data-range-output="#headingLineHeightValue">
+
+                                        <div class="form-text">Heading line height: <span id="headingLineHeightValue">{{ typography.heading_line_height or 1.3 }}</span></div>
+
+                                    </div>
+
+                                    <div class="col-md-4">
+
+                                        <label class="form-label" for="font_weight_body">Body Weight</label>
+
+                                        <input type="number" class="form-control" id="font_weight_body" name="font_weight_body" value="{{ typography.base_weight or '400' }}" min="100" max="900" step="50">
+
+                                        {% set base_weight_options = preset_weights.get(base_key, {}).get('options', []) %}
+
+                                        <div class="font-weight-options mt-2 {% if not base_weight_options %}d-none{% endif %}" data-weight-selector="body">
+
+                                            {% if base_weight_options %}
+
+                                                <div class="btn-group btn-group-sm" role="group">
+
+                                                    {% for option in base_weight_options %}
+
+                                                        <button type="button" class="btn btn-outline-secondary {% if (typography.base_weight or '400') == option.value %}active{% endif %}" data-weight-value="{{ option.value }}">{{ option.label }}</button>
+
+                                                    {% endfor %}
+
+                                                </div>
+
+                                                <small class="text-muted d-block mt-1">Body weight quick presets</small>
+
+                                            {% endif %}
+
+                                        </div>
+
+                                    </div>
+
+                                    <div class="col-md-4">
+
+                                        <label class="form-label" for="font_weight_heading">Heading Weight</label>
+
+                                        <input type="number" class="form-control" id="font_weight_heading" name="font_weight_heading" value="{{ typography.heading_weight or '600' }}" min="100" max="900" step="50">
+
+                                        {% set heading_weight_options = preset_weights.get(heading_key, {}).get('options', []) %}
+
+                                        <div class="font-weight-options mt-2 {% if not heading_weight_options %}d-none{% endif %}" data-weight-selector="heading">
+
+                                            {% if heading_weight_options %}
+
+                                                <div class="btn-group btn-group-sm" role="group">
+
+                                                    {% for option in heading_weight_options %}
+
+                                                        <button type="button" class="btn btn-outline-secondary {% if (typography.heading_weight or '600') == option.value %}active{% endif %}" data-weight-value="{{ option.value }}">{{ option.label }}</button>
+
+                                                    {% endfor %}
+
+                                                </div>
+
+                                                <small class="text-muted d-block mt-1">Heading weight quick presets</small>
+
+                                            {% endif %}
+
+                                        </div>
+
+                                    </div>
+
+                                    <div class="col-md-4">
+
+                                        <label class="form-label" for="body_letter_spacing">Body Letter Spacing</label>
+
+                                        <input type="text" class="form-control" id="body_letter_spacing" name="body_letter_spacing" value="{{ typography.letter_spacing or 'normal' }}" placeholder="normal / 0.02em">
+
+                                    </div>
+
+                                    <div class="col-md-4">
+
+                                        <label class="form-label" for="heading_letter_spacing">Heading Letter Spacing</label>
+
+                                        <input type="text" class="form-control" id="heading_letter_spacing" name="heading_letter_spacing" value="{{ typography.heading_letter_spacing or '0.01em' }}" placeholder="0.01em">
+
+                                    </div>
+
+                                    <div class="col-md-4">
+
+                                        <label class="form-label" for="heading_transform">Heading Transform</label>
+
+                                        <select class="form-select" id="heading_transform" name="heading_transform">
+
+                                            {% set heading_transform = typography.heading_transform or 'none' %}
+
+                                            {% for option in ['none', 'uppercase', 'capitalize'] %}
+
+                                                <option value="{{ option }}" {% if heading_transform == option %}selected{% endif %}>{{ option.title() }}</option>
+
+                                            {% endfor %}
+
+                                        </select>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                            <div class="tab-pane fade" id="iconography" role="tabpanel" aria-labelledby="iconography-tab">
+
+                                <div class="row g-3">
+
+                                    <div class="col-md-4">
+
+                                        <label class="form-label" for="icon_weight">Icon Weight</label>
+
+                                        {% set icon_weight = iconography.weight or 'regular' %}
+
+                                        <select class="form-select" id="icon_weight" name="icon_weight">
+
+                                            {% for option in theme_options.icon_weights %}
+
+                                                <option value="{{ option }}" {% if icon_weight == option %}selected{% endif %}>{{ option.title() }}</option>
+
+                                            {% endfor %}
+
+                                        </select>
+
+                                    </div>
+
+                                    <div class="col-md-4">
+
+                                        <label class="form-label" for="icon_size_scale">Icon Scale</label>
+
+                                        <input type="range" class="form-range setting-range" id="icon_size_scale" name="icon_size_scale" min="0.5" max="2.0" step="0.05" value="{{ iconography.size_scale or 1.0 }}" data-range-output="#iconScaleValue">
+
+                                        <div class="form-text">Scale: <span id="iconScaleValue">{{ iconography.size_scale or 1.0 }}</span>x</div>
+
+                                    </div>
+
+                                    {{ color_input('icon_primary_color', 'Icon Base Colour', iconography.primary_color, palette.text, True) }}
+
+                                    {{ color_input('icon_accent_color', 'Icon Accent Colour', iconography.accent_color, palette.accent, True) }}
+
+                                    {{ color_input('icon_hover_color', 'Icon Hover Colour', iconography.hover_color, palette.accent, True) }}
+
+                                    {{ color_input('icon_active_color', 'Icon Active Colour', iconography.active_color, palette.primary, True) }}
+
+                                </div>
+
+                            </div>
+
+                            <div class="tab-pane fade" id="components" role="tabpanel" aria-labelledby="components-tab">
+
+                                <div class="row g-3">
+
+                                    <div class="col-md-4">
+
+                                        <label class="form-label" for="button_shape">Button Shape</label>
+
+                                        {% set button_shape = components.button_shape or 'rounded' %}
+
+                                        <select class="form-select" id="button_shape" name="button_shape">
+
+                                            {% for option in theme_options.button_shapes %}
+
+                                                <option value="{{ option }}" {% if button_shape == option %}selected{% endif %}>{{ option.title() }}</option>
+
+                                            {% endfor %}
+
+                                        </select>
+
+                                    </div>
+
+                                    <div class="col-md-4">
+
+                                        <label class="form-label" for="button_style">Button Style</label>
+
+                                        {% set button_style = components.button_style or 'solid' %}
+
+                                        <select class="form-select" id="button_style" name="button_style">
+
+                                            {% for option in theme_options.button_styles %}
+
+                                                <option value="{{ option }}" {% if button_style == option %}selected{% endif %}>{{ option.title() }}</option>
+
+                                            {% endfor %}
+
+                                        </select>
+
+                                    </div>
+
+                                    <div class="col-md-4">
+
+                                        <label class="form-label" for="button_text_transform">Button Text Case</label>
+
+                                        {% set button_text_transform = components.button_text_transform or 'none' %}
+
+                                        <select class="form-select" id="button_text_transform" name="button_text_transform">
+
+                                            {% for option in theme_options.button_text_transforms %}
+
+                                                <option value="{{ option }}" {% if button_text_transform == option %}selected{% endif %}>{{ option.title() }}</option>
+
+                                            {% endfor %}
+
+                                        </select>
+
+                                    </div>
+
+                                    <div class="col-md-4">
+
+                                        <label class="form-label" for="card_style">Card Style</label>
+
+                                        {% set card_style = components.card_style or 'elevated' %}
+
+                                        <select class="form-select" id="card_style" name="card_style">
+
+                                            {% for option in theme_options.card_styles %}
+
+                                                <option value="{{ option }}" {% if card_style == option %}selected{% endif %}>{{ option.title() }}</option>
+
+                                            {% endfor %}
+
+                                        </select>
+
+                                    </div>
+
+                                    <div class="col-md-4">
+
+                                        <label class="form-label" for="card_shadow">Card Shadow</label>
+
+                                        {% set card_shadow = components.card_shadow or 'medium' %}
+
+                                        <select class="form-select" id="card_shadow" name="card_shadow">
+
+                                            {% for option in theme_options.card_shadows %}
+
+                                                <option value="{{ option }}" {% if card_shadow == option %}selected{% endif %}>{{ option.title() }}</option>
+
+                                            {% endfor %}
+
+                                        </select>
+
+                                    </div>
+
+                                    <div class="col-md-4">
+
+                                        <label class="form-label" for="input_style">Input Style</label>
+
+                                        {% set input_style = components.input_style or 'soft' %}
+
+                                        <select class="form-select" id="input_style" name="input_style">
+
+                                            {% for option in theme_options.input_styles %}
+
+                                                <option value="{{ option }}" {% if input_style == option %}selected{% endif %}>{{ option.title() }}</option>
+
+                                            {% endfor %}
+
+                                        </select>
+
+                                    </div>
+
+                                    <div class="col-md-4">
+
+                                        <label class="form-label" for="border_radius_scale">Radius Scale</label>
+
+                                        {% set border_radius_scale = components.border_radius_scale or 'md' %}
+
+                                        <select class="form-select" id="border_radius_scale" name="border_radius_scale">
+
+                                            {% for option in theme_options.border_radius_scales %}
+
+                                                <option value="{{ option }}" {% if border_radius_scale == option %}selected{% endif %}>{{ option.upper() }}</option>
+
+                                            {% endfor %}
+
+                                        </select>
+
+                                    </div>
+
+                                    <div class="col-md-4">
+
+                                        <label class="form-label" for="layout_density">Layout Density</label>
+
+                                        {% set layout_density = components.layout_density or 'comfortable' %}
+
+                                        <select class="form-select" id="layout_density" name="layout_density">
+
+                                            {% for option in theme_options.layout_densities %}
+
+                                                <option value="{{ option }}" {% if layout_density == option %}selected{% endif %}>{{ option.title() }}</option>
+
+                                            {% endfor %}
+
+                                        </select>
+
+                                    </div>
+
+                                    <div class="col-md-4">
+
+                                        <label class="form-label" for="nav_style">Navigation Style</label>
+
+                                        {% set nav_style = components.nav_style or 'glass' %}
+
+                                        <select class="form-select" id="nav_style" name="nav_style">
+
+                                            {% for option in theme_options.nav_styles %}
+
+                                                <option value="{{ option }}" {% if nav_style == option %}selected{% endif %}>{{ option.title() }}</option>
+
+                                            {% endfor %}
+
+                                        </select>
+
+                                    </div>
+
+                                    <div class="col-md-4">
+
+                                        <label class="form-label" for="surface_tint">Surface Tint</label>
+
+                                        {% set surface_tint = components.surface_tint or 'subtle' %}
+
+                                        <select class="form-select" id="surface_tint" name="surface_tint">
+
+                                            {% for option in theme_options.surface_tints %}
+
+                                                <option value="{{ option }}" {% if surface_tint == option %}selected{% endif %}>{{ option.title() }}</option>
+
+                                            {% endfor %}
+
+                                        </select>
+
+                                    </div>
+
+                                    <div class="col-md-4">
+
+                                        <label class="form-label" for="chip_style">Chip Style</label>
+
+                                        {% set chip_style = components.chip_style or 'soft' %}
+
+                                        <select class="form-select" id="chip_style" name="chip_style">
+
+                                            {% for option in theme_options.chip_styles %}
+
+                                                <option value="{{ option }}" {% if chip_style == option %}selected{% endif %}>{{ option.title() }}</option>
+
+                                            {% endfor %}
+
+                                        </select>
+
+                                    </div>
+
+                                    <div class="col-md-4">
+
+                                        <label class="form-label" for="navbar_transparency">Navbar Transparency</label>
+
+                                        <input type="range" class="form-range setting-range" id="navbar_transparency" name="navbar_transparency" min="0" max="1" step="0.05" value="{{ components.navbar_transparency or 0.9 }}" data-range-output="#navbarTransparencyValue">
+
+                                        <div class="form-text">Transparency: <span id="navbarTransparencyValue">{{ components.navbar_transparency or 0.9 }}</span></div>
+
+                                    </div>
+
+                                    <div class="col-md-4">
+
+                                        <label class="form-label" for="navbar_blur">Navbar Blur</label>
+
+                                        <input type="text" class="form-control" id="navbar_blur" name="navbar_blur" value="{{ components.navbar_blur or '18px' }}" placeholder="18px">
+
+                                    </div>
+
+                                    <div class="col-md-4">
+
+                                        <label class="form-label" for="card_border">Card Border CSS</label>
+
+                                        <input type="text" class="form-control" id="card_border" name="card_border" value="{{ components.card_border or '1px solid rgba(15, 23, 42, 0.08)' }}" placeholder="1px solid rgba(15, 23, 42, 0.08)">
+
+                                    </div>
+
+                                    <div class="col-12">
+
+                                        <div class="row row-cols-1 row-cols-md-3 g-2">
+
+                                            <div class="col">
+
+                                                <div class="form-check form-switch">
+
+                                                    <input class="form-check-input" type="checkbox" id="use_gradients" name="use_gradients" {% if components.use_gradients %}checked{% endif %}>
+
+                                                    <label class="form-check-label" for="use_gradients">Enable Gradient Buttons &amp; Hero</label>
+
+                                                </div>
+
+                                            </div>
+
+                                            <div class="col">
+
+                                                <div class="form-check form-switch">
+
+                                                    <input class="form-check-input" type="checkbox" id="section_dividers" name="section_dividers" {% if components.section_dividers %}checked{% endif %}>
+
+                                                    <label class="form-check-label" for="section_dividers">Show Section Dividers</label>
+
+                                                </div>
+
+                                            </div>
+
+                                            <div class="col">
+
+                                                <div class="form-check form-switch">
+
+                                                    <input class="form-check-input" type="checkbox" id="button_glow" name="button_glow" {% if components.button_glow %}checked{% endif %}>
+
+                                                    <label class="form-check-label" for="button_glow">Button Glow Accent</label>
+
+                                                </div>
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                            <div class="tab-pane fade" id="social" role="tabpanel" aria-labelledby="social-tab">
+
+                                <div class="row g-3">
+
+                                    {% for key in social_keys %}
+
+                                        {% set meta = social_meta.get(key, (key.replace('_', ' ').title(), 'https://', 'ph-link')) %}
+
+                                        <div class="col-md-6">
+
+                                            <label class="form-label" for="{{ key }}_url">{{ meta[0] }}</label>
+
+                                            <div class="input-group">
+
+                                                <span class="input-group-text"><i class="{{ site_icon_class }} {{ meta[2] }} theme-icon"></i></span>
+
+                                                <input type="url" class="form-control" id="{{ key }}_url" name="{{ key }}_url" value="{{ settings[key ~ '_url'] or '' }}" placeholder="{{ meta[1] }}">
+
+                                            </div>
+
+                                            {% if key.startswith('custom_') %}
+
+                                            <div class="mt-2">
+
+                                                <label class="form-label" for="{{ key }}_label">Custom Label</label>
+
+                                                <input type="text" class="form-control" id="{{ key }}_label" name="{{ key }}_label" value="{{ social_labels.get(key) or meta[0] }}" placeholder="Link label">
+
+                                            </div>
+
+                                            {% endif %}
+
+                                        </div>
+
+                                    {% endfor %}
+
+                                </div>
+
+                            </div>
+
+                            <div class="tab-pane fade" id="features" role="tabpanel" aria-labelledby="features-tab">
+
+                                <div class="row row-cols-1 row-cols-md-2 g-3">
+
+                                    {% for key in feature_flag_fields %}
+
+                                        {% set label, helper = feature_meta.get(key, (key.replace('_', ' ').title(), '')) %}
+
+                                        <div class="col">
+
+                                            <div class="form-check form-switch feature-toggle">
+
+                                                <input class="form-check-input" type="checkbox" id="{{ key }}" name="{{ key }}" {% if settings.get(key) %}checked{% endif %}>
+
+                                                <label class="form-check-label" for="{{ key }}">{{ label }}</label>
+
+                                                {% if helper %}<small class="text-muted d-block">{{ helper }}</small>{% endif %}
+
+                                            </div>
+
+                                        </div>
+
+                                    {% endfor %}
+
+                                </div>
+
+                            </div>
+
+                            <div class="tab-pane fade" id="advanced" role="tabpanel" aria-labelledby="advanced-tab">
+
+                                <div class="mb-3">
+
+                                    <label class="form-label" for="custom_css">Custom CSS Overrides</label>
+
+                                    <textarea class="form-control font-monospace" id="custom_css" name="custom_css" rows="10" placeholder=":root {\n    /* place site-wide overrides */\n}">{{ theme.custom_css or '' }}</textarea>
+
+                                    <small class="text-muted">Injected at the end of the head tag. Keep scoped selectors to avoid unintended overrides.</small>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 pt-4">
+
+                            <div class="text-muted small">
+
+                                Theme preview updates live as you tweak options. Save to apply across the entire site.
+
+                            </div>
+
+                            <div class="d-flex gap-2">
+
+                                <button type="submit" class="btn btn-primary">
+
+                                    <i class="{{ site_icon_class }} ph-floppy-disk"></i>
+
+                                    Save Settings
+
+                                </button>
+
+                                <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-outline-secondary">Cancel</a>
+
+                            </div>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="col-lg-4">
+
+            <div class="card shadow-sm position-sticky" style="top: 1rem;">
+
+                <div class="card-header d-flex justify-content-between align-items-center">
+
+                    <span>Live Theme Preview</span>
+
+                    <span class="badge bg-primary-subtle text-primary-emphasis">New</span>
+
+                </div>
+
+                <div class="card-body">
+
+                    <div id="themePreview" class="theme-preview p-4 rounded-4 text-white mb-3" style="background: linear-gradient(135deg, {{ preview_start }}, {{ preview_end }});">
+
+                        <div class="d-flex align-items-center gap-2">
+
+                            <div class="preview-badge" id="previewBadge">SL</div>
+
+                            <div>
+
+                                <div class="fw-bold" id="previewTitle">{{ settings.site_title }}</div>
+
+                                <div class="small" id="previewSubtitle">{{ settings.league_tagline or 'Live preview of headings & copy' }}</div>
+
+                            </div>
+
+                        </div>
+
+                        <div class="preview-buttons mt-4 d-flex gap-2 flex-wrap">
+
+                            <a href="#" class="btn btn-sm btn-light preview-primary">Primary Action</a>
+
+                            <a href="#" class="btn btn-sm btn-outline-light preview-secondary">Secondary</a>
+
+                        </div>
+
+                    </div>
+
+                    <div class="preview-cards">
+
+                        <div class="card mb-3 shadow-sm preview-card">
+
+                            <div class="card-body">
+
+                                <h6 class="fw-semibold mb-1" id="previewCardHeading">Standings Snapshot</h6>
+
+                                <p class="text-muted small mb-2" id="previewCardCopy">Configure font, spacing, and surface treatments to match your brand voice.</p>
+
+                                <div class="d-flex align-items-center gap-2 small">
+
+                                    <span class="badge bg-primary-subtle text-primary-emphasis">W</span>
+
+                                    <span class="badge bg-warning-subtle text-warning-emphasis">D</span>
+
+                                    <span class="badge bg-danger-subtle text-danger-emphasis">L</span>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <div class="d-flex align-items-center gap-3">
+
+                            <i class="{{ site_icon_class }} ph-sparkle theme-icon preview-icon" id="previewIcon"></i>
+
+                            <div>
+
+                                <div class="fw-semibold" id="previewIconLabel">Iconography in context</div>
+
+                                <div class="text-muted small">Weight, colour, and hover tint respond instantly.</div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
 {% endblock %}
+
+
 
 {% block extra_js %}
+
+<script type="application/json" id="fontPresetWeights">{{ font_preset_weights|default({})|tojson }}</script>
+
 <script>
-// Sync color pickers with text inputs
-document.addEventListener('DOMContentLoaded', function() {
-    const primaryColorPicker = document.getElementById('primary_color_picker');
-    const primaryColorInput = document.getElementById('primary_color');
-    const secondaryColorPicker = document.getElementById('secondary_color_picker');
-    const secondaryColorInput = document.getElementById('secondary_color');
-    const themePreview = document.getElementById('themePreview');
 
-    // Primary color sync
-    primaryColorPicker.addEventListener('input', function() {
-        primaryColorInput.value = this.value;
-        updatePreview();
-    });
+(function() {
 
-    primaryColorInput.addEventListener('input', function() {
-        if (this.value.match(/^#[0-9A-F]{6}$/i)) {
-            primaryColorPicker.value = this.value;
-            updatePreview();
+    const doc = document;
+
+    const preview = doc.getElementById('themePreview');
+
+    const previewTitle = doc.getElementById('previewTitle');
+
+    const previewSubtitle = doc.getElementById('previewSubtitle');
+
+    const previewBadge = doc.getElementById('previewBadge');
+
+    const previewCardHeading = doc.getElementById('previewCardHeading');
+
+    const previewCardCopy = doc.getElementById('previewCardCopy');
+
+    const previewIcon = doc.getElementById('previewIcon');
+
+    const typographyPreviewHeading = doc.getElementById('previewHeadingSample');
+
+    const typographyPreviewBody = doc.getElementById('previewBodySample');
+
+    const typographyPreviewBadge = doc.getElementById('previewBadgeSample');
+
+
+
+    const baseFontSelect = doc.getElementById('font_family_base_select');
+
+    const baseFontCustomGroup = doc.getElementById('font_family_base_custom_group');
+
+    const baseFontCustomInput = doc.getElementById('font_family_base_custom');
+
+    const baseFontHint = doc.getElementById('font_family_base_hint');
+
+    const headingFontSelect = doc.getElementById('font_family_heading_select');
+
+    const headingFontCustomGroup = doc.getElementById('font_family_heading_custom_group');
+
+    const headingFontCustomInput = doc.getElementById('font_family_heading_custom');
+
+    const headingFontHint = doc.getElementById('font_family_heading_hint');
+
+
+
+    const bodyLetterSpacingInput = doc.getElementById('body_letter_spacing');
+
+    const headingLetterSpacingInput = doc.getElementById('heading_letter_spacing');
+
+    const headingTransformSelect = doc.getElementById('heading_transform');
+
+
+
+    const presetWeightDataEl = doc.getElementById('fontPresetWeights');
+
+    let fontPresetWeights = {};
+
+    if (presetWeightDataEl) {
+
+        try {
+
+            fontPresetWeights = JSON.parse(presetWeightDataEl.textContent) || {};
+
+        } catch (err) {
+
+            fontPresetWeights = {};
+
         }
-    });
 
-    // Secondary color sync
-    secondaryColorPicker.addEventListener('input', function() {
-        secondaryColorInput.value = this.value;
-    });
-
-    secondaryColorInput.addEventListener('input', function() {
-        if (this.value.match(/^#[0-9A-F]{6}$/i)) {
-            secondaryColorPicker.value = this.value;
-        }
-    });
-
-    function updatePreview() {
-        themePreview.style.background = primaryColorInput.value;
     }
-});
+
+
+
+    const weightContainers = {
+
+        body: doc.querySelector('[data-weight-selector="body"]'),
+
+        heading: doc.querySelector('[data-weight-selector="heading"]'),
+
+    };
+
+
+
+    function toGradient(start, end) {
+
+        if (!start || !end) { return start || end; }
+
+        return `linear-gradient(135deg, ${start}, ${end})`;
+
+    }
+
+
+
+    function syncWeightButtons(container, weightValue) {
+
+        if (!container) { return; }
+
+        container.querySelectorAll('button[data-weight-value]').forEach(button => {
+
+            if (button.dataset.weightValue === weightValue) {
+
+                button.classList.add('active');
+
+            } else {
+
+                button.classList.remove('active');
+
+            }
+
+        });
+
+    }
+
+
+
+    function renderWeightOptions(selectEl, container, weightInput, type) {
+
+        if (!container || !weightInput) { return; }
+
+        const rawValue = (selectEl?.value || '').toLowerCase();
+
+        let presetKey = null;
+
+        if (rawValue.startsWith('preset:')) {
+
+            presetKey = rawValue.split(':', 1)[1];
+
+        }
+
+        const preset = presetKey ? fontPresetWeights[presetKey] : null;
+
+        const options = Array.isArray(preset?.options) ? preset.options : [];
+
+        container.innerHTML = '';
+
+        if (!options.length) {
+
+            container.classList.add('d-none');
+
+            return;
+
+        }
+
+        container.classList.remove('d-none');
+
+        const group = doc.createElement('div');
+
+        group.className = 'btn-group btn-group-sm';
+
+        group.setAttribute('role', 'group');
+
+        const currentValue = (weightInput.value || '').trim();
+
+        options.forEach(option => {
+
+            const button = doc.createElement('button');
+
+            button.type = 'button';
+
+            button.className = 'btn btn-outline-secondary';
+
+            button.textContent = option.label;
+
+            button.dataset.weightValue = option.value;
+
+            if (option.value === currentValue) {
+
+                button.classList.add('active');
+
+            }
+
+            button.addEventListener('click', () => {
+
+                weightInput.value = option.value;
+
+                weightInput.dataset.lockedByUser = 'manual';
+
+                weightInput.dispatchEvent(new Event('input'));
+
+                syncWeightButtons(container, option.value);
+
+            });
+
+            group.appendChild(button);
+
+        });
+
+        container.appendChild(group);
+
+        const helper = doc.createElement('small');
+
+        helper.className = 'text-muted d-block mt-1';
+
+        helper.textContent = type === 'body' ? 'Body weight quick presets' : 'Heading weight quick presets';
+
+        container.appendChild(helper);
+
+    }
+
+
+
+    const colorGroups = doc.querySelectorAll('.color-input-group');
+
+    colorGroups.forEach(group => {
+
+        const picker = group.querySelector('[data-color-picker]');
+
+        const hexInput = group.querySelector('.color-hex');
+
+        const allowAuto = group.dataset.allowAuto === 'true';
+
+        const field = group.dataset.colorField;
+
+        const defaultValue = picker.value;
+
+
+
+        picker.addEventListener('input', () => {
+
+            hexInput.value = picker.value;
+
+            handleColorChange(field, picker.value);
+
+        });
+
+
+
+        hexInput.addEventListener('input', () => {
+
+            const value = hexInput.value.trim();
+
+            if (!value && allowAuto) {
+
+                handleColorChange(field, '');
+
+                return;
+
+            }
+
+            if (/^#[0-9A-Fa-f]{6}$/.test(value) || value.startsWith('rgb')) {
+
+                picker.value = value.startsWith('rgb') ? defaultValue : value;
+
+                handleColorChange(field, value);
+
+            }
+
+        });
+
+    });
+
+
+
+    const previewTitleInput = doc.getElementById('site_title');
+
+    if (previewTitleInput) {
+
+        previewTitleInput.addEventListener('input', (event) => {
+
+            if (previewTitle) {
+
+                previewTitle.textContent = event.target.value || 'Site Title';
+
+            }
+
+        });
+
+    }
+
+
+
+    const previewSubtitleInput = doc.getElementById('league_tagline');
+
+    if (previewSubtitleInput && previewSubtitle) {
+
+        previewSubtitleInput.addEventListener('input', (event) => {
+
+            previewSubtitle.textContent = event.target.value || 'Live preview of headings & copy';
+
+        });
+
+    }
+
+
+
+    const fontWeightBody = doc.getElementById('font_weight_body');
+
+
+
+    if (fontWeightBody) {
+
+
+
+        fontWeightBody.addEventListener('input', (event) => {
+
+
+
+            if (event.isTrusted) {
+
+
+
+                fontWeightBody.dataset.lockedByUser = 'manual';
+
+
+
+            }
+
+
+
+            const value = fontWeightBody.value || '400';
+
+
+
+            if (previewCardCopy) previewCardCopy.style.fontWeight = value;
+
+
+
+            if (typographyPreviewBody) typographyPreviewBody.style.fontWeight = value;
+
+
+
+            updateFontHint(baseFontSelect, baseFontHint, 'body', fontWeightBody);
+
+            syncWeightButtons(weightContainers.body, value);
+
+
+
+        });
+
+
+
+    }
+
+
+
+
+
+
+
+    const fontWeightHeading = doc.getElementById('font_weight_heading');
+
+
+
+    if (fontWeightHeading) {
+
+
+
+        fontWeightHeading.addEventListener('input', () => {
+
+
+
+            fontWeightHeading.dataset.lockedByUser = 'manual';
+
+
+
+            const value = fontWeightHeading.value || '600';
+
+
+
+            if (previewTitle) previewTitle.style.fontWeight = value;
+
+
+
+            if (previewCardHeading) previewCardHeading.style.fontWeight = value;
+
+
+
+            if (typographyPreviewHeading) typographyPreviewHeading.style.fontWeight = value;
+
+
+
+            if (typographyPreviewBadge) typographyPreviewBadge.style.fontWeight = value;
+
+
+
+            updateFontHint(headingFontSelect, headingFontHint, 'heading', fontWeightHeading);
+
+            syncWeightButtons(weightContainers.heading, value);
+
+
+
+        });
+
+
+
+    }
+
+
+
+
+
+
+
+    const rangeInputs = doc.querySelectorAll('.setting-range[data-range-output]');
+
+    rangeInputs.forEach(range => {
+
+        const outputSelector = range.getAttribute('data-range-output');
+
+        const outputEl = outputSelector ? doc.querySelector(outputSelector) : null;
+
+        const updateOutput = () => {
+
+            if (outputEl) {
+
+                const value = range.value;
+
+                outputEl.textContent = range.id === 'font_size_base' ? `${value}px` : value;
+
+            }
+
+            if (range.id === 'font_size_base') {
+
+                const px = `${range.value}px`;
+
+                if (previewCardCopy) previewCardCopy.style.fontSize = px;
+
+                if (typographyPreviewBody) typographyPreviewBody.style.fontSize = px;
+
+            }
+
+            if (range.id === 'line_height') {
+
+                if (previewCardCopy) previewCardCopy.style.lineHeight = range.value;
+
+                if (typographyPreviewBody) typographyPreviewBody.style.lineHeight = range.value;
+
+            }
+
+            if (range.id === 'font_scale') {
+
+                const base = parseFloat(doc.getElementById('font_size_base')?.value || '16');
+
+                const scale = parseFloat(range.value || '1');
+
+                const headingSize = `${Math.round(base * (scale + 0.15))}px`;
+
+                const titleSize = `${Math.round(base * (scale + 0.4))}px`;
+
+                if (previewTitle) previewTitle.style.fontSize = titleSize;
+
+                if (previewCardHeading) previewCardHeading.style.fontSize = headingSize;
+
+                if (typographyPreviewHeading) typographyPreviewHeading.style.fontSize = headingSize;
+
+                if (typographyPreviewBadge) typographyPreviewBadge.style.fontSize = `${Math.round(base * (scale + 0.05))}px`;
+
+            }
+
+            if (range.id === 'heading_line_height') {
+
+                if (previewCardHeading) previewCardHeading.style.lineHeight = range.value;
+
+                if (typographyPreviewHeading) typographyPreviewHeading.style.lineHeight = range.value;
+
+            }
+
+            if (range.id === 'icon_size_scale') {
+
+                if (previewIcon) previewIcon.style.fontSize = `${Math.round(24 * parseFloat(range.value || '1'))}px`;
+
+            }
+
+            if (range.id === 'navbar_transparency') {
+
+                if (preview) preview.style.opacity = range.value;
+
+            }
+
+        };
+
+        range.addEventListener('input', updateOutput);
+
+        updateOutput();
+
+    });
+
+
+
+    const iconWeightSelect = doc.getElementById('icon_weight');
+
+    const weightClassMap = {
+
+        thin: 'ph-thin',
+
+        light: 'ph-light',
+
+        regular: 'ph',
+
+        bold: 'ph-bold',
+
+        fill: 'ph-fill',
+
+        duotone: 'ph-duotone',
+
+    };
+
+    if (iconWeightSelect) {
+
+        const updateIconWeight = () => {
+
+            const weight = (iconWeightSelect.value || 'regular').toLowerCase();
+
+            const weightClass = weightClassMap[weight] || weightClassMap.regular;
+
+            if (previewIcon) previewIcon.className = `${weightClass} ph-sparkle theme-icon preview-icon`;
+
+        };
+
+        iconWeightSelect.addEventListener('change', updateIconWeight);
+
+        updateIconWeight();
+
+    }
+
+
+
+    function handleColorChange(field, value) {
+
+        if (field === 'primary_color') {
+
+            if (preview) preview.style.background = value || preview.style.background;
+
+            doc.querySelectorAll('.preview-primary').forEach(btn => {
+
+                btn.style.background = value || '';
+
+                btn.style.borderColor = value || '';
+
+            });
+
+            if (previewBadge) previewBadge.style.background = value || '';
+
+            if (typographyPreviewBadge) typographyPreviewBadge.style.background = value || typographyPreviewBadge.style.background;
+
+        }
+
+        if (field === 'secondary_color') {
+
+            doc.querySelectorAll('.preview-secondary').forEach(btn => {
+
+                btn.style.borderColor = value || '';
+
+                btn.style.color = value || '';
+
+            });
+
+        }
+
+        if (field === 'gradient_start_color' || field === 'gradient_end_color') {
+
+            const start = doc.getElementById('gradient_start_color')?.value || '{{ preview_start }}';
+
+            const end = doc.getElementById('gradient_end_color')?.value || '{{ preview_end }}';
+
+            if (preview) preview.style.background = toGradient(start, end);
+
+        }
+
+        if (field === 'text_color') {
+
+            if (previewCardCopy) previewCardCopy.style.color = value || '';
+
+            if (typographyPreviewBody) typographyPreviewBody.style.color = value || '';
+
+        }
+
+        if (field === 'heading_color') {
+
+            if (previewTitle) previewTitle.style.color = value || '';
+
+            if (previewCardHeading) previewCardHeading.style.color = value || '';
+
+            if (typographyPreviewHeading) typographyPreviewHeading.style.color = value || '';
+
+            if (typographyPreviewBadge) typographyPreviewBadge.style.color = value || '';
+
+        }
+
+    }
+
+
+
+    ['primary_color', 'secondary_color', 'gradient_start_color', 'gradient_end_color', 'text_color', 'heading_color'].forEach((fieldId) => {
+
+        const input = doc.getElementById(fieldId);
+
+        if (input) {
+
+            handleColorChange(fieldId, input.value);
+
+        }
+
+    });
+
+
+
+    function updateFontHint(selectEl, hintEl, type, weightInput) {
+
+        if (!hintEl) { return; }
+
+        if (!selectEl) { hintEl.textContent = ''; return; }
+
+        const option = selectEl.selectedOptions?.[0];
+
+        if (!option) { hintEl.textContent = ''; return; }
+
+        const value = (selectEl.value || '').toLowerCase();
+
+        const manual = weightInput && weightInput.dataset.lockedByUser === 'manual';
+
+        if (value.startsWith('preset:')) {
+
+            const fontLabel = option.textContent.trim();
+
+            const weightValue = type === 'body' ? option.dataset.bodyWeight : option.dataset.headingWeight;
+
+            const weightText = weightValue ? `Recommended weight: ${weightValue}` : 'Preset font stack';
+
+            hintEl.textContent = `${fontLabel} - ${weightText}${manual ? ' (custom weight)' : ''}`;
+
+        } else {
+
+            hintEl.textContent = 'Using a custom font stack';
+
+        }
+
+    }
+
+
+
+    function applyPresetWeightsForSelect(selectEl, weightInput, type) {
+
+        if (!selectEl || !weightInput) { return; }
+
+        const option = selectEl.selectedOptions?.[0];
+
+        if (!option) { return; }
+
+        const value = (selectEl.value || '').toLowerCase();
+
+        if (!value.startsWith('preset:')) { return; }
+
+        const dataValue = type === 'body' ? option.dataset.bodyWeight : option.dataset.headingWeight;
+
+        if (!dataValue) { return; }
+
+        if (weightInput.value !== dataValue) {
+
+            weightInput.value = dataValue;
+
+            weightInput.dispatchEvent(new Event('input'));
+
+        }
+
+        weightInput.dataset.lockedByUser = 'preset';
+
+    }
+
+
+
+    bodyLetterSpacingInput?.addEventListener('input', applyBodyLetterSpacing);
+
+    headingLetterSpacingInput?.addEventListener('input', applyHeadingLetterSpacing);
+
+    headingTransformSelect?.addEventListener('change', applyHeadingTransform);
+
+
+
+    initialiseTypographyControls();
+
+    applyBodyLetterSpacing();
+
+    applyHeadingLetterSpacing();
+
+    applyHeadingTransform();
+
+    syncTypographyPreview();
+
+
+
+    function resolveFontStack(selectEl, customInput) {
+
+        const fallback = selectEl?.dataset?.defaultStack || 'Inter, system-ui, sans-serif';
+
+        if (!selectEl) {
+
+            const custom = (customInput?.value || '').trim();
+
+            return custom || fallback;
+
+        }
+
+        const value = (selectEl.value || '').toLowerCase();
+
+        if (value.startsWith('preset:')) {
+
+            const option = selectEl.selectedOptions[0];
+
+            return option?.dataset.stack || fallback;
+
+        }
+
+        if (value === 'custom') {
+
+            const custom = (customInput?.value || '').trim();
+
+            return custom || fallback;
+
+        }
+
+        return fallback;
+
+    }
+
+
+
+    function toggleCustomGroup(selectEl, groupEl) {
+
+        if (!selectEl || !groupEl) { return; }
+
+        if ((selectEl.value || '').toLowerCase() === 'custom') {
+
+            groupEl.classList.remove('d-none');
+
+        } else {
+
+            groupEl.classList.add('d-none');
+
+        }
+
+    }
+
+
+
+    function syncTypographyPreview() {
+
+        const bodyStack = resolveFontStack(baseFontSelect, baseFontCustomInput);
+
+        const headingStack = resolveFontStack(headingFontSelect, headingFontCustomInput);
+
+        if (previewCardCopy) previewCardCopy.style.fontFamily = bodyStack;
+
+        if (previewTitle) previewTitle.style.fontFamily = headingStack;
+
+        if (previewCardHeading) previewCardHeading.style.fontFamily = headingStack;
+
+        if (typographyPreviewBody) typographyPreviewBody.style.fontFamily = bodyStack;
+
+        if (typographyPreviewHeading) typographyPreviewHeading.style.fontFamily = headingStack;
+
+        if (typographyPreviewBadge) {
+
+            typographyPreviewBadge.style.fontFamily = headingStack;
+
+            const label = headingFontSelect?.selectedOptions?.[0]?.text?.trim();
+
+            if (label) {
+
+                typographyPreviewBadge.textContent = label.slice(0, 2).toUpperCase();
+
+            }
+
+        }
+
+    }
+
+
+
+    function initialiseTypographyControls() {
+
+
+
+        toggleCustomGroup(baseFontSelect, baseFontCustomGroup);
+
+
+
+        toggleCustomGroup(headingFontSelect, headingFontCustomGroup);
+
+
+
+        updateFontHint(baseFontSelect, baseFontHint, 'body', fontWeightBody);
+
+
+
+        updateFontHint(headingFontSelect, headingFontHint, 'heading', fontWeightHeading);
+
+
+
+        renderWeightOptions(baseFontSelect, weightContainers.body, fontWeightBody, 'body');
+
+        renderWeightOptions(headingFontSelect, weightContainers.heading, fontWeightHeading, 'heading');
+
+
+
+
+
+
+
+        baseFontSelect?.addEventListener('change', () => {
+
+
+
+            toggleCustomGroup(baseFontSelect, baseFontCustomGroup);
+
+
+
+            if (fontWeightBody) { delete fontWeightBody.dataset.lockedByUser; }
+
+
+
+            applyPresetWeightsForSelect(baseFontSelect, fontWeightBody, 'body');
+
+
+
+            renderWeightOptions(baseFontSelect, weightContainers.body, fontWeightBody, 'body');
+
+
+
+            updateFontHint(baseFontSelect, baseFontHint, 'body', fontWeightBody);
+
+
+
+            syncTypographyPreview();
+
+
+
+        });
+
+
+
+
+
+
+
+        headingFontSelect?.addEventListener('change', () => {
+
+
+
+            toggleCustomGroup(headingFontSelect, headingFontCustomGroup);
+
+
+
+            if (fontWeightHeading) { delete fontWeightHeading.dataset.lockedByUser; }
+
+
+
+            applyPresetWeightsForSelect(headingFontSelect, fontWeightHeading, 'heading');
+
+
+
+            renderWeightOptions(headingFontSelect, weightContainers.heading, fontWeightHeading, 'heading');
+
+
+
+            updateFontHint(headingFontSelect, headingFontHint, 'heading', fontWeightHeading);
+
+
+
+            syncTypographyPreview();
+
+
+
+        });
+
+
+
+
+
+
+
+        baseFontCustomInput?.addEventListener('input', () => {
+
+
+
+            if ((baseFontSelect?.value || '').toLowerCase() === 'custom') {
+
+
+
+                if (fontWeightBody) { fontWeightBody.dataset.lockedByUser = 'manual'; }
+
+
+
+                updateFontHint(baseFontSelect, baseFontHint, 'body', fontWeightBody);
+
+
+
+                syncTypographyPreview();
+
+
+
+                renderWeightOptions(baseFontSelect, weightContainers.body, fontWeightBody, 'body');
+
+
+
+            }
+
+
+
+        });
+
+
+
+
+
+
+
+        headingFontCustomInput?.addEventListener('input', () => {
+
+
+
+            if ((headingFontSelect?.value || '').toLowerCase() === 'custom') {
+
+
+
+                if (fontWeightHeading) { fontWeightHeading.dataset.lockedByUser = 'manual'; }
+
+
+
+                updateFontHint(headingFontSelect, headingFontHint, 'heading', fontWeightHeading);
+
+
+
+                syncTypographyPreview();
+
+
+
+                renderWeightOptions(headingFontSelect, weightContainers.heading, fontWeightHeading, 'heading');
+
+
+
+            }
+
+
+
+        });
+
+
+
+    }
+
+
+
+
+
+
+
+
+
+
+
+    function applyBodyLetterSpacing() {
+
+        if (!bodyLetterSpacingInput) { return; }
+
+        const raw = bodyLetterSpacingInput.value.trim();
+
+        const spacing = raw ? raw.split('/')[0].trim() : 'normal';
+
+        if (previewCardCopy) previewCardCopy.style.letterSpacing = spacing;
+
+        if (typographyPreviewBody) typographyPreviewBody.style.letterSpacing = spacing;
+
+    }
+
+
+
+    function applyHeadingLetterSpacing() {
+
+        if (!headingLetterSpacingInput) { return; }
+
+        const raw = headingLetterSpacingInput.value.trim();
+
+        const spacing = raw ? raw.split('/')[0].trim() : 'normal';
+
+        if (previewCardHeading) previewCardHeading.style.letterSpacing = spacing;
+
+        if (previewTitle) previewTitle.style.letterSpacing = spacing;
+
+        if (typographyPreviewHeading) typographyPreviewHeading.style.letterSpacing = spacing;
+
+    }
+
+
+
+    function applyHeadingTransform() {
+
+        if (!headingTransformSelect) { return; }
+
+        const value = headingTransformSelect.value || 'none';
+
+        [previewCardHeading, previewTitle, typographyPreviewHeading].forEach(el => {
+
+            if (el) el.style.textTransform = value;
+
+        });
+
+    }
+
+})();
+
 </script>
+
+
+
 {% endblock %}
+

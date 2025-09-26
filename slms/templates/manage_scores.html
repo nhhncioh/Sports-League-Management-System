@@ -1,100 +1,511 @@
 {% extends "base.html" %}
-{% block title %}Manage Scores - Admin Panel{% endblock %}
+{% block title %}Score Management Hub - Admin Panel{% endblock %}
+
+{% block head %}
+<style>
+    .match-card {
+        transition: all 0.3s ease;
+        border: 1px solid #e9ecef;
+    }
+    .match-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .status-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .status-live {
+        background: linear-gradient(135deg, #dc3545, #e74c3c);
+        color: white;
+        animation: pulse 2s infinite;
+    }
+    .status-scheduled {
+        background: linear-gradient(135deg, #ffc107, #f39c12);
+        color: #212529;
+    }
+    .status-completed {
+        background: linear-gradient(135deg, #28a745, #27ae60);
+        color: white;
+    }
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.7; }
+        100% { opacity: 1; }
+    }
+    .score-input {
+        width: 60px;
+        text-align: center;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        font-size: 1.5rem;
+        font-weight: bold;
+        transition: all 0.2s ease;
+    }
+    .score-input:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+    }
+    .score-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .score-btn {
+        width: 30px;
+        height: 30px;
+        border-radius: 6px;
+        border: none;
+        font-size: 14px;
+        font-weight: bold;
+        transition: all 0.2s ease;
+    }
+    .score-btn:hover {
+        transform: scale(1.1);
+    }
+    .btn-increment {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+    }
+    .btn-decrement {
+        background: linear-gradient(135deg, #dc3545, #fd7e14);
+        color: white;
+    }
+    .team-name {
+        font-weight: 600;
+        color: #495057;
+    }
+    .match-time {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    .quick-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .summary-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+    }
+    .summary-card .card-body {
+        padding: 1.5rem;
+    }
+    .summary-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    .floating-action-bar {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1050;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 25px;
+        padding: 15px 20px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .vs-divider {
+        font-size: 0.9rem;
+        font-weight: bold;
+        color: #6c757d;
+        margin: 0 10px;
+    }
+    .league-badge {
+        background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+        color: white;
+        font-size: 0.7rem;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-weight: 500;
+    }
+    .time-badge {
+        background: #f8f9fa;
+        color: #495057;
+        font-size: 0.75rem;
+        padding: 4px 8px;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+    }
+    .match-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+    .bulk-selector {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        z-index: 10;
+    }
+    @media (max-width: 768px) {
+        .floating-action-bar {
+            position: relative;
+            bottom: auto;
+            right: auto;
+            margin: 20px 0;
+            width: 100%;
+        }
+        .score-input {
+            font-size: 1.2rem;
+        }
+        .match-card {
+            margin-bottom: 15px;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-    <h1 class="mb-4">Manage Scores</h1>
-    <div class="row">
-        <div class="col-md-6">
-            <h2 id="form-title">Add Score</h2>
-            <form action="{{ url_for('admin.manage_scores') }}" method="POST">
-                <input type="hidden" id="score_id" name="score_id">
-                <div class="form-group">
-                    <label for="match_id">Match:</label>
-                    <select class="form-control" id="match_id" name="match_id" required>
-                        {% for match in matches %}
-                        <option value="{{ match[0] }}">{{ match[1] }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="full_time_home">Full Time Home:</label>
-                    <input type="number" class="form-control" id="full_time_home" name="full_time_home" required>
-                </div>
-                <div class="form-group">
-                    <label for="full_time_away">Full Time Away:</label>
-                    <input type="number" class="form-control" id="full_time_away" name="full_time_away" required>
-                </div>
-                <div class="form-group">
-                    <label for="half_time_home">Half Time Home:</label>
-                    <input type="number" class="form-control" id="half_time_home" name="half_time_home" required>
-                </div>
-                <div class="form-group">
-                    <label for="half_time_away">Half Time Away:</label>
-                    <input type="number" class="form-control" id="half_time_away" name="half_time_away" required>
-                </div>
-                <button type="submit" name="submit" class="btn btn-primary" id="submit-button">Add Score</button>
-            </form>
+<div class="container-fluid mt-4">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-2">
+                <i class="ph ph-soccer-ball me-2 text-primary"></i>Score Management Hub
+            </h1>
+            <p class="text-muted mb-0">Real-time match scoring and management</p>
         </div>
-        <div class="col-md-6">
-            <h2>Existing Scores</h2>
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Match</th>
-                        <th>Full Time Home</th>
-                        <th>Full Time Away</th>
-                        <th>Half Time Home</th>
-                        <th>Half Time Away</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for score in scores %}
-                    <tr>
-                        <td>{{ score[0] }}</td>
-                        <td>{{ score[1] }}</td>
-                        <td>{{ score[2] }}</td>
-                        <td>{{ score[3] }}</td>
-                        <td>{{ score[4] }}</td>
-                        <td>{{ score[5] }}</td>
-                        <td>
-                            <button class="btn btn-success btn-sm" onclick="editScore('{{ score[0] }}', '{{ score[1] }}', '{{ score[2] }}', '{{ score[3] }}', '{{ score[4] }}', '{{ score[5] }}')">
-                                <i class="ph ph-pencil"></i>
-                            </button>
-                        </td>
-                        <td>
-                            <button class="btn btn-danger btn-sm" data-toggle="modal" data-target="#deleteModal" data-id="{{ score[0] }}" data-action="{{ url_for('admin.manage_scores') }}">
-                                <i class="ph ph-minus"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#bulkActionsModal">
+                <i class="ph ph-list-checks me-2"></i>Bulk Actions
+            </button>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addScoreModal">
+                <i class="ph ph-plus me-2"></i>Manual Entry
+            </button>
+        </div>
+    </div>
+
+    <!-- Summary Statistics -->
+    {% if stats %}
+    <div class="row mb-4">
+        <div class="col-xl-3 col-lg-6 col-md-6 mb-3">
+            <div class="card summary-card h-100">
+                <div class="card-body text-center">
+                    <div class="summary-number">{{ stats[0] or 0 }}</div>
+                    <div>Total Matches</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-lg-6 col-md-6 mb-3">
+            <div class="card h-100" style="background: linear-gradient(135deg, #ffc107, #f39c12); color: #212529;">
+                <div class="card-body text-center">
+                    <div class="summary-number">{{ stats[1] or 0 }}</div>
+                    <div>Scheduled</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-lg-6 col-md-6 mb-3">
+            <div class="card h-100" style="background: linear-gradient(135deg, #dc3545, #e74c3c); color: white;">
+                <div class="card-body text-center">
+                    <div class="summary-number">{{ stats[2] or 0 }}</div>
+                    <div>Live</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-lg-6 col-md-6 mb-3">
+            <div class="card h-100" style="background: linear-gradient(135deg, #28a745, #27ae60); color: white;">
+                <div class="card-body text-center">
+                    <div class="summary-number">{{ stats[3] or 0 }}</div>
+                    <div>Completed</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Filter Bar -->
+    <div class="card mb-4">
+        <div class="card-body py-3">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-sm btn-outline-secondary active" data-filter="all">
+                            <i class="ph ph-list me-1"></i>All
+                        </button>
+                        <button class="btn btn-sm btn-outline-warning" data-filter="scheduled">
+                            <i class="ph ph-clock me-1"></i>Scheduled
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" data-filter="live">
+                            <i class="ph ph-broadcast me-1"></i>Live
+                        </button>
+                        <button class="btn btn-sm btn-outline-success" data-filter="completed">
+                            <i class="ph ph-check-circle me-1"></i>Completed
+                        </button>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="ph ph-magnifying-glass"></i>
+                        </span>
+                        <input type="text" class="form-control" id="searchMatches" placeholder="Search teams...">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Matches Grid -->
+    <div class="row" id="matchesGrid">
+        {% for match in matches %}
+        <div class="col-xl-4 col-lg-6 col-md-6 col-sm-12 mb-4 match-item" data-status="{{ match[3] or 'scheduled' }}" data-search="{{ (match[4] or '') + ' ' + (match[5] or '') }}">
+            <div class="card match-card h-100" data-match-id="{{ match[0] }}">
+                <!-- Bulk Selector -->
+                <div class="bulk-selector">
+                    <div class="form-check">
+                        <input class="form-check-input match-selector" type="checkbox" value="{{ match[0] }}" id="match_{{ match[0] }}">
+                    </div>
+                </div>
+
+                <!-- Match Header -->
+                <div class="card-header border-0 bg-transparent">
+                    <div class="match-header">
+                        <div class="d-flex align-items-center gap-2">
+                            {% if match[12] %}
+                            <span class="league-badge">{{ match[12] }}</span>
+                            {% endif %}
+                            {% if match[13] %}
+                            <span class="time-badge">{{ match[13] }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            {% if match[1] %}
+                            <small class="match-time">
+                                <i class="ph ph-calendar me-1"></i>{{ match[1].strftime('%m/%d') }}
+                            </small>
+                            {% endif %}
+                            <span class="status-badge status-{{ match[3] or 'scheduled' }}">
+                                {% if match[3] == 'live' %}
+                                    <i class="ph ph-broadcast me-1"></i>Live
+                                {% elif match[3] == 'completed' %}
+                                    <i class="ph ph-check-circle me-1"></i>Final
+                                {% else %}
+                                    <i class="ph ph-clock me-1"></i>Scheduled
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Match Content -->
+                <div class="card-body">
+                    <!-- Teams and Score -->
+                    <div class="row align-items-center text-center mb-3">
+                        <!-- Home Team -->
+                        <div class="col-5">
+                            <div class="team-name mb-2">{{ match[4] or 'TBD' }}</div>
+                            <div class="score-controls justify-content-center">
+                                <button class="btn btn-decrement score-btn" data-match="{{ match[0] }}" data-field="full_time_home" data-action="decrement">-</button>
+                                <input type="number"
+                                       class="score-input form-control"
+                                       value="{{ match[6] or 0 }}"
+                                       min="0"
+                                       data-match="{{ match[0] }}"
+                                       data-field="full_time_home">
+                                <button class="btn btn-increment score-btn" data-match="{{ match[0] }}" data-field="full_time_home" data-action="increment">+</button>
+                            </div>
+                            <small class="text-muted">HT: {{ match[8] or 0 }}</small>
+                        </div>
+
+                        <!-- VS Divider -->
+                        <div class="col-2">
+                            <div class="vs-divider">VS</div>
+                        </div>
+
+                        <!-- Away Team -->
+                        <div class="col-5">
+                            <div class="team-name mb-2">{{ match[5] or 'TBD' }}</div>
+                            <div class="score-controls justify-content-center">
+                                <button class="btn btn-decrement score-btn" data-match="{{ match[0] }}" data-field="full_time_away" data-action="decrement">-</button>
+                                <input type="number"
+                                       class="score-input form-control"
+                                       value="{{ match[7] or 0 }}"
+                                       min="0"
+                                       data-match="{{ match[0] }}"
+                                       data-field="full_time_away">
+                                <button class="btn btn-increment score-btn" data-match="{{ match[0] }}" data-field="full_time_away" data-action="increment">+</button>
+                            </div>
+                            <small class="text-muted">HT: {{ match[9] or 0 }}</small>
+                        </div>
+                    </div>
+
+                    <!-- Half Time Scores -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-center align-items-center gap-3">
+                                <small class="text-muted">Half Time:</small>
+                                <div class="score-controls">
+                                    <button class="btn btn-decrement score-btn btn-sm" data-match="{{ match[0] }}" data-field="half_time_home" data-action="decrement">-</button>
+                                    <input type="number"
+                                           class="score-input form-control form-control-sm"
+                                           style="width: 45px; font-size: 1rem;"
+                                           value="{{ match[8] or 0 }}"
+                                           min="0"
+                                           data-match="{{ match[0] }}"
+                                           data-field="half_time_home">
+                                    <button class="btn btn-increment score-btn btn-sm" data-match="{{ match[0] }}" data-field="half_time_home" data-action="increment">+</button>
+                                </div>
+                                <span class="text-muted">-</span>
+                                <div class="score-controls">
+                                    <button class="btn btn-decrement score-btn btn-sm" data-match="{{ match[0] }}" data-field="half_time_away" data-action="decrement">-</button>
+                                    <input type="number"
+                                           class="score-input form-control form-control-sm"
+                                           style="width: 45px; font-size: 1rem;"
+                                           value="{{ match[9] or 0 }}"
+                                           min="0"
+                                           data-match="{{ match[0] }}"
+                                           data-field="half_time_away">
+                                    <button class="btn btn-increment score-btn btn-sm" data-match="{{ match[0] }}" data-field="half_time_away" data-action="increment">+</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="quick-actions justify-content-center">
+                        {% if match[3] != 'completed' %}
+                        <button class="btn btn-success btn-sm status-btn" data-match="{{ match[0] }}" data-status="live">
+                            <i class="ph ph-play me-1"></i>Go Live
+                        </button>
+                        <button class="btn btn-primary btn-sm status-btn" data-match="{{ match[0] }}" data-status="completed">
+                            <i class="ph ph-check me-1"></i>Finish
+                        </button>
+                        {% else %}
+                        <button class="btn btn-outline-secondary btn-sm status-btn" data-match="{{ match[0] }}" data-status="scheduled">
+                            <i class="ph ph-arrow-counter-clockwise me-1"></i>Reopen
+                        </button>
+                        {% endif %}
+                        {% if match[11] %}
+                        <small class="text-muted ms-2">
+                            <i class="ph ph-clock me-1"></i>
+                            Updated {{ match[11].strftime('%H:%M') }}
+                        </small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="ph ph-soccer-ball display-4 text-muted mb-3"></i>
+                    <h3 class="text-muted">No Matches Found</h3>
+                    <p class="text-muted">Create some matches in the Match Management section to get started.</p>
+                    <a href="{{ url_for('admin.manage_matches') }}" class="btn btn-primary">
+                        <i class="ph ph-plus me-2"></i>Manage Matches
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Floating Action Bar -->
+    <div class="floating-action-bar d-none d-lg-block">
+        <div class="d-flex align-items-center gap-3">
+            <span class="text-muted fw-medium">Quick Actions:</span>
+            <button class="btn btn-sm btn-success" id="bulkGoLive">
+                <i class="ph ph-broadcast me-1"></i>Go Live
+            </button>
+            <button class="btn btn-sm btn-primary" id="bulkFinalize">
+                <i class="ph ph-check me-1"></i>Finalize
+            </button>
+            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#settingsModal">
+                <i class="ph ph-gear"></i>
+            </button>
         </div>
     </div>
 </div>
 
-<!-- Delete Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
+<!-- Manual Score Entry Modal -->
+<div class="modal fade" id="addScoreModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <form id="deleteForm" method="POST" action="">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="ph ph-plus-circle me-2"></i>Manual Score Entry
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('admin.manage_scores') }}" method="POST">
                 <div class="modal-body">
-                    Are you sure you want to delete this item?
-                    <input type="hidden" id="deleteItemId" name="deleteEntityId">
+                    <input type="hidden" id="score_id" name="score_id">
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label for="match_id" class="form-label">Select Match</label>
+                            <select class="form-select" id="match_id" name="match_id" required>
+                                <option value="">Choose a match...</option>
+                                {% for match in matches %}
+                                <option value="{{ match[0] }}">
+                                    {{ match[1].strftime('%m/%d') if match[1] else 'TBD' }} -
+                                    {{ match[4] or 'TBD' }} vs {{ match[5] or 'TBD' }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="full_time_home" class="form-label">Full Time Home</label>
+                            <input type="number" class="form-control" id="full_time_home" name="full_time_home" min="0" value="0" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="full_time_away" class="form-label">Full Time Away</label>
+                            <input type="number" class="form-control" id="full_time_away" name="full_time_away" min="0" value="0" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="half_time_home" class="form-label">Half Time Home</label>
+                            <input type="number" class="form-control" id="half_time_home" name="half_time_home" min="0" value="0" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="half_time_away" class="form-label">Half Time Away</label>
+                            <input type="number" class="form-control" id="half_time_away" name="half_time_away" min="0" value="0" required>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="submit" name="delete" class="btn btn-danger">Delete</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" name="submit" class="btn btn-primary">
+                        <i class="ph ph-check me-2"></i>Save Score
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Actions Modal -->
+<div class="modal fade" id="bulkActionsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="ph ph-list-checks me-2"></i>Bulk Actions
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('admin.manage_scores') }}" method="POST">
+                <div class="modal-body">
+                    <p class="text-muted">Select matches using the checkboxes, then choose an action:</p>
+                    <div class="d-grid gap-2">
+                        <button type="submit" name="bulk_finalize" class="btn btn-primary">
+                            <i class="ph ph-check-circle me-2"></i>Finalize Selected Matches
+                        </button>
+                    </div>
+                    <div id="selectedMatchesList" class="mt-3"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 </div>
             </form>
         </div>
@@ -102,23 +513,160 @@
 </div>
 
 <script>
-    function editScore(id, match_id, full_time_home, full_time_away, half_time_home, half_time_away) {
-        document.getElementById('score_id').value = id;
-        document.getElementById('match_id').value = match_id;
-        document.getElementById('full_time_home').value = full_time_home;
-        document.getElementById('full_time_away').value = full_time_away;
-        document.getElementById('half_time_home').value = half_time_home;
-        document.getElementById('half_time_away').value = half_time_away;
-        document.getElementById('submit-button').innerText = 'Update Score';
-        document.getElementById('form-title').innerText = 'Edit Score';
+document.addEventListener('DOMContentLoaded', function() {
+    // Score update functionality
+    function updateScore(matchId, field, value) {
+        const formData = new FormData();
+        formData.append('ajax_update', '1');
+        formData.append('match_id', matchId);
+        formData.append('field', field);
+        formData.append('value', value);
+
+        fetch('{{ url_for("admin.manage_scores") }}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update match status visually if needed
+                const matchCard = document.querySelector(`[data-match-id="${matchId}"]`);
+                const statusBadge = matchCard.querySelector('.status-badge');
+                if (statusBadge && !statusBadge.classList.contains('status-completed')) {
+                    statusBadge.innerHTML = '<i class="ph ph-broadcast me-1"></i>Live';
+                    statusBadge.className = 'status-badge status-live';
+                }
+            }
+        })
+        .catch(error => console.error('Error updating score:', error));
     }
 
-    $('#deleteModal').on('show.bs.modal', function (event) {
-        var button = $(event.relatedTarget);
-        var id = button.data('id');
-        var action = button.data('action');
-        document.getElementById('deleteItemId').value = id;
-        document.getElementById('deleteForm').action = action;
+    // Score input change handlers
+    document.querySelectorAll('.score-input').forEach(input => {
+        input.addEventListener('change', function() {
+            const matchId = this.getAttribute('data-match');
+            const field = this.getAttribute('data-field');
+            const value = parseInt(this.value) || 0;
+            updateScore(matchId, field, value);
+        });
     });
+
+    // Score button handlers
+    document.querySelectorAll('.score-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const matchId = this.getAttribute('data-match');
+            const field = this.getAttribute('data-field');
+            const action = this.getAttribute('data-action');
+            const input = document.querySelector(`input[data-match="${matchId}"][data-field="${field}"]`);
+
+            let currentValue = parseInt(input.value) || 0;
+
+            if (action === 'increment') {
+                currentValue++;
+            } else if (action === 'decrement' && currentValue > 0) {
+                currentValue--;
+            }
+
+            input.value = currentValue;
+            updateScore(matchId, field, currentValue);
+        });
+    });
+
+    // Status change handlers
+    document.querySelectorAll('.status-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const matchId = this.getAttribute('data-match');
+            const status = this.getAttribute('data-status');
+
+            const formData = new FormData();
+            formData.append('update_match_status', '1');
+            formData.append('match_id', matchId);
+            formData.append('status', status);
+
+            fetch('{{ url_for("admin.manage_scores") }}', {
+                method: 'POST',
+                body: formData
+            })
+            .then(() => {
+                location.reload(); // Reload to show updated status
+            })
+            .catch(error => console.error('Error updating status:', error));
+        });
+    });
+
+    // Filter functionality
+    document.querySelectorAll('[data-filter]').forEach(button => {
+        button.addEventListener('click', function() {
+            const filter = this.getAttribute('data-filter');
+
+            // Update active button
+            document.querySelectorAll('[data-filter]').forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+
+            // Filter matches
+            document.querySelectorAll('.match-item').forEach(item => {
+                const status = item.getAttribute('data-status');
+                if (filter === 'all' || status === filter) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+    });
+
+    // Search functionality
+    document.getElementById('searchMatches').addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        document.querySelectorAll('.match-item').forEach(item => {
+            const searchData = item.getAttribute('data-search').toLowerCase();
+            if (searchData.includes(searchTerm)) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    });
+
+    // Bulk selection functionality
+    function updateBulkActions() {
+        const selected = document.querySelectorAll('.match-selector:checked');
+        const selectedIds = Array.from(selected).map(cb => cb.value);
+
+        // Update bulk action buttons
+        const bulkButtons = document.querySelectorAll('#bulkGoLive, #bulkFinalize');
+        bulkButtons.forEach(btn => {
+            btn.disabled = selectedIds.length === 0;
+        });
+
+        // Update modal list
+        const listContainer = document.getElementById('selectedMatchesList');
+        if (selectedIds.length > 0) {
+            listContainer.innerHTML = `
+                <div class="alert alert-info">
+                    <strong>${selectedIds.length}</strong> matches selected
+                </div>
+            `;
+            // Add hidden inputs for selected matches
+            selectedIds.forEach(id => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'selected_matches';
+                input.value = id;
+                listContainer.appendChild(input);
+            });
+        } else {
+            listContainer.innerHTML = '<div class="text-muted">No matches selected</div>';
+        }
+    }
+
+    // Bulk selector change handlers
+    document.querySelectorAll('.match-selector').forEach(checkbox => {
+        checkbox.addEventListener('change', updateBulkActions);
+    });
+
+    // Initialize bulk actions
+    updateBulkActions();
+});
 </script>
 {% endblock %}

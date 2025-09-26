@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import copy
 import json
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Set
 
 from flask import g, url_for
 
@@ -133,6 +134,128 @@ LEGACY_ICON_MAP = {
 
 
 
+
+DEFAULT_SOCIAL_KEYS: List[str] = [
+    "facebook",
+    "instagram",
+    "twitter",
+    "youtube",
+    "tiktok",
+    "linkedin",
+    "twitch",
+    "custom_1",
+    "custom_2",
+]
+
+DEFAULT_SOCIAL_LINKS: Dict[str, Optional[str]] = {key: None for key in DEFAULT_SOCIAL_KEYS}
+
+DEFAULT_FEATURE_FLAGS: Dict[str, bool] = {
+    "show_hero": True,
+    "show_stats": True,
+    "show_leagues": True,
+    "show_recent_games": True,
+    "show_cta_panel": True,
+    "show_team_logos": True,
+    "show_breadcrumbs": True,
+    "show_footer_social": True,
+    "enable_dark_mode": False,
+    "show_season_filter": True,
+    "show_live_scores": True,
+    "show_venue_details": True,
+    "show_player_stats": True,
+    "show_standings_preview": True,
+    "show_featured_players": True,
+    "show_latest_results": True,
+    "show_highlight_reel": False,
+    "show_partner_logos": False,
+    "show_match_filters": True,
+    "enable_animated_icons": False,
+    "enable_card_glow": False,
+}
+
+DEFAULT_THEME_CONFIG: Dict[str, Any] = {
+    "palette": {
+        "primary": DEFAULT_PRIMARY_COLOR,
+        "secondary": "#6c757d",
+        "accent": "#f97316",
+        "neutral": "#f5f7fb",
+        "surface": "#ffffff",
+        "background": "#f5f6fa",
+        "text": "#1f2937",
+        "muted": "#6b7280",
+        "heading": "#111827",
+        "nav_background": None,
+        "nav_text": "#ffffff",
+        "nav_hover": "rgba(255, 255, 255, 0.85)",
+        "card_border": "#d0d5dd",
+        "success": "#198754",
+        "warning": "#ffc107",
+        "danger": "#dc3545",
+        "info": "#0dcaf0",
+        "gradient_start": "#2563eb",
+        "gradient_end": "#9333ea",
+        "highlight": "#fde68a",
+        "shadow": "rgba(15, 23, 42, 0.12)",
+    },
+    "typography": {
+        "base_family": "Inter, system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+        "heading_family": "Inter, system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+        "base_size": "16px",
+        "scale": 1.0,
+        "base_weight": "400",
+        "heading_weight": "600",
+        "letter_spacing": "normal",
+        "heading_letter_spacing": "0.01em",
+        "heading_transform": "none",
+        "line_height": "1.6",
+        "heading_line_height": "1.3",
+    },
+    "iconography": {
+        "weight": "regular",
+        "primary_color": None,
+        "accent_color": None,
+        "size_scale": 1.0,
+        "hover_color": None,
+        "active_color": None,
+    },
+    "components": {
+        "button_shape": "rounded",
+        "button_style": "solid",
+        "button_text_transform": "none",
+        "card_style": "elevated",
+        "card_shadow": "medium",
+        "input_style": "soft",
+        "border_radius_scale": "md",
+        "layout_density": "comfortable",
+        "nav_style": "glass",
+        "navbar_transparency": 0.9,
+        "navbar_blur": "18px",
+        "use_gradients": True,
+        "section_dividers": False,
+        "surface_tint": "subtle",
+        "card_border": "1px solid rgba(15, 23, 42, 0.08)",
+        "chip_style": "soft",
+        "button_glow": False,
+    },
+    "custom_css": "",
+    "social_labels": {
+        "custom_1": "Custom Link 1",
+        "custom_2": "Custom Link 2",
+    },
+}
+
+
+
+def _merge_nested(default: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+    """Return a deep merged copy of default with values from override."""
+    result = copy.deepcopy(default)
+    for key, value in override.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = _merge_nested(result[key], value)
+        else:
+            result[key] = value
+    return result
+
 def _ensure_site_settings_schema(cur) -> None:
     cur.execute(
         """
@@ -143,11 +266,17 @@ def _ensure_site_settings_schema(cur) -> None:
             primary_color TEXT DEFAULT '#343a40',
             nav_layout TEXT DEFAULT 'top',
             navigation_json TEXT,
+            favicon_url TEXT,
+            league_tagline TEXT,
+            contact_email TEXT,
+            social_links_json TEXT,
+            feature_flags_json TEXT,
+            theme_config_json TEXT,
             updated_at TIMESTAMPTZ DEFAULT NOW()
         );
         """
     )
-    existing_columns = set()
+    existing_columns: Set[str] = set()
     try:
         cur.execute(
             """
@@ -159,10 +288,20 @@ def _ensure_site_settings_schema(cur) -> None:
         existing_columns = {row[0] for row in cur.fetchall()}
     except Exception:
         existing_columns = set()
-    if 'nav_layout' not in existing_columns:
-        cur.execute("ALTER TABLE site_settings ADD COLUMN nav_layout TEXT DEFAULT 'top'")
-    if 'navigation_json' not in existing_columns:
-        cur.execute("ALTER TABLE site_settings ADD COLUMN navigation_json TEXT")
+
+    migrations = {
+        'nav_layout': "ALTER TABLE site_settings ADD COLUMN nav_layout TEXT DEFAULT 'top'",
+        'navigation_json': "ALTER TABLE site_settings ADD COLUMN navigation_json TEXT",
+        'favicon_url': "ALTER TABLE site_settings ADD COLUMN favicon_url TEXT",
+        'league_tagline': "ALTER TABLE site_settings ADD COLUMN league_tagline TEXT",
+        'contact_email': "ALTER TABLE site_settings ADD COLUMN contact_email TEXT",
+        'social_links_json': "ALTER TABLE site_settings ADD COLUMN social_links_json TEXT",
+        'feature_flags_json': "ALTER TABLE site_settings ADD COLUMN feature_flags_json TEXT",
+        'theme_config_json': "ALTER TABLE site_settings ADD COLUMN theme_config_json TEXT",
+    }
+    for column, statement in migrations.items():
+        if column not in existing_columns:
+            cur.execute(statement)
 
 
 def _sanitize_nav_link(entry: Dict[str, Any]) -> Dict[str, Any] | None:
@@ -223,28 +362,80 @@ def _load_site_settings() -> Dict[str, Any]:
     if hasattr(g, "_site_settings_cache"):
         return g._site_settings_cache  # type: ignore[attr-defined]
 
+    def _coerce_bool(value: Any, default: bool = False) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return bool(value)
+        if isinstance(value, str):
+            lowered = value.strip().lower()
+            return lowered in {"1", "true", "yes", "on"}
+        return default
+
     try:
         db = get_db()
         cur = db.cursor()
         _ensure_site_settings_schema(cur)
         cur.execute(
-            "SELECT id, site_title, brand_image_url, primary_color, nav_layout, navigation_json FROM site_settings ORDER BY id ASC LIMIT 1"
+            """
+            SELECT
+                id,
+                site_title,
+                brand_image_url,
+                primary_color,
+                nav_layout,
+                navigation_json,
+                favicon_url,
+                league_tagline,
+                contact_email,
+                social_links_json,
+                feature_flags_json,
+                theme_config_json
+            FROM site_settings
+            ORDER BY id ASC
+            LIMIT 1
+            """
         )
         row = cur.fetchone()
         if not row:
+            navigation_json = json.dumps(DEFAULT_NAV_LINKS)
+            social_json = json.dumps(DEFAULT_SOCIAL_LINKS)
+            feature_json = json.dumps(DEFAULT_FEATURE_FLAGS)
+            theme_json = json.dumps(DEFAULT_THEME_CONFIG)
             cur.execute(
-                "INSERT INTO site_settings (site_title, brand_image_url, primary_color, nav_layout, navigation_json) VALUES (%s, %s, %s, %s, %s) RETURNING id, site_title, brand_image_url, primary_color, nav_layout, navigation_json",
+                """
+                INSERT INTO site_settings (
+                    site_title,
+                    brand_image_url,
+                    primary_color,
+                    nav_layout,
+                    navigation_json,
+                    favicon_url,
+                    league_tagline,
+                    contact_email,
+                    social_links_json,
+                    feature_flags_json,
+                    theme_config_json
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id, site_title, brand_image_url, primary_color, nav_layout, navigation_json, favicon_url,
+                          league_tagline, contact_email, social_links_json, feature_flags_json, theme_config_json
+                """,
                 (
                     "Sports League Management System",
                     None,
                     DEFAULT_PRIMARY_COLOR,
                     "top",
-                    json.dumps(DEFAULT_NAV_LINKS),
+                    navigation_json,
+                    None,
+                    None,
+                    None,
+                    social_json,
+                    feature_json,
+                    theme_json,
                 ),
             )
             row = cur.fetchone()
             db.commit()
-        cur.close()
 
         navigation_json = row[5] or json.dumps(DEFAULT_NAV_LINKS)
         try:
@@ -260,19 +451,92 @@ def _load_site_settings() -> Dict[str, Any]:
         if not raw_links:
             raw_links = _default_nav_links()
 
+        social_links = dict(DEFAULT_SOCIAL_LINKS)
+        raw_social = row[9]
+        if raw_social:
+            try:
+                loaded_social = json.loads(raw_social)
+                if isinstance(loaded_social, dict):
+                    for key, value in loaded_social.items():
+                        social_links[key] = value or None
+            except (TypeError, json.JSONDecodeError):
+                pass
+
+        feature_flags = dict(DEFAULT_FEATURE_FLAGS)
+        raw_flags = row[10]
+        if raw_flags:
+            try:
+                loaded_flags = json.loads(raw_flags)
+                if isinstance(loaded_flags, dict):
+                    for key, value in loaded_flags.items():
+                        feature_flags[key] = _coerce_bool(value, feature_flags.get(key, False))
+            except (TypeError, json.JSONDecodeError):
+                pass
+
+        theme_config = copy.deepcopy(DEFAULT_THEME_CONFIG)
+        raw_theme = row[11]
+        if raw_theme:
+            try:
+                parsed_theme = json.loads(raw_theme)
+                if isinstance(parsed_theme, dict):
+                    theme_config = _merge_nested(DEFAULT_THEME_CONFIG, parsed_theme)
+                else:
+                    theme_config = copy.deepcopy(DEFAULT_THEME_CONFIG)
+            except (TypeError, json.JSONDecodeError):
+                theme_config = copy.deepcopy(DEFAULT_THEME_CONFIG)
+
+        palette = theme_config.setdefault("palette", {})
+        typography = theme_config.setdefault("typography", {})
+        iconography = theme_config.setdefault("iconography", {})
+        components = theme_config.setdefault("components", {})
+
+        palette.setdefault("primary", row[3] or DEFAULT_PRIMARY_COLOR)
+        if not palette.get("primary"):
+            palette["primary"] = DEFAULT_PRIMARY_COLOR
+        if row[3] and palette["primary"] != row[3]:
+            palette["primary"] = row[3]
+        for key, default_value in DEFAULT_THEME_CONFIG["palette"].items():
+            palette.setdefault(key, default_value)
+        for key, default_value in DEFAULT_THEME_CONFIG["typography"].items():
+            typography.setdefault(key, default_value)
+        for key, default_value in DEFAULT_THEME_CONFIG["iconography"].items():
+            iconography.setdefault(key, default_value)
+        for key, default_value in DEFAULT_THEME_CONFIG["components"].items():
+            components.setdefault(key, default_value)
+        if "custom_css" not in theme_config:
+            theme_config["custom_css"] = ""
+        if "social_labels" not in theme_config or not isinstance(theme_config.get("social_labels"), dict):
+            theme_config["social_labels"] = {"custom_1": "Custom Link 1", "custom_2": "Custom Link 2"}
+
         settings = {
             "id": row[0],
             "site_title": row[1],
             "brand_image_url": row[2],
-            "primary_color": row[3] or DEFAULT_PRIMARY_COLOR,
+            "primary_color": palette.get("primary", DEFAULT_PRIMARY_COLOR),
             "nav_layout": row[4] or "top",
             "navigation_links_raw": raw_links,
             "navigation_links": _resolve_nav_links(raw_links),
+            "favicon_url": row[6],
+            "league_tagline": row[7],
+            "contact_email": row[8],
+            "social_links": social_links,
+            "feature_flags": feature_flags,
+            "theme": theme_config,
         }
+
+        for palette_key, palette_value in palette.items():
+            settings[f"{palette_key}_color"] = palette_value
+        for key, value in social_links.items():
+            settings[f"{key}_url"] = value
+        for key, value in feature_flags.items():
+            settings[key] = value
+        settings["custom_css"] = theme_config.get("custom_css", "")
+
         g._site_settings_cache = settings  # type: ignore[attr-defined]
         return settings
     except Exception:
         fallback_links = _default_nav_links()
+        fallback_theme = copy.deepcopy(DEFAULT_THEME_CONFIG)
         settings = {
             "site_title": "Sports League Management System",
             "brand_image_url": None,
@@ -280,7 +544,18 @@ def _load_site_settings() -> Dict[str, Any]:
             "nav_layout": "top",
             "navigation_links_raw": fallback_links,
             "navigation_links": _resolve_nav_links(fallback_links),
+            "favicon_url": None,
+            "league_tagline": None,
+            "contact_email": None,
+            "social_links": dict(DEFAULT_SOCIAL_LINKS),
+            "feature_flags": dict(DEFAULT_FEATURE_FLAGS),
+            "theme": fallback_theme,
+            "custom_css": fallback_theme.get("custom_css", ""),
         }
+        for key, value in settings["social_links"].items():
+            settings[f"{key}_url"] = value
+        for key, value in settings["feature_flags"].items():
+            settings[key] = value
         g._site_settings_cache = settings  # type: ignore[attr-defined]
         return settings
 
@@ -292,10 +567,33 @@ def invalidate_site_settings_cache() -> None:
 
 def inject_site_settings():
     settings = _load_site_settings()
+    theme = settings.get("theme", DEFAULT_THEME_CONFIG)
+    palette = theme.get("palette", {})
+    iconography = theme.get("iconography", {})
+    weight = str(iconography.get("weight", "regular")).lower()
+    icon_weight_map = {
+        "thin": "ph-thin",
+        "light": "ph-light",
+        "regular": "ph",
+        "bold": "ph-bold",
+        "fill": "ph-fill",
+        "duotone": "ph-duotone",
+    }
+    icon_class = icon_weight_map.get(weight, "ph")
+
     return dict(
         site_title=settings.get("site_title", "Sports League Management System"),
+        site_tagline=settings.get("league_tagline"),
         brand_image_url=settings.get("brand_image_url"),
-        primary_color=settings.get("primary_color", DEFAULT_PRIMARY_COLOR),
+        favicon_url=settings.get("favicon_url"),
+        contact_email=settings.get("contact_email"),
+        primary_color=palette.get("primary", DEFAULT_PRIMARY_COLOR),
+        secondary_color=palette.get("secondary"),
         nav_layout=settings.get("nav_layout", "top"),
         navigation_links=settings.get("navigation_links", []),
+        site_social_links=settings.get("social_links", {}),
+        site_feature_flags=settings.get("feature_flags", {}),
+        site_theme=theme,
+        site_icon_class=icon_class,
     )
+
