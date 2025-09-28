@@ -22,7 +22,7 @@
         {% set nav_background_css = nav_background %}
     {% endif %}
     {% set radius_map = {'xs': '0.35rem','sm': '0.5rem','md': '0.75rem','lg': '1rem','xl': '1.5rem'} %}
-    {% set button_shape_map = {'rounded': '0.75rem','soft': '0.5rem','pill': '999px','square': '0.3rem'} %}
+    {% set button_shape_map = {'rounded': '0.75rem','soft': '0.5rem','pill': '999px','square': '0'} %}
     {% set card_shadow_map = {
         'none': 'none',
         'light': '0 6px 18px ' ~ (palette.shadow or 'rgba(15, 23, 42, 0.08)'),
@@ -33,6 +33,9 @@
     {% set layout_density_map = {'compact': '0.9','comfortable': '1','spacious': '1.12'} %}
     {% set density_scale = layout_density_map.get(components.layout_density or 'comfortable', '1') %}
     {% set surface_tint = components.surface_tint or 'subtle' %}
+    {% set button_style = components.button_style or 'solid' %}
+    {% set button_primary = palette.primary or '#343a40' %}
+    {% set gradient_css = 'linear-gradient(135deg, ' ~ gradient_start ~ ', ' ~ gradient_end ~ ')' %}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&family=Nunito:wght@300;400;600;700;800&family=Raleway:wght@200;300;400;500;600;700&family=Work+Sans:wght@300;400;500;600;700&family=Source+Sans+Pro:wght@300;400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Roboto+Slab:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Merriweather:wght@300;400;700&family=Lora:wght@400;500;600;700&family=Abril+Fatface&family=IBM+Plex+Serif:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -77,6 +80,15 @@
         --slms-card-radius: {{ radius_map.get(components.border_radius_scale or 'md', '0.75rem') }};
         --slms-card-shadow: {{ card_shadow_map.get(components.card_shadow or 'medium') }};
         --slms-button-shadow: {{ button_glow_shadow }};
+        --slms-button-bg: {{ button_primary }};
+        --slms-button-border: {{ button_primary }};
+        --slms-button-color: #fff;
+        --slms-button-hover-bg: {{ button_primary }};
+        --slms-button-hover-border: {{ button_primary }};
+        --slms-button-hover-color: #fff;
+        --slms-button-outline-color: {{ button_primary }};
+        --slms-button-outline-hover-bg: {{ button_primary }};
+        --slms-button-outline-hover-color: #fff;
         --slms-layout-density: {{ density_scale }};
         --slms-icon-base: {{ iconography.primary_color or 'currentColor' }};
         --slms-icon-hover: {{ iconography.hover_color or palette.accent or '#f97316' }};
@@ -138,23 +150,77 @@
         background: rgba(255, 255, 255, 0.12);
     }
     .btn-primary {
-        background: {{ palette.primary or '#343a40' }};
-        border-color: {{ palette.primary or '#343a40' }};
+        background: var(--slms-button-bg);
+        border-color: var(--slms-button-border);
+        color: var(--slms-button-color);
         border-radius: var(--slms-button-radius);
         box-shadow: var(--slms-button-shadow);
+        transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
     }
-    body.theme-gradients .btn-primary {
-        background: linear-gradient(135deg, {{ gradient_start }}, {{ gradient_end }});
-        border: none;
+    .btn-primary:hover,
+    .btn-primary:focus {
+        background: var(--slms-button-hover-bg);
+        border-color: var(--slms-button-hover-border);
+        color: var(--slms-button-hover-color);
+        box-shadow: var(--slms-button-shadow);
     }
     .btn-outline-primary {
-        color: {{ palette.primary or '#343a40' }};
-        border-color: {{ palette.primary or '#343a40' }};
+        color: var(--slms-button-outline-color);
+        border-color: var(--slms-button-outline-color);
         border-radius: var(--slms-button-radius);
+        transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
     }
-    .btn-outline-primary:hover {
-        background: {{ palette.primary or '#343a40' }};
-        color: #fff;
+    .btn-outline-primary:hover,
+    .btn-outline-primary:focus {
+        background: var(--slms-button-outline-hover-bg);
+        color: var(--slms-button-outline-hover-color);
+        border-color: var(--slms-button-outline-color);
+    }
+    body.button-style-outline {
+        --slms-button-bg: transparent;
+        --slms-button-border: {{ button_primary }};
+        --slms-button-color: {{ button_primary }};
+        --slms-button-hover-bg: {{ button_primary }};
+        --slms-button-hover-border: {{ button_primary }};
+        --slms-button-hover-color: #fff;
+        --slms-button-outline-color: {{ button_primary }};
+        --slms-button-outline-hover-bg: {{ button_primary }};
+        --slms-button-outline-hover-color: #fff;
+    }
+    body.button-style-gradient {
+        --slms-button-bg: {{ gradient_css }};
+        --slms-button-border: transparent;
+        --slms-button-color: #fff;
+        --slms-button-hover-bg: linear-gradient(135deg, {{ gradient_end }}, {{ gradient_start }});
+        --slms-button-hover-border: transparent;
+        --slms-button-hover-color: #fff;
+    }
+    body.button-style-ghost {
+        --slms-button-bg: transparent;
+        --slms-button-border: transparent;
+        --slms-button-color: {{ button_primary }};
+        --slms-button-hover-bg: {% if button_primary|first == '#' %}{{ button_primary ~ '14' }}{% else %}rgba(15, 23, 42, 0.1){% endif %};
+        --slms-button-hover-border: transparent;
+        --slms-button-hover-color: {{ button_primary }};
+        --slms-button-outline-color: {{ button_primary }};
+        --slms-button-outline-hover-bg: {% if button_primary|first == '#' %}{{ button_primary ~ '14' }}{% else %}rgba(15, 23, 42, 0.1){% endif %};
+        --slms-button-outline-hover-color: {{ button_primary }};
+        --slms-button-shadow: none;
+    }
+    body.theme-gradients.button-style-solid {
+        --slms-button-bg: {{ gradient_css }};
+        --slms-button-border: transparent;
+        --slms-button-hover-bg: linear-gradient(135deg, {{ gradient_end }}, {{ gradient_start }});
+        --slms-button-hover-border: transparent;
+    }
+    body .btn,
+    body .btn-primary,
+    body .btn-outline-primary,
+    body .btn-outline-secondary,
+    body .btn-light,
+    body .btn-lg,
+    body .btn-sm {
+        border-radius: var(--slms-button-radius) !important;
     }
     .card {
         border-radius: var(--slms-card-radius);
@@ -272,7 +338,7 @@
 {% set body_content %}
     {% block content %}{% endblock %}
 {% endset %}
-<body class="app-shell d-flex flex-column min-vh-100 bg-surface text-body{% if nav_layout == 'sidebar' %} layout-sidebar{% endif %}{% if components.use_gradients %} theme-gradients{% endif %} nav-style-{{ nav_style }} density-{{ components.layout_density or 'comfortable' }}{% if components.section_dividers %} has-section-dividers{% endif %}{% if feature_flags.enable_dark_mode %} has-dark-toggle{% endif %}">
+<body class="app-shell d-flex flex-column min-vh-100 bg-surface text-body{% if nav_layout == 'sidebar' %} layout-sidebar{% endif %}{% if components.use_gradients %} theme-gradients{% endif %} nav-style-{{ nav_style }} button-style-{{ button_style }} density-{{ components.layout_density or 'comfortable' }}{% if components.section_dividers %} has-section-dividers{% endif %}{% if feature_flags.enable_dark_mode %} has-dark-toggle{% endif %}">
     {% if nav_layout == 'sidebar' %}
     <div class="sidebar-wrapper d-flex flex-column flex-lg-row flex-grow-1">
         <aside class="sidebar-panel d-none d-lg-flex flex-column">
@@ -440,6 +506,15 @@
     {% block extra_js %}{% endblock %}
 </body>
 </html>
+
+
+
+
+
+
+
+
+
 
 
 

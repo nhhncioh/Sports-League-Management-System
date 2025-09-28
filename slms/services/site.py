@@ -257,8 +257,36 @@ def _merge_nested(default: Dict[str, Any], override: Dict[str, Any]) -> Dict[str
     return result
 
 def _ensure_site_settings_schema(cur) -> None:
-    cur.execute(
+    session = getattr(cur, "_session", None)
+    dialect_name = ""
+    if session is not None:
+        try:
+            bind = session.get_bind()
+            dialect_name = getattr(getattr(bind, "dialect", None), "name", "") or ""
+        except Exception:
+            dialect_name = ""
+    dialect_name = dialect_name.lower()
+
+    if dialect_name == "sqlite":
+        create_sql = """
+        CREATE TABLE IF NOT EXISTS site_settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            site_title TEXT DEFAULT 'Sports League Management System',
+            brand_image_url TEXT,
+            primary_color TEXT DEFAULT '#343a40',
+            nav_layout TEXT DEFAULT 'top',
+            navigation_json TEXT,
+            favicon_url TEXT,
+            league_tagline TEXT,
+            contact_email TEXT,
+            social_links_json TEXT,
+            feature_flags_json TEXT,
+            theme_config_json TEXT,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
         """
+    else:
+        create_sql = """
         CREATE TABLE IF NOT EXISTS site_settings (
             id SERIAL PRIMARY KEY,
             site_title TEXT DEFAULT 'Sports League Management System',
@@ -272,20 +300,26 @@ def _ensure_site_settings_schema(cur) -> None:
             social_links_json TEXT,
             feature_flags_json TEXT,
             theme_config_json TEXT,
-            updated_at TIMESTAMPTZ DEFAULT NOW()
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
         """
-    )
+
+    cur.execute(create_sql)
+
     existing_columns: Set[str] = set()
     try:
-        cur.execute(
-            """
-            SELECT column_name
-            FROM information_schema.columns
-            WHERE table_name = 'site_settings'
-            """
-        )
-        existing_columns = {row[0] for row in cur.fetchall()}
+        if dialect_name == "sqlite":
+            cur.execute("PRAGMA table_info('site_settings')")
+            existing_columns = {row[1] for row in cur.fetchall()}
+        else:
+            cur.execute(
+                """
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_name = 'site_settings'
+                """
+            )
+            existing_columns = {row[0] for row in cur.fetchall()}
     except Exception:
         existing_columns = set()
 
@@ -302,7 +336,6 @@ def _ensure_site_settings_schema(cur) -> None:
     for column, statement in migrations.items():
         if column not in existing_columns:
             cur.execute(statement)
-
 
 def _sanitize_nav_link(entry: Dict[str, Any]) -> Dict[str, Any] | None:
     if not isinstance(entry, dict):

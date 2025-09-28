@@ -1,3 +1,12 @@
+.btn,
+.btn-primary,
+.btn-outline-primary,
+.btn-outline-secondary,
+.btn-light,
+.btn-lg,
+.btn-sm {
+    border-radius: var(--slms-button-radius, 0.5rem) !important;
+}
 /*
   Global UI polish for Sports League Management System
   - Unifies look across legacy (layout.html) and modern (base.html) templates
@@ -41,9 +50,33 @@ body {
 .input-group-text { background-color: var(--slms-bg-soft); }
 
 /* Buttons */
-.btn { border-radius: .5rem; }
-.btn-outline-primary { border-color: var(--primary-color); color: var(--primary-color); }
-.btn-outline-primary:hover { background-color: var(--primary-color); color: #fff; }
+.btn {
+    font-family: inherit;
+    border-radius: var(--slms-button-radius, 0.5rem) !important;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.btn-primary {
+  background: var(--slms-button-bg, var(--primary-color, #0d6efd));
+  border-color: var(--slms-button-border, var(--primary-color, #0d6efd));
+  color: var(--slms-button-color, #fff);
+  border-radius: var(--slms-button-radius, 0.5rem);
+  box-shadow: var(--slms-button-shadow, none);
+}
+.btn-primary:hover, .btn-primary:focus {
+  background: var(--slms-button-hover-bg, var(--slms-button-bg, var(--primary-color, #0d6efd)));
+  border-color: var(--slms-button-hover-border, var(--slms-button-border, var(--primary-color, #0d6efd)));
+  color: var(--slms-button-hover-color, #fff);
+}
+.btn-outline-primary {
+  color: var(--slms-button-outline-color, var(--primary-color, #0d6efd));
+  border-color: var(--slms-button-outline-color, var(--primary-color, #0d6efd));
+  border-radius: var(--slms-button-radius, 0.5rem);
+}
+.btn-outline-primary:hover, .btn-outline-primary:focus {
+  background: var(--slms-button-outline-hover-bg, var(--primary-color, #0d6efd));
+  color: var(--slms-button-outline-hover-color, #fff);
+  border-color: var(--slms-button-outline-color, var(--primary-color, #0d6efd));
+}
 
 /* Badges for game status */
 .game-status-badge { font-size: .75rem; padding: .25rem .5rem; }
@@ -484,6 +517,9 @@ footer .text-muted { color: var(--slms-text-muted) !important; }
 @media (max-width: 576px) {
   .navbar-brand img { height: 32px; }
 }
+
+
+
 
 
 

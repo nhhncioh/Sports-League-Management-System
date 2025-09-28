@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, g, jsonify
 from functools import wraps
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 import copy
 import json
@@ -601,7 +601,7 @@ def _ensure_league_fee_plan(cur, league_id, currency='USD'):
     plan = _get_league_fee_plan(cur, league_id)
     if plan:
         return plan
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     cur.execute(
         "INSERT INTO league_fee_plans (league_id, total_fee_cents, deposit_cents, currency, notes, installments_enabled, installment_count, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
         (league_id, 0, None, currency.upper(), None, False, 0, now, now)
@@ -681,15 +681,16 @@ def _persist_navigation_settings(layout: str, links: list[dict]):
         payload = json.dumps(links)
         cur.execute('SELECT id FROM site_settings ORDER BY id ASC LIMIT 1')
         row = cur.fetchone()
+        timestamp = datetime.now(timezone.utc)
         if row:
             cur.execute(
-                "UPDATE site_settings SET nav_layout = %s, navigation_json = %s, updated_at = NOW() WHERE id = %s",
-                (layout_normalized, payload, row[0])
+                "UPDATE site_settings SET nav_layout = %s, navigation_json = %s, updated_at = %s WHERE id = %s",
+                (layout_normalized, payload, timestamp, row[0])
             )
         else:
             cur.execute(
-                "INSERT INTO site_settings (nav_layout, navigation_json) VALUES (%s, %s)",
-                (layout_normalized, payload)
+                "INSERT INTO site_settings (nav_layout, navigation_json, updated_at) VALUES (%s, %s, %s)",
+                (layout_normalized, payload, timestamp)
             )
         db.commit()
     except Exception:
@@ -702,7 +703,7 @@ def _build_league_insights():
     db = get_db()
     cur = db.cursor()
     try:
-        current_year = datetime.utcnow().year
+        current_year = datetime.now(timezone.utc).year
         previous_year = current_year - 1
 
         teams_current = _execute_scalar(
@@ -892,7 +893,7 @@ def _build_league_insights():
             'conversion_rate': conversion_rate,
             'average_team_size': average_team_size,
             'league_breakdown': league_breakdown,
-            'updated_at': datetime.utcnow(),
+            'updated_at': datetime.now(timezone.utc),
         }
     finally:
         cur.close()
@@ -1239,7 +1240,7 @@ def manage_league_fees():
                 currency = (request.form.get('currency') or 'USD').upper()[:3]
                 installments_enabled = True if request.form.get('installments_enabled') else False
                 notes = (request.form.get('notes') or '').strip() or None
-                now = datetime.utcnow().isoformat()
+                now = datetime.now(timezone.utc).isoformat()
 
                 plan = _get_league_fee_plan(cur, league_id_int)
                 installment_count = request.form.get('installment_count')
@@ -1721,43 +1722,374 @@ def manage_teams():
     cur = db.cursor()
 
     if request.method == 'POST':
+        action = request.form.get('action')
+
+        if action == 'save_team':
+            return _handle_save_team(db)
+        elif action == 'delete_team':
+            return _handle_delete_team(db)
+        elif action == 'upload_logo':
+            return _handle_upload_logo(db)
+
+        # Fallback for old-style form submissions
         try:
             team_id = request.form.get('team_id')
-            name = request.form['name']
-            founded_year = request.form['founded_year']
-            stadium_id = request.form['stadium_id']
-            league_id = request.form['league_id']
-            coach_id = request.form['coach_id']
+            name = request.form.get('name', '')
+            founded_year = request.form.get('founded_year')
+            stadium_id = request.form.get('stadium_id')
+            league_id = request.form.get('league_id')
+            coach_id = request.form.get('coach_id')
+
+            cur = db.cursor()
 
             if 'add' in request.form:
-                cur.execute('INSERT INTO teams (name, founded_year, stadium_id, league_id, coach_id) VALUES (%s, %s, %s, %s, %s)', 
+                cur.execute('INSERT INTO teams (name, founded_year, stadium_id, league_id, coach_id) VALUES (%s, %s, %s, %s, %s)',
                             (name, founded_year, stadium_id, league_id, coach_id))
                 flash('Team added successfully', 'success')
             elif 'edit' in request.form and team_id:
-                cur.execute('UPDATE teams SET name = %s, founded_year = %s, stadium_id = %s, league_id = %s, coach_id = %s WHERE team_id = %s', 
+                cur.execute('UPDATE teams SET name = %s, founded_year = %s, stadium_id = %s, league_id = %s, coach_id = %s WHERE team_id = %s',
                             (name, founded_year, stadium_id, league_id, coach_id, team_id))
                 flash('Team updated successfully', 'success')
             elif 'delete' in request.form and team_id:
                 cur.execute('DELETE FROM teams WHERE team_id = %s', (team_id,))
                 flash('Team deleted successfully', 'success')
             db.commit()
+            cur.close()
         except Exception as e:
             db.rollback()
             flash('An error occurred: ' + str(e), 'error')
-        finally:
-            cur.close()
+
         return redirect(url_for('admin.manage_teams'))
 
-    cur.execute('SELECT team_id, name, founded_year, stadium_id, league_id, coach_id FROM teams')
-    teams = cur.fetchall()
-    cur.execute('SELECT stadium_id, name FROM stadiums')
-    stadiums = cur.fetchall()
-    cur.execute('SELECT league_id, name FROM leagues')
+    # Get teams with extended information
+    cur.execute("""
+        SELECT
+            t.team_id,
+            t.name,
+            t.founded_year,
+            t.cresturl,
+            l.name as league_name,
+            s.name as stadium_name,
+            c.name as coach_name,
+            t.league_id,
+            t.stadium_id,
+            t.coach_id,
+            COUNT(p.player_id) as player_count
+        FROM teams t
+        LEFT JOIN leagues l ON t.league_id = l.league_id
+        LEFT JOIN stadiums s ON t.stadium_id = s.stadium_id
+        LEFT JOIN coaches c ON t.coach_id = c.coach_id
+        LEFT JOIN players p ON t.team_id = p.team_id
+        GROUP BY t.team_id, t.name, t.founded_year, t.cresturl,
+                 l.name, s.name, c.name, t.league_id, t.stadium_id, t.coach_id
+        ORDER BY t.name
+    """)
+
+    teams_raw = cur.fetchall()
+
+    # Convert to list of dictionaries for easier template access
+    teams = []
+    for team in teams_raw:
+        team_dict = {
+            'team_id': team[0],
+            'name': team[1],
+            'founded_year': team[2],
+            'cresturl': team[3],
+            'league_name': team[4],
+            'stadium_name': team[5],
+            'coach_name': team[6],
+            'league_id': team[7],
+            'stadium_id': team[8],
+            'coach_id': team[9],
+            'player_count': team[10],
+            'recent_players': []
+        }
+
+        # Get recent players for this team
+        cur.execute("""
+            SELECT name, position
+            FROM players
+            WHERE team_id = %s
+            ORDER BY name
+            LIMIT 5
+        """, (team[0],))
+
+        players = cur.fetchall()
+        team_dict['recent_players'] = [{'name': p[0], 'position': p[1]} for p in players]
+
+        teams.append(team_dict)
+
+    # Get reference data for dropdowns
+    cur.execute('SELECT league_id, name FROM leagues ORDER BY name')
     leagues = cur.fetchall()
-    cur.execute('SELECT coach_id, name FROM coaches')
+
+    cur.execute('SELECT stadium_id, name FROM stadiums ORDER BY name')
+    stadiums = cur.fetchall()
+
+    cur.execute('SELECT coach_id, name FROM coaches ORDER BY name')
     coaches = cur.fetchall()
+
+    # Calculate summary statistics
+    total_players = sum(team['player_count'] for team in teams)
+    avg_squad_size = total_players / len(teams) if teams else 0
+
     cur.close()
-    return render_template('manage_teams.html', teams=teams, stadiums=stadiums, leagues=leagues, coaches=coaches)
+
+    return render_template('manage_teams.html',
+                         teams=teams,
+                         leagues=leagues,
+                         stadiums=stadiums,
+                         coaches=coaches,
+                         total_players=total_players,
+                         avg_squad_size=avg_squad_size)
+
+def _handle_save_team(db):
+    """Handle team creation/editing"""
+    try:
+        team_id = request.form.get('team_id')
+        name = request.form.get('name', '').strip()
+        founded_year = request.form.get('founded_year')
+        league_id = request.form.get('league_id')
+        stadium_id = request.form.get('stadium_id')
+        coach_id = request.form.get('coach_id')
+        cresturl = request.form.get('cresturl', '').strip()
+
+        if not name or not league_id:
+            flash('Team name and league are required.', 'error')
+            return redirect(url_for('admin.manage_teams'))
+
+        # Convert empty strings to None for optional fields
+        founded_year = int(founded_year) if founded_year else None
+        stadium_id = int(stadium_id) if stadium_id else None
+        coach_id = int(coach_id) if coach_id else None
+        cresturl = cresturl if cresturl else None
+
+        cur = db.cursor()
+
+        if team_id:
+            # Update existing team
+            cur.execute("""
+                UPDATE teams
+                SET name = %s, founded_year = %s, league_id = %s, stadium_id = %s, coach_id = %s, cresturl = %s
+                WHERE team_id = %s
+            """, (name, founded_year, league_id, stadium_id, coach_id, cresturl, team_id))
+            flash(f'Team "{name}" updated successfully!', 'success')
+        else:
+            # Create new team
+            cur.execute("""
+                INSERT INTO teams (name, founded_year, league_id, stadium_id, coach_id, cresturl)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (name, founded_year, league_id, stadium_id, coach_id, cresturl))
+            flash(f'Team "{name}" created successfully!', 'success')
+
+        db.commit()
+        cur.close()
+
+    except Exception as e:
+        db.rollback()
+        flash(f'Error saving team: {str(e)}', 'error')
+
+    return redirect(url_for('admin.manage_teams'))
+
+def _handle_delete_team(db):
+    """Handle team deletion"""
+    try:
+        team_id = request.form.get('team_id')
+
+        if not team_id:
+            flash('Invalid team ID.', 'error')
+            return redirect(url_for('admin.manage_teams'))
+
+        cur = db.cursor()
+
+        # Get team name for confirmation message
+        cur.execute('SELECT name FROM teams WHERE team_id = %s', (team_id,))
+        team_row = cur.fetchone()
+
+        if not team_row:
+            flash('Team not found.', 'error')
+            return redirect(url_for('admin.manage_teams'))
+
+        team_name = team_row[0]
+
+        # Delete team (cascade should handle related records)
+        cur.execute('DELETE FROM teams WHERE team_id = %s', (team_id,))
+
+        db.commit()
+        cur.close()
+
+        flash(f'Team "{team_name}" deleted successfully.', 'success')
+
+    except Exception as e:
+        db.rollback()
+        flash(f'Error deleting team: {str(e)}', 'error')
+
+    return redirect(url_for('admin.manage_teams'))
+
+def _handle_upload_logo(db):
+    """Handle team logo upload"""
+    try:
+        team_id = request.form.get('team_id')
+        logo_url = request.form.get('logo_url', '').strip()
+
+        if not team_id:
+            flash('Invalid team ID.', 'error')
+            return redirect(url_for('admin.manage_teams'))
+
+        # Handle file upload
+        logo_file = request.files.get('logo')
+        if logo_file and logo_file.filename:
+            # Here you would typically upload to a cloud service or local storage
+            # For now, we'll just use the URL field
+            flash('File upload functionality would be implemented here. Please use URL instead.', 'info')
+            return redirect(url_for('admin.manage_teams'))
+
+        # Handle URL
+        if logo_url:
+            cur = db.cursor()
+            cur.execute('UPDATE teams SET cresturl = %s WHERE team_id = %s', (logo_url, team_id))
+            db.commit()
+            cur.close()
+            flash('Team logo updated successfully!', 'success')
+        else:
+            flash('Please provide a logo URL.', 'error')
+
+    except Exception as e:
+        db.rollback()
+        flash(f'Error updating logo: {str(e)}', 'error')
+
+    return redirect(url_for('admin.manage_teams'))
+
+# Team Management API Routes
+@admin_bp.route('/get_team/<int:team_id>')
+@admin_required
+def get_team(team_id):
+    """API endpoint to get team data for editing"""
+    try:
+        db = get_db()
+        cur = db.cursor()
+
+        cur.execute("""
+            SELECT team_id, name, founded_year, league_id, stadium_id, coach_id, cresturl
+            FROM teams WHERE team_id = %s
+        """, (team_id,))
+
+        team_row = cur.fetchone()
+        cur.close()
+
+        if not team_row:
+            return jsonify({'success': False, 'message': 'Team not found'})
+
+        team_data = {
+            'team_id': team_row[0],
+            'name': team_row[1],
+            'founded_year': team_row[2],
+            'league_id': team_row[3],
+            'stadium_id': team_row[4],
+            'coach_id': team_row[5],
+            'cresturl': team_row[6]
+        }
+
+        return jsonify({'success': True, 'team': team_data})
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@admin_bp.route('/get_team_roster/<int:team_id>')
+@admin_required
+def get_team_roster(team_id):
+    """API endpoint to get team roster and available players"""
+    try:
+        db = get_db()
+        cur = db.cursor()
+
+        # Get team name
+        cur.execute('SELECT name FROM teams WHERE team_id = %s', (team_id,))
+        team_row = cur.fetchone()
+        if not team_row:
+            return jsonify({'success': False, 'message': 'Team not found'})
+
+        team_name = team_row[0]
+
+        # Get current roster
+        cur.execute("""
+            SELECT player_id, name, position, nationality
+            FROM players
+            WHERE team_id = %s
+            ORDER BY position, name
+        """, (team_id,))
+
+        roster = []
+        for row in cur.fetchall():
+            roster.append({
+                'player_id': row[0],
+                'name': row[1],
+                'position': row[2],
+                'nationality': row[3]
+            })
+
+        # Get available players (no team assigned)
+        cur.execute("""
+            SELECT player_id, name, position, nationality
+            FROM players
+            WHERE team_id IS NULL
+            ORDER BY position, name
+        """)
+
+        available_players = []
+        for row in cur.fetchall():
+            available_players.append({
+                'player_id': row[0],
+                'name': row[1],
+                'position': row[2],
+                'nationality': row[3]
+            })
+
+        cur.close()
+
+        return jsonify({
+            'success': True,
+            'team_name': team_name,
+            'roster': roster,
+            'available_players': available_players
+        })
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@admin_bp.route('/update_team_roster', methods=['POST'])
+@admin_required
+def update_team_roster():
+    """API endpoint to update team roster"""
+    try:
+        data = request.get_json()
+        team_id = data.get('team_id')
+        changes = data.get('changes', {})
+
+        if not team_id:
+            return jsonify({'success': False, 'message': 'Team ID required'})
+
+        db = get_db()
+        cur = db.cursor()
+
+        # Add players to team
+        players_to_add = changes.get('add', [])
+        for player_id in players_to_add:
+            cur.execute('UPDATE players SET team_id = %s WHERE player_id = %s', (team_id, player_id))
+
+        # Remove players from team
+        players_to_remove = changes.get('remove', [])
+        for player_id in players_to_remove:
+            cur.execute('UPDATE players SET team_id = NULL WHERE player_id = %s', (player_id,))
+
+        db.commit()
+        cur.close()
+
+        return jsonify({'success': True, 'message': 'Roster updated successfully'})
+
+    except Exception as e:
+        db.rollback()
+        return jsonify({'success': False, 'message': str(e)})
 
 
 @admin_bp.route('/manage_coaches', methods=['GET', 'POST'])
@@ -4398,16 +4730,20 @@ def site_settings():
             cur = db.cursor()
             cur.execute('SELECT id FROM site_settings ORDER BY id ASC LIMIT 1')
             row = cur.fetchone()
-            payload = (
+            timestamp = datetime.now(timezone.utc)
+            social_links_json = json.dumps(social_links)
+            feature_flags_json = json.dumps(feature_flags)
+            theme_json = json.dumps(theme)
+            base_payload = (
                 site_title,
                 brand_image_url,
                 primary_color,
                 favicon_url,
                 league_tagline,
                 contact_email,
-                json.dumps(social_links),
-                json.dumps(feature_flags),
-                json.dumps(theme),
+                social_links_json,
+                feature_flags_json,
+                theme_json,
             )
             if row:
                 cur.execute(
@@ -4422,10 +4758,10 @@ def site_settings():
                         social_links_json = %s,
                         feature_flags_json = %s,
                         theme_config_json = %s,
-                        updated_at = NOW()
+                        updated_at = %s
                     WHERE id = %s
                     """,
-                    payload + (row[0],),
+                    base_payload + (timestamp, row[0]),
                 )
             else:
                 cur.execute(
@@ -4439,10 +4775,11 @@ def site_settings():
                         contact_email,
                         social_links_json,
                         feature_flags_json,
-                        theme_config_json
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        theme_config_json,
+                        updated_at
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """,
-                    payload,
+                    base_payload + (timestamp,),
                 )
             db.commit()
             invalidate_site_settings_cache()
@@ -4496,3 +4833,5 @@ def site_settings():
         font_preset_weights=font_preset_weights,
         font_preset_lookup=font_preset_lookup,
     )
+
+

@@ -1,129 +1,899 @@
 {% extends "base.html" %}
-{% block title %}Manage Teams - Admin Panel{% endblock %}
+{% block title %}Team Management - Admin Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+.team-management-page .stat-card{border:none;border-radius:1rem;box-shadow:0 10px 30px rgba(15,23,42,0.08);}
+.team-management-page .stat-label{font-size:0.85rem;text-transform:uppercase;letter-spacing:0.06em;}
+.team-card{border:none;border-radius:1rem;box-shadow:0 18px 44px rgba(15,23,42,0.08);transition:transform 0.2s ease,box-shadow 0.2s ease;position:relative;}
+.team-card:hover{transform:translateY(-2px);box-shadow:0 20px 50px rgba(15,23,42,0.12);}
+.team-card .dropdown{position:relative;z-index:10;}
+.team-card .dropdown-menu{z-index:1050;box-shadow:0 10px 30px rgba(0,0,0,0.15);border:none;border-radius:0.5rem;margin-top:0.25rem;min-width:180px;}
+.team-card .dropdown-item{padding:0.5rem 1rem;transition:all 0.2s ease;}
+.team-card .dropdown-item:hover{background-color:#f1f5f9;transform:translateX(2px);}
+.team-card .dropdown-item.text-danger:hover{background-color:#fef2f2;color:#dc2626;}
+.team-card .dropdown-toggle{border:1px solid rgba(226,232,240,0.8);transition:all 0.2s ease;}
+.team-card .dropdown-toggle:hover{background-color:#f8fafc;border-color:#cbd5e1;transform:scale(1.05);}
+.team-card .dropdown-toggle:focus{box-shadow:0 0 0 3px rgba(59,130,246,0.1);border-color:#3b82f6;}
+.team-card-container{position:relative;}
+.team-card-container:hover{z-index:20;}
+.team-logo{width:60px;height:60px;object-fit:cover;border-radius:50%;border:3px solid #fff;box-shadow:0 4px 12px rgba(15,23,42,0.15);}
+.team-logo-large{width:120px;height:120px;object-fit:cover;border-radius:50%;border:4px solid #fff;box-shadow:0 8px 24px rgba(15,23,42,0.2);}
+.roster-player{padding:0.75rem;border-radius:0.5rem;background:rgba(248,250,252,0.8);border:1px solid rgba(226,232,240,0.6);transition:all 0.2s ease;}
+.roster-player:hover{background:rgba(239,246,255,0.9);border-color:rgba(59,130,246,0.3);}
+.position-badge{display:inline-flex;align-items:center;padding:0.25rem 0.5rem;border-radius:999px;font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;}
+.position-gk{background-color:rgba(239,68,68,0.1);color:#dc2626;}
+.position-def{background-color:rgba(34,197,94,0.1);color:#16a34a;}
+.position-mid{background-color:rgba(59,130,246,0.1);color:#2563eb;}
+.position-att{background-color:rgba(251,146,60,0.1);color:#ea580c;}
+.nationality-flag{width:20px;height:15px;border-radius:2px;margin-right:0.5rem;}
+.team-stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;}
+.upload-zone{border:2px dashed #cbd5e1;border-radius:1rem;padding:2rem;text-align:center;transition:all 0.2s ease;cursor:pointer;}
+.upload-zone:hover{border-color:#3b82f6;background-color:rgba(59,130,246,0.05);}
+.upload-zone.dragover{border-color:#2563eb;background-color:rgba(37,99,235,0.1);}
+.btn-icon{display:inline-flex;align-items:center;gap:0.5rem;}
+.modal-xl{max-width:1200px;}
+.roster-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;}
+.available-players{max-height:400px;overflow-y:auto;}
+.player-search{position:sticky;top:0;background:white;z-index:10;padding-bottom:1rem;border-bottom:1px solid #e2e8f0;}
+/* Card View Styles */
+.teams-grid-cards .team-card-container{flex:0 0 calc(33.333% - 1rem);max-width:calc(33.333% - 1rem);}
+@media (max-width: 1200px) {
+  .teams-grid-cards .team-card-container{flex:0 0 calc(50% - 1rem);max-width:calc(50% - 1rem);}
+}
+@media (max-width: 768px) {
+  .teams-grid-cards .team-card-container{flex:0 0 100%;max-width:100%;}
+  .filter-controls .row{flex-direction:column;}
+  .filter-controls .col-md-6{margin-bottom:1rem;}
+  .filter-controls .d-flex{flex-wrap:wrap;gap:0.5rem;}
+}
+/* List View Styles */
+.teams-grid-list{display:block;}
+.teams-grid-list .team-card-container{flex:none;max-width:100%;margin-bottom:0.5rem;}
+.teams-grid-list .list-view-template{background:#f8fafc;border:1px solid #e2e8f0;border-radius:0.5rem;box-shadow:none;}
+.teams-grid-list .list-view-template:hover{background:#f1f5f9;border-color:#cbd5e1;}
+.teams-grid-list .card-body{padding:0.75rem;}
+.teams-grid-list .team-header .team-logo{width:40px;height:40px;border-radius:50%;object-fit:cover;}
+.teams-grid-list .team-info h5{margin-bottom:0.25rem;font-size:1rem;line-height:1.2;font-weight:600;}
+.teams-grid-list .team-stats{min-width:300px;}
+.teams-grid-list .stat-item{min-width:60px;}
+.teams-grid-list .stat-value{font-size:1rem;line-height:1.2;}
+.teams-grid-list .stat-label{font-size:0.75rem;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.teams-grid-list .position-absolute .dropdown-toggle{padding:0.375rem;border-radius:50%;transition:background-color 0.15s ease;}
+.teams-grid-list .position-absolute .dropdown-toggle:hover{background-color:#e5e7eb;}
+@media (max-width: 992px) {
+  .teams-grid-list .team-stats{min-width:250px;gap:3rem;}
+  .teams-grid-list .card-body{padding:0.625rem;}
+}
+@media (max-width: 768px) {
+  .teams-grid-list .team-stats{min-width:200px;gap:2rem;}
+  .teams-grid-list .stat-item{min-width:50px;}
+  .teams-grid-list .team-header .team-logo{width:36px;height:36px;}
+  .teams-grid-list .card-body{padding:0.5rem;}
+}
+@media (max-width: 576px) {
+  .teams-grid-list .team-stats{flex-direction:column;gap:0.5rem;align-items:flex-end;}
+  .teams-grid-list .stat-item{min-width:auto;text-align:right;}
+  .teams-grid-list .team-header .team-logo{width:32px;height:32px;}
+  .teams-grid-list .card-body{padding:0.5rem;}
+}
+.filter-controls{background:rgba(248,250,252,0.8);backdrop-filter:blur(10px);border:1px solid rgba(226,232,240,0.8);border-radius:1rem;padding:1rem;margin-bottom:1.5rem;}
+.view-toggle-btn{display:inline-flex;align-items:center;justify-content:center;width:2.5rem;height:2.5rem;border-radius:0.5rem;border:1px solid #e2e8f0;background:#fff;transition:all 0.2s ease;margin:0 0.25rem;}
+.view-toggle-btn:hover{background:#f8fafc;border-color:#cbd5e1;transform:scale(1.05);}
+.view-toggle-btn.active{background:#3b82f6;border-color:#3b82f6;color:#fff;}
+.view-toggle-btn.active:hover{background:#2563eb;}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-    <h1 class="mb-4">Manage Teams</h1>
-    <div class="row">
-        <div class="col-md-6">
-            <h2 id="form-title">Add Team</h2>
-            <form action="{{ url_for('admin.manage_teams') }}" method="POST">
-                <input type="hidden" id="team_id" name="team_id">
-                <div class="form-group">
-                    <label for="name">Name:</label>
-                    <input type="text" class="form-control" id="name" name="name" required>
-                </div>
-                <div class="form-group">
-                    <label for="founded_year">Founded Year:</label>
-                    <input type="number" class="form-control" id="founded_year" name="founded_year" required>
-                </div>
-                <div class="form-group">
-                    <label for="stadium_id">Stadium:</label>
-                    <select class="form-control" id="stadium_id" name="stadium_id" required>
-                        {% for stadium in stadiums %}
-                        <option value="{{ stadium[0] }}">{{ stadium[1] }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="league_id">League:</label>
-                    <select class="form-control" id="league_id" name="league_id" required>
-                        {% for league in leagues %}
-                        <option value="{{ league[0] }}">{{ league[1] }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="coach_id">Coach:</label>
-                    <select class="form-control" id="coach_id" name="coach_id" required>
-                        {% for coach in coaches %}
-                        <option value="{{ coach[0] }}">{{ coach[1] }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <button type="submit" name="add" class="btn btn-primary" id="submit-button">Add Team</button>
-            </form>
+<div class="container-fluid py-4 team-management-page">
+    <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4">
+        <div>
+            <h1 class="h3 mb-1">Team Management</h1>
+            <p class="text-muted mb-0">Manage teams, rosters, logos, and all team information in one place.</p>
         </div>
-        <div class="col-md-6">
-            <h2>Existing Teams</h2>
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Founded Year</th>
-                        <th>Stadium</th>
-                        <th>League</th>
-                        <th>Coach</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for team in teams %}
-                    <tr>
-                        <td>{{ team[0] }}</td>
-                        <td>{{ team[1] }}</td>
-                        <td>{{ team[2] }}</td>
-                        <td>{{ team[3] }}</td>
-                        <td>{{ team[4] }}</td>
-                        <td>{{ team[5] }}</td>
-                        <td>
-                            <button class="btn btn-success btn-sm" onclick="editTeam('{{ team[0] }}', '{{ team[1] }}', '{{ team[2] }}', '{{ team[3] }}', '{{ team[4] }}', '{{ team[5] }}')">
-                                <i class="ph ph-pencil"></i>
-                            </button>
-                        </td>
-                        <td>
-                            <button class="btn btn-danger btn-sm" onclick="confirmDelete('{{ team[0] }}')">
-                                <i class="ph ph-minus"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <div class="input-group search-group shadow-sm" style="width:300px;">
+                <span class="input-group-text bg-white border-end-0"><i class="ph ph-magnifying-glass"></i></span>
+                <input type="search" class="form-control border-start-0" id="teamSearch" placeholder="Search teams...">
+            </div>
+            <button class="btn btn-primary" type="button" onclick="openTeamModal()">
+                <i class="ph ph-plus me-2"></i>Add Team
+            </button>
         </div>
     </div>
-</div>
 
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteModalLabel">Delete Confirmation</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
+    <!-- Quick Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="card stat-card p-3 h-100">
+                <div class="stat-label text-muted mb-2">Total Teams</div>
+                <div class="fs-3 fw-bold">{{ teams|length }}</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card stat-card p-3 h-100">
+                <div class="stat-label text-muted mb-2">Active Players</div>
+                <div class="fs-3 fw-bold">{{ total_players }}</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card stat-card p-3 h-100">
+                <div class="stat-label text-muted mb-2">Leagues</div>
+                <div class="fs-3 fw-bold">{{ leagues|length }}</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card stat-card p-3 h-100">
+                <div class="stat-label text-muted mb-2">Avg Squad Size</div>
+                <div class="fs-3 fw-bold">{{ avg_squad_size|round|int }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter and View Controls -->
+    <div class="filter-controls">
+        <div class="row align-items-center g-3">
+            <div class="col-md-6">
+                <div class="d-flex align-items-center gap-3">
+                    <label class="form-label mb-0 fw-semibold text-muted small text-uppercase">Filter by League:</label>
+                    <select class="form-select form-select-sm" id="leagueFilter" style="width:200px;">
+                        <option value="">All Leagues</option>
+                        {% for league in leagues %}
+                            <option value="{{ league[0] }}">{{ league[1] }}</option>
+                        {% endfor %}
+                    </select>
+                    <span class="badge bg-primary" id="filteredCount">{{ teams|length }} teams</span>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="d-flex align-items-center justify-content-md-end gap-3">
+                    <label class="form-label mb-0 fw-semibold text-muted small text-uppercase">View:</label>
+                    <div class="d-flex">
+                        <button class="view-toggle-btn active" data-view="cards" title="Card view">
+                            <i class="ph ph-squares-four"></i>
+                        </button>
+                        <button class="view-toggle-btn" data-view="list" title="List view">
+                            <i class="ph ph-list"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Teams Grid -->
+    <div class="d-flex flex-wrap gap-4 teams-grid-cards" id="teamsGrid">
+        {% for team in teams %}
+        <div class="team-card-container" data-team-name="{{ team.name|lower }}" data-league="{{ team.league_name|lower }}" data-league-id="{{ team.league_id }}">
+            <!-- Card View Template -->
+            <div class="card team-card h-100 card-view-template">
+                <div class="card-body">
+                    <div class="d-flex align-items-start gap-3 mb-3">
+                        <img src="{{ team.cresturl or '/static/images/default-team-logo.png' }}"
+                             alt="{{ team.name }} logo" class="team-logo"
+                             onerror="this.src='/static/images/default-team-logo.png'">
+                        <div class="flex-grow-1">
+                            <h5 class="card-title mb-1">{{ team.name }}</h5>
+                            <p class="text-muted small mb-1">{{ team.league_name }}</p>
+                            <p class="text-muted small mb-0">Founded: {{ team.founded_year }}</p>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="ph ph-dots-three-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="openTeamModal({{ team.team_id }})">
+                                    <i class="ph ph-pencil me-2"></i>Edit Team
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="openRosterModal({{ team.team_id }})">
+                                    <i class="ph ph-users me-2"></i>Manage Roster
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="openLogoModal({{ team.team_id }})">
+                                    <i class="ph ph-image me-2"></i>Change Logo
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="confirmDeleteTeam({{ team.team_id }}, '{{ team.name }}')">
+                                    <i class="ph ph-trash me-2"></i>Delete Team
+                                </a></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="team-stats-grid mb-3">
+                        <div class="text-center">
+                            <div class="fw-bold text-primary">{{ team.player_count }}</div>
+                            <small class="text-muted">Players</small>
+                        </div>
+                        <div class="text-center">
+                            <div class="fw-bold text-success">{{ team.coach_name or 'No Coach' }}</div>
+                            <small class="text-muted">Coach</small>
+                        </div>
+                        <div class="text-center">
+                            <div class="fw-bold text-info">{{ team.stadium_name or 'No Stadium' }}</div>
+                            <small class="text-muted">Home Ground</small>
+                        </div>
+                    </div>
+
+                    {% if team.recent_players %}
+                    <div class="mb-3">
+                        <small class="text-muted d-block mb-2">Key Players:</small>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for player in team.recent_players[:3] %}
+                            <span class="badge bg-light text-dark border">{{ player.name }}</span>
+                            {% endfor %}
+                            {% if team.player_count > 3 %}
+                            <span class="badge bg-secondary">+{{ team.player_count - 3 }} more</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary btn-sm flex-fill" onclick="openRosterModal({{ team.team_id }})">
+                            <i class="ph ph-users me-1"></i>Roster
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm flex-fill" onclick="openTeamModal({{ team.team_id }})">
+                            <i class="ph ph-pencil me-1"></i>Edit
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- List View Template -->
+            <div class="card team-card list-view-template" style="display:none;">
+                <div class="card-body position-relative">
+                    <!-- Top Right Actions Menu -->
+                    <div class="position-absolute top-0 end-0 p-2">
+                        <div class="dropdown">
+                            <button class="btn btn-light btn-sm border-0 shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="ph ph-dots-three-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow">
+                                <li><a class="dropdown-item" href="#" onclick="openTeamModal({{ team.team_id }})">
+                                    <i class="ph ph-pencil me-2"></i>Edit Team
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="openRosterModal({{ team.team_id }})">
+                                    <i class="ph ph-users me-2"></i>Manage Roster
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="openLogoModal({{ team.team_id }})">
+                                    <i class="ph ph-image me-2"></i>Change Logo
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="confirmDeleteTeam({{ team.team_id }}, '{{ team.name }}')">
+                                    <i class="ph ph-trash me-2"></i>Delete Team
+                                </a></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Main Content -->
+                    <div class="d-flex align-items-center pe-5">
+                        <!-- Team Basic Info -->
+                        <div class="team-header d-flex align-items-center">
+                            <img src="{{ team.cresturl or '/static/images/default-team-logo.png' }}"
+                                 alt="{{ team.name }} logo" class="team-logo me-3"
+                                 onerror="this.src='/static/images/default-team-logo.png'">
+                            <div class="team-info">
+                                <h5 class="mb-1">{{ team.name }}</h5>
+                                <div class="d-flex align-items-center gap-3 text-muted small">
+                                    <span><i class="ph ph-trophy me-1"></i>{{ team.league_name }}</span>
+                                    {% if team.founded_year %}
+                                    <span><i class="ph ph-calendar me-1"></i>Est. {{ team.founded_year }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Team Statistics -->
+                        <div class="team-stats ms-auto d-flex align-items-center gap-4">
+                            <div class="stat-item text-center">
+                                <div class="stat-value text-primary fw-bold">{{ team.player_count }}</div>
+                                <div class="stat-label text-muted small">Players</div>
+                            </div>
+                            {% if team.coach_name %}
+                            <div class="stat-item text-center">
+                                <div class="stat-value text-success fw-bold"><i class="ph ph-user-check"></i></div>
+                                <div class="stat-label text-muted small">{{ team.coach_name[:12] }}{% if team.coach_name|length > 12 %}...{% endif %}</div>
+                            </div>
+                            {% endif %}
+                            {% if team.stadium_name %}
+                            <div class="stat-item text-center">
+                                <div class="stat-value text-info fw-bold"><i class="ph ph-buildings"></i></div>
+                                <div class="stat-label text-muted small">{{ team.stadium_name[:12] }}{% if team.stadium_name|length > 12 %}...{% endif %}</div>
+                            </div>
+                            {% endif %}
+                            <div class="stat-item text-center">
+                                <div class="stat-value text-warning fw-bold">-</div>
+                                <div class="stat-label text-muted small">Last 5</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="ph ph-users fs-1 text-muted mb-3"></i>
+                <h4 class="text-muted">No Teams Found</h4>
+                <p class="text-muted">Start by adding your first team.</p>
+                <button class="btn btn-primary" onclick="openTeamModal()">
+                    <i class="ph ph-plus me-2"></i>Add First Team
                 </button>
             </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Team Creation/Edit Modal -->
+<div class="modal fade" id="teamModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <form class="modal-content" method="post" id="teamForm">
+            <input type="hidden" name="action" value="save_team">
+            <input type="hidden" name="team_id" id="modalTeamId">
+            <div class="modal-header">
+                <h5 class="modal-title" id="teamModalTitle">Add New Team</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
             <div class="modal-body">
-                Are you sure you want to delete this team?
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label" for="teamName">Team Name</label>
+                        <input type="text" class="form-control" name="name" id="teamName" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="foundedYear">Founded Year</label>
+                        <input type="number" class="form-control" name="founded_year" id="foundedYear" min="1800" max="2030">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="teamLeague">League</label>
+                        <select class="form-select" name="league_id" id="teamLeague" required>
+                            <option value="">Select League</option>
+                            {% for league in leagues %}
+                                <option value="{{ league[0] }}">{{ league[1] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="teamStadium">Stadium</label>
+                        <select class="form-select" name="stadium_id" id="teamStadium">
+                            <option value="">Select Stadium</option>
+                            {% for stadium in stadiums %}
+                                <option value="{{ stadium[0] }}">{{ stadium[1] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="teamCoach">Coach</label>
+                        <select class="form-select" name="coach_id" id="teamCoach">
+                            <option value="">Select Coach</option>
+                            {% for coach in coaches %}
+                                <option value="{{ coach[0] }}">{{ coach[1] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="teamCrest">Logo URL</label>
+                        <input type="url" class="form-control" name="cresturl" id="teamCrest" placeholder="https://example.com/logo.png">
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
-                <form action="{{ url_for('admin.manage_teams') }}" method="POST" id="deleteForm">
-                    <input type="hidden" name="team_id" id="deleteTeamId">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="submit" name="delete" class="btn btn-danger">Delete</button>
-                </form>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Team</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Roster Management Modal -->
+<div class="modal fade" id="rosterModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="rosterModalTitle">Manage Team Roster</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-7">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0">Current Roster</h6>
+                            <span class="badge bg-primary" id="rosterCount">0 players</span>
+                        </div>
+                        <div id="currentRoster" class="roster-grid">
+                            <!-- Current roster will be populated here -->
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="available-players">
+                            <div class="player-search">
+                                <h6>Available Players</h6>
+                                <input type="text" class="form-control form-control-sm" id="playerSearchInput" placeholder="Search players...">
+                            </div>
+                            <div id="availablePlayers">
+                                <!-- Available players will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="saveRosterChanges()">Save Changes</button>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Logo Upload Modal -->
+<div class="modal fade" id="logoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="post" enctype="multipart/form-data" id="logoForm">
+            <input type="hidden" name="action" value="upload_logo">
+            <input type="hidden" name="team_id" id="logoTeamId">
+            <div class="modal-header">
+                <h5 class="modal-title">Change Team Logo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-3">
+                    <img id="currentLogo" src="" alt="Current logo" class="team-logo-large mb-3" style="display:none;">
+                    <div id="logoPreview" class="team-logo-large mb-3 d-flex align-items-center justify-content-center bg-light" style="display:none;">
+                        <i class="ph ph-image fs-1 text-muted"></i>
+                    </div>
+                </div>
+
+                <div class="upload-zone" onclick="document.getElementById('logoFile').click()">
+                    <input type="file" id="logoFile" name="logo" accept="image/*" style="display:none;" onchange="previewLogo(this)">
+                    <i class="ph ph-cloud-arrow-up fs-1 text-muted mb-2"></i>
+                    <p class="mb-1">Click to upload or drag and drop</p>
+                    <small class="text-muted">PNG, JPG, GIF up to 5MB</small>
+                </div>
+
+                <div class="mt-3">
+                    <label class="form-label">Or enter logo URL:</label>
+                    <input type="url" class="form-control" name="logo_url" id="logoUrl" placeholder="https://example.com/logo.png" onchange="previewLogoUrl(this)">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Update Logo</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Team Modal -->
+<div class="modal fade" id="deleteTeamModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="post" id="deleteTeamForm">
+            <input type="hidden" name="action" value="delete_team">
+            <input type="hidden" name="team_id" id="deleteTeamId">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Team</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center">
+                    <i class="ph ph-warning-circle fs-1 text-warning mb-3"></i>
+                    <h6>Are you sure you want to delete this team?</h6>
+                    <p class="text-muted mb-0">This action cannot be undone. All associated data will be removed.</p>
+                    <p class="fw-bold mt-2" id="deleteTeamName"></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-danger">Delete Team</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-    function editTeam(id, name, founded_year, stadium_id, league_id, coach_id) {
-        document.getElementById('team_id').value = id;
-        document.getElementById('name').value = name;
-        document.getElementById('founded_year').value = founded_year;
-        document.getElementById('stadium_id').value = stadium_id;
-        document.getElementById('league_id').value = league_id;
-        document.getElementById('coach_id').value = coach_id;
-        document.getElementById('submit-button').innerText = 'Update Team';
-        document.getElementById('form-title').innerText = 'Edit Team';
+// Global variables
+const teamModal = new bootstrap.Modal(document.getElementById('teamModal'));
+const rosterModal = new bootstrap.Modal(document.getElementById('rosterModal'));
+const logoModal = new bootstrap.Modal(document.getElementById('logoModal'));
+const deleteTeamModal = new bootstrap.Modal(document.getElementById('deleteTeamModal'));
+
+let currentTeamId = null;
+let rosterChanges = { add: [], remove: [] };
+
+// Team search functionality
+document.getElementById('teamSearch').addEventListener('input', function() {
+    applyFilters();
+});
+
+// League filter functionality
+document.getElementById('leagueFilter').addEventListener('change', function() {
+    applyFilters();
+});
+
+// View toggle functionality (cards vs list)
+document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const viewType = this.dataset.view;
+
+        // Update active state
+        document.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+
+        // Toggle view
+        toggleView(viewType);
+
+        // Save preference to localStorage
+        localStorage.setItem('teamViewType', viewType);
+    });
+});
+
+// Toggle between card and list view
+function toggleView(viewType) {
+    const grid = document.getElementById('teamsGrid');
+    const teamContainers = document.querySelectorAll('.team-card-container');
+
+    if (viewType === 'list') {
+        // Switch to list view
+        grid.className = 'teams-grid-list';
+        teamContainers.forEach(container => {
+            const cardView = container.querySelector('.card-view-template');
+            const listView = container.querySelector('.list-view-template');
+
+            if (cardView && listView) {
+                cardView.style.display = 'none';
+                listView.style.display = 'block';
+            }
+        });
+    } else {
+        // Switch to card view
+        grid.className = 'd-flex flex-wrap gap-4 teams-grid-cards';
+        teamContainers.forEach(container => {
+            const cardView = container.querySelector('.card-view-template');
+            const listView = container.querySelector('.list-view-template');
+
+            if (cardView && listView) {
+                cardView.style.display = 'block';
+                listView.style.display = 'none';
+            }
+        });
+    }
+}
+
+// Apply all filters (search + league)
+function applyFilters() {
+    const searchTerm = document.getElementById('teamSearch').value.toLowerCase();
+    const selectedLeague = document.getElementById('leagueFilter').value;
+    const teamCards = document.querySelectorAll('.team-card-container');
+
+    let visibleCount = 0;
+
+    teamCards.forEach(card => {
+        const teamName = card.dataset.teamName || '';
+        const league = card.dataset.league || '';
+        const leagueId = card.dataset.leagueId || '';
+
+        const matchesSearch = !searchTerm || teamName.includes(searchTerm) || league.includes(searchTerm);
+        const matchesLeague = !selectedLeague || leagueId === selectedLeague;
+
+        const shouldShow = matchesSearch && matchesLeague;
+        card.style.display = shouldShow ? '' : 'none';
+
+        if (shouldShow) visibleCount++;
+    });
+
+    // Update count badge
+    document.getElementById('filteredCount').textContent = `${visibleCount} teams`;
+}
+
+// Load saved preferences
+function loadUserPreferences() {
+    const savedViewType = localStorage.getItem('teamViewType');
+    if (savedViewType) {
+        const btn = document.querySelector(`[data-view="${savedViewType}"]`);
+        if (btn) {
+            document.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            toggleView(savedViewType);
+        }
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadUserPreferences();
+    applyFilters();
+});
+
+// Open team modal for create/edit
+function openTeamModal(teamId = null) {
+    const form = document.getElementById('teamForm');
+    form.reset();
+
+    document.getElementById('modalTeamId').value = teamId || '';
+    const title = document.getElementById('teamModalTitle');
+
+    if (teamId) {
+        title.textContent = 'Edit Team';
+        // Load team data
+        loadTeamData(teamId);
+    } else {
+        title.textContent = 'Add New Team';
     }
 
-    function confirmDelete(id) {
-        document.getElementById('deleteTeamId').value = id;
-        $('#deleteModal').modal('show');
+    teamModal.show();
+}
+
+// Load team data for editing
+function loadTeamData(teamId) {
+    fetch(`/admin/get_team/${teamId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const team = data.team;
+                document.getElementById('teamName').value = team.name || '';
+                document.getElementById('foundedYear').value = team.founded_year || '';
+                document.getElementById('teamLeague').value = team.league_id || '';
+                document.getElementById('teamStadium').value = team.stadium_id || '';
+                document.getElementById('teamCoach').value = team.coach_id || '';
+                document.getElementById('teamCrest').value = team.cresturl || '';
+            }
+        })
+        .catch(error => console.error('Error loading team data:', error));
+}
+
+// Open roster management modal
+function openRosterModal(teamId) {
+    currentTeamId = teamId;
+    rosterChanges = { add: [], remove: [] };
+
+    fetch(`/admin/get_team_roster/${teamId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('rosterModalTitle').textContent = `Manage ${data.team_name} Roster`;
+                displayCurrentRoster(data.roster);
+                displayAvailablePlayers(data.available_players);
+                rosterModal.show();
+            }
+        })
+        .catch(error => console.error('Error loading roster:', error));
+}
+
+// Display current roster
+function displayCurrentRoster(roster) {
+    const container = document.getElementById('currentRoster');
+    document.getElementById('rosterCount').textContent = `${roster.length} players`;
+
+    container.innerHTML = roster.map(player => `
+        <div class="roster-player" data-player-id="${player.player_id}">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="fw-semibold">${player.name}</div>
+                    <span class="position-badge position-${player.position.toLowerCase()}">${player.position}</span>
+                    <div class="small text-muted mt-1">
+                        <span class="nationality-flag">🏴</span>
+                        ${player.nationality || 'Unknown'}
+                    </div>
+                </div>
+                <button class="btn btn-outline-danger btn-sm" onclick="removeFromRoster(${player.player_id})">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Display available players
+function displayAvailablePlayers(players) {
+    const container = document.getElementById('availablePlayers');
+
+    container.innerHTML = players.map(player => `
+        <div class="roster-player mb-2" data-player-id="${player.player_id}">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="fw-semibold">${player.name}</div>
+                    <span class="position-badge position-${player.position.toLowerCase()}">${player.position}</span>
+                    <div class="small text-muted mt-1">
+                        <span class="nationality-flag">🏴</span>
+                        ${player.nationality || 'Unknown'}
+                    </div>
+                </div>
+                <button class="btn btn-outline-primary btn-sm" onclick="addToRoster(${player.player_id})">
+                    <i class="ph ph-plus"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Add player to roster
+function addToRoster(playerId) {
+    const playerElement = document.querySelector(`#availablePlayers [data-player-id="${playerId}"]`);
+    if (playerElement) {
+        // Move to current roster visually
+        const currentRoster = document.getElementById('currentRoster');
+        const newRosterPlayer = playerElement.cloneNode(true);
+
+        // Update button
+        const btn = newRosterPlayer.querySelector('button');
+        btn.className = 'btn btn-outline-danger btn-sm';
+        btn.innerHTML = '<i class="ph ph-x"></i>';
+        btn.onclick = () => removeFromRoster(playerId);
+
+        currentRoster.appendChild(newRosterPlayer);
+        playerElement.remove();
+
+        // Track change
+        rosterChanges.add.push(playerId);
+        const removeIndex = rosterChanges.remove.indexOf(playerId);
+        if (removeIndex > -1) {
+            rosterChanges.remove.splice(removeIndex, 1);
+        }
+
+        updateRosterCount();
     }
+}
+
+// Remove player from roster
+function removeFromRoster(playerId) {
+    const playerElement = document.querySelector(`#currentRoster [data-player-id="${playerId}"]`);
+    if (playerElement) {
+        // Move to available players visually
+        const availablePlayers = document.getElementById('availablePlayers');
+        const newAvailablePlayer = playerElement.cloneNode(true);
+
+        // Update button
+        const btn = newAvailablePlayer.querySelector('button');
+        btn.className = 'btn btn-outline-primary btn-sm';
+        btn.innerHTML = '<i class="ph ph-plus"></i>';
+        btn.onclick = () => addToRoster(playerId);
+
+        availablePlayers.appendChild(newAvailablePlayer);
+        playerElement.remove();
+
+        // Track change
+        rosterChanges.remove.push(playerId);
+        const addIndex = rosterChanges.add.indexOf(playerId);
+        if (addIndex > -1) {
+            rosterChanges.add.splice(addIndex, 1);
+        }
+
+        updateRosterCount();
+    }
+}
+
+// Update roster count
+function updateRosterCount() {
+    const currentCount = document.querySelectorAll('#currentRoster .roster-player').length;
+    document.getElementById('rosterCount').textContent = `${currentCount} players`;
+}
+
+// Save roster changes
+function saveRosterChanges() {
+    if (rosterChanges.add.length === 0 && rosterChanges.remove.length === 0) {
+        rosterModal.hide();
+        return;
+    }
+
+    fetch('/admin/update_team_roster', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            team_id: currentTeamId,
+            changes: rosterChanges
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            rosterModal.hide();
+            location.reload(); // Refresh to show updated data
+        } else {
+            alert('Error updating roster: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error updating roster');
+    });
+}
+
+// Player search in roster modal
+document.getElementById('playerSearchInput').addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+    const players = document.querySelectorAll('#availablePlayers .roster-player');
+
+    players.forEach(player => {
+        const name = player.querySelector('.fw-semibold').textContent.toLowerCase();
+        const position = player.querySelector('.position-badge').textContent.toLowerCase();
+        const nationality = player.querySelector('.text-muted').textContent.toLowerCase();
+
+        const isMatch = name.includes(searchTerm) || position.includes(searchTerm) || nationality.includes(searchTerm);
+        player.style.display = isMatch ? '' : 'none';
+    });
+});
+
+// Open logo modal
+function openLogoModal(teamId) {
+    document.getElementById('logoTeamId').value = teamId;
+    document.getElementById('logoForm').reset();
+
+    // Load current logo
+    fetch(`/admin/get_team/${teamId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.team.cresturl) {
+                const currentLogo = document.getElementById('currentLogo');
+                currentLogo.src = data.team.cresturl;
+                currentLogo.style.display = 'block';
+                document.getElementById('logoPreview').style.display = 'none';
+            } else {
+                document.getElementById('currentLogo').style.display = 'none';
+                document.getElementById('logoPreview').style.display = 'flex';
+            }
+        });
+
+    logoModal.show();
+}
+
+// Preview logo file
+function previewLogo(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const currentLogo = document.getElementById('currentLogo');
+            currentLogo.src = e.target.result;
+            currentLogo.style.display = 'block';
+            document.getElementById('logoPreview').style.display = 'none';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+// Preview logo URL
+function previewLogoUrl(input) {
+    if (input.value) {
+        const currentLogo = document.getElementById('currentLogo');
+        currentLogo.src = input.value;
+        currentLogo.style.display = 'block';
+        document.getElementById('logoPreview').style.display = 'none';
+    }
+}
+
+// Confirm team deletion
+function confirmDeleteTeam(teamId, teamName) {
+    document.getElementById('deleteTeamId').value = teamId;
+    document.getElementById('deleteTeamName').textContent = teamName;
+    deleteTeamModal.show();
+}
+
+// Drag and drop for logo upload
+const uploadZone = document.querySelector('.upload-zone');
+uploadZone.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    this.classList.add('dragover');
+});
+
+uploadZone.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    this.classList.remove('dragover');
+});
+
+uploadZone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    this.classList.remove('dragover');
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        document.getElementById('logoFile').files = files;
+        previewLogo(document.getElementById('logoFile'));
+    }
+});
 </script>
 {% endblock %}

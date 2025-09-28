@@ -445,29 +445,43 @@ body, html {
 .alert-modern.alert-danger { border-left: 4px solid #ef4444; }
 
 .btn-primary {
-    background: var(--brand-primary);
-    border-color: var(--brand-primary);
-    border-radius: 10px;
+    background: var(--slms-button-bg, var(--brand-primary));
+    border-color: var(--slms-button-border, var(--brand-primary));
+    color: var(--slms-button-color, #fff);
+    border-radius: var(--slms-button-radius, 0.5rem);
     font-weight: 600;
     padding-inline: 1.5rem;
     transition: var(--transition-base);
+    box-shadow: var(--slms-button-shadow, none);
 }
 
 .btn-primary:hover,
 .btn-primary:focus {
-    background: var(--brand-primary-dark);
-    border-color: var(--brand-primary-dark);
+    background: var(--slms-button-hover-bg, var(--brand-primary-dark, var(--brand-primary)));
+    border-color: var(--slms-button-hover-border, var(--brand-primary-dark, var(--brand-primary)));
+    color: var(--slms-button-hover-color, #fff);
 }
 
 .btn-outline-primary,
 .btn-outline-secondary {
-    border-radius: 999px;
+    border-radius: var(--slms-button-radius, 0.5rem);
     font-weight: 600;
     padding-inline: 1.25rem;
+    color: var(--slms-button-outline-color, var(--brand-primary));
+    border-color: var(--slms-button-outline-color, var(--brand-primary));
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:focus,
+.btn-outline-secondary:hover,
+.btn-outline-secondary:focus {
+    background: var(--slms-button-outline-hover-bg, var(--brand-primary));
+    color: var(--slms-button-outline-hover-color, #fff);
+    border-color: var(--slms-button-outline-color, var(--brand-primary));
 }
 
 .btn-light {
-    border-radius: 999px;
+    border-radius: var(--slms-button-radius, 0.5rem);
     font-weight: 600;
 }
 
@@ -546,8 +560,18 @@ body, html {
 .table,
 .btn {
     font-family: inherit;
+    border-radius: var(--slms-button-radius, 0.5rem) !important;
 }
 
+.btn,
+.btn-primary,
+.btn-outline-primary,
+.btn-outline-secondary,
+.btn-light,
+.btn-lg,
+.btn-sm {
+    border-radius: var(--slms-button-radius, 0.5rem) !important;
+}
 .table-striped > tbody > tr:nth-of-type(odd) > * {
     background-color: rgba(15, 23, 42, 0.03);
 }
@@ -1096,4 +1120,7 @@ body.has-section-dividers .main-content > .container:not(:last-child) {
     font-weight: 600;
     letter-spacing: 0.02em;
 }
+
+
+
 
