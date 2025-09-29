@@ -1,1339 +1,617 @@
 {% extends "base.html" %}
-{% block title %}Match Management Hub - Admin Panel{% endblock %}
+{% block title %}Match Creation & Scheduling - Admin Panel{% endblock %}
 
 {% block head %}
 <style>
-    .view-selector {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 50px;
-        padding: 4px;
-    }
-    .view-selector .btn {
-        border-radius: 50px;
-        border: none;
-        padding: 8px 20px;
-        margin: 0 2px;
-        color: rgba(255,255,255,0.7);
-        background: transparent;
-        transition: all 0.3s ease;
-        font-weight: 500;
-    }
-    .view-selector .btn.active {
-        background: rgba(255,255,255,0.2);
-        color: white;
-        backdrop-filter: blur(10px);
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    .view-selector .btn:hover {
-        color: white;
-        background: rgba(255,255,255,0.1);
-    }
+.match-creation-hub {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 1rem;
+    padding: 2rem;
+    color: white;
+    margin-bottom: 2rem;
+}
 
-    .match-card {
-        transition: all 0.3s ease;
-        border: 1px solid #e9ecef;
-        border-radius: 12px;
-        overflow: hidden;
-    }
-    .match-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-        border-color: #007bff;
-    }
+.creation-method-card {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
 
-    .match-card-modern {
-        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-        border: none;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-    }
+.creation-method-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    border-color: #667eea;
+}
 
-    .match-card-compact {
-        border-radius: 8px;
-        background: white;
-    }
+.creation-method-card.selected {
+    border-color: #667eea;
+    background: #f8f9ff;
+}
 
-    .match-card-elegant {
-        border: 2px solid #f1f3f4;
-        background: #fefefe;
-        border-radius: 16px;
-    }
+.wizard-step {
+    display: none;
+    background: white;
+    border-radius: 1rem;
+    padding: 2rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
 
-    .status-badge {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
+.wizard-step.active {
+    display: block;
+}
 
-    .status-live {
-        background: linear-gradient(135deg, #dc3545, #c82333);
-        color: white;
-        animation: pulse-glow 2s infinite;
-    }
-    .status-scheduled {
-        background: linear-gradient(135deg, #17a2b8, #138496);
-        color: white;
-    }
-    .status-completed {
-        background: linear-gradient(135deg, #28a745, #1e7e34);
-        color: white;
-    }
-    .status-postponed {
-        background: linear-gradient(135deg, #ffc107, #e0a800);
-        color: #212529;
-    }
-    .status-cancelled {
-        background: linear-gradient(135deg, #6c757d, #545b62);
-        color: white;
-    }
+.step-indicator {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2rem;
+}
 
-    @keyframes pulse-glow {
-        0%, 100% { box-shadow: 0 0 5px rgba(220, 53, 69, 0.5); }
-        50% { box-shadow: 0 0 20px rgba(220, 53, 69, 0.8); }
-    }
+.step-indicator .step {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 0.5rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
 
-    .calendar-view {
-        background: white;
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-    }
+.step-indicator .step.completed {
+    background: #28a745;
+    color: white;
+}
 
-    .calendar-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-        padding-bottom: 15px;
-        border-bottom: 2px solid #f1f3f4;
-    }
+.step-indicator .step.active {
+    background: #667eea;
+    color: white;
+}
 
-    .calendar-nav {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-    }
+.step-indicator .step-line {
+    width: 60px;
+    height: 2px;
+    background: #e9ecef;
+    margin-top: 19px;
+}
 
-    .calendar-nav .btn {
-        border-radius: 50%;
-        width: 40px;
-        height: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: none;
-        background: #f8f9fa;
-        color: #495057;
-        transition: all 0.2s ease;
-    }
+.step-indicator .step-line.completed {
+    background: #28a745;
+}
 
-    .calendar-nav .btn:hover {
-        background: #007bff;
-        color: white;
-        transform: scale(1.1);
-    }
+.match-preview-card {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+}
 
-    .calendar-grid {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap: 1px;
-        background: #dee2e6;
-        border-radius: 8px;
-        overflow: hidden;
-    }
+.existing-matches-section {
+    background: white;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
 
-    .calendar-day {
-        background: white;
-        min-height: 120px;
-        padding: 8px;
-        position: relative;
-        transition: background-color 0.2s ease;
-    }
+.match-item {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    transition: all 0.2s ease;
+}
 
-    .calendar-day:hover {
-        background: #f8f9fa;
-    }
+.match-item:hover {
+    background: #e9ecef;
+}
 
-    .calendar-day.other-month {
-        background: #fafbfc;
-        color: #adb5bd;
-    }
+.status-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
 
-    .calendar-day.today {
-        background: linear-gradient(135deg, #007bff, #0056b3);
-        color: white;
-    }
+.status-scheduled {
+    background: #fff3cd;
+    color: #856404;
+}
 
-    .calendar-day-number {
-        font-weight: bold;
-        margin-bottom: 4px;
-    }
+.status-completed {
+    background: #d4edda;
+    color: #155724;
+}
 
-    .calendar-match {
-        background: linear-gradient(135deg, #28a745, #1e7e34);
-        color: white;
-        border-radius: 4px;
-        padding: 2px 6px;
-        font-size: 0.7rem;
-        margin-bottom: 2px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
+.status-live {
+    background: #f8d7da;
+    color: #721c24;
+    animation: pulse 1.5s infinite;
+}
 
-    .calendar-match:hover {
-        transform: scale(1.05);
-        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    }
-
-    .timeline-view {
-        background: white;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-    }
-
-    .timeline-item {
-        display: flex;
-        align-items: center;
-        padding: 20px;
-        border-bottom: 1px solid #f1f3f4;
-        transition: all 0.2s ease;
-        position: relative;
-    }
-
-    .timeline-item:hover {
-        background: #f8f9fa;
-        padding-left: 25px;
-    }
-
-    .timeline-item:last-child {
-        border-bottom: none;
-    }
-
-    .timeline-item::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: 4px;
-        background: linear-gradient(135deg, #007bff, #0056b3);
-        opacity: 0;
-        transition: opacity 0.2s ease;
-    }
-
-    .timeline-item:hover::before {
-        opacity: 1;
-    }
-
-    .timeline-date {
-        min-width: 120px;
-        text-align: center;
-        padding: 10px;
-        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-        border-radius: 8px;
-        margin-right: 20px;
-    }
-
-    .timeline-content {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-
-    .customization-panel {
-        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-        border: 1px solid #dee2e6;
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 20px;
-    }
-
-    .customization-section {
-        margin-bottom: 20px;
-        padding-bottom: 20px;
-        border-bottom: 1px solid #f1f3f4;
-    }
-
-    .customization-section:last-child {
-        border-bottom: none;
-        margin-bottom: 0;
-    }
-
-    .stats-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-radius: 12px;
-        padding: 20px;
-        text-align: center;
-        border: none;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .stats-card::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        right: -50%;
-        width: 100%;
-        height: 100%;
-        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-        transform: rotate(45deg);
-    }
-
-    .stats-card h3 {
-        font-size: 2.5rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    }
-
-    .bulk-actions {
-        background: white;
-        border: 1px solid #dee2e6;
-        border-radius: 12px;
-        padding: 15px;
-        margin-bottom: 20px;
-        display: none;
-    }
-
-    .bulk-actions.show {
-        display: block;
-        animation: slideDown 0.3s ease;
-    }
-
-    @keyframes slideDown {
-        from {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .floating-fab {
-        position: fixed;
-        bottom: 30px;
-        right: 30px;
-        z-index: 1050;
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #28a745, #1e7e34);
-        border: none;
-        box-shadow: 0 8px 20px rgba(40, 167, 69, 0.3);
-        color: white;
-        font-size: 24px;
-        transition: all 0.3s ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .floating-fab:hover {
-        transform: scale(1.1);
-        box-shadow: 0 12px 30px rgba(40, 167, 69, 0.4);
-        background: linear-gradient(135deg, #1e7e34, #155724);
-    }
-
-    .team-logo {
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
-        object-fit: cover;
-        margin-right: 10px;
-        border: 2px solid #f8f9fa;
-    }
-
-    .vs-divider {
-        font-weight: bold;
-        color: #6c757d;
-        margin: 0 15px;
-        position: relative;
-    }
-
-    .vs-divider::before,
-    .vs-divider::after {
-        content: '';
-        position: absolute;
-        top: 50%;
-        width: 20px;
-        height: 1px;
-        background: #dee2e6;
-    }
-
-    .vs-divider::before {
-        left: -25px;
-    }
-
-    .vs-divider::after {
-        right: -25px;
-    }
-
-    @media (max-width: 768px) {
-        .floating-fab {
-            bottom: 20px;
-            right: 20px;
-            width: 50px;
-            height: 50px;
-            font-size: 20px;
-        }
-
-        .calendar-day {
-            min-height: 80px;
-            padding: 4px;
-        }
-
-        .timeline-item {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 10px;
-        }
-
-        .timeline-date {
-            margin-right: 0;
-            margin-bottom: 10px;
-            width: 100%;
-        }
-    }
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4">
-    <!-- Header Section -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="mb-2">
-                <i class="ph ph-calendar me-2 text-primary"></i>Match Management Hub
-            </h1>
-            <p class="text-muted mb-0">Comprehensive match scheduling with customizable displays</p>
-        </div>
-        <div class="d-flex gap-2">
-            <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#customizeModal">
-                <i class="ph ph-gear me-2"></i>Customize Display
-            </button>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addMatchModal">
-                <i class="ph ph-plus me-2"></i>Add Match
-            </button>
-        </div>
-    </div>
-
-    <!-- Statistics Dashboard -->
-    {% if match_stats %}
-    <div class="row mb-4">
-        <div class="col-xl-2 col-lg-4 col-md-6 mb-3">
-            <div class="card stats-card h-100">
-                <div class="card-body">
-                    <h3>{{ match_stats[0] or 0 }}</h3>
-                    <div>Total</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-2 col-lg-4 col-md-6 mb-3">
-            <div class="card h-100" style="background: linear-gradient(135deg, #17a2b8, #138496); color: white; border-radius: 12px;">
-                <div class="card-body text-center">
-                    <h3>{{ match_stats[1] or 0 }}</h3>
-                    <div>Scheduled</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-2 col-lg-4 col-md-6 mb-3">
-            <div class="card h-100" style="background: linear-gradient(135deg, #dc3545, #c82333); color: white; border-radius: 12px;">
-                <div class="card-body text-center">
-                    <h3>{{ match_stats[2] or 0 }}</h3>
-                    <div>Live</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-2 col-lg-4 col-md-6 mb-3">
-            <div class="card h-100" style="background: linear-gradient(135deg, #28a745, #1e7e34); color: white; border-radius: 12px;">
-                <div class="card-body text-center">
-                    <h3>{{ match_stats[3] or 0 }}</h3>
-                    <div>Completed</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-2 col-lg-4 col-md-6 mb-3">
-            <div class="card h-100" style="background: linear-gradient(135deg, #ffc107, #e0a800); color: #212529; border-radius: 12px;">
-                <div class="card-body text-center">
-                    <h3>{{ match_stats[4] or 0 }}</h3>
-                    <div>Postponed</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-2 col-lg-4 col-md-6 mb-3">
-            <div class="card h-100" style="background: linear-gradient(135deg, #6c757d, #545b62); color: white; border-radius: 12px;">
-                <div class="card-body text-center">
-                    <h3>{{ match_stats[5] or 0 }}</h3>
-                    <div>Cancelled</div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Bulk Actions Bar -->
-    <div class="bulk-actions" id="bulkActions">
-        <div class="d-flex align-items-center justify-content-between">
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="match-creation-hub">
+        <div class="d-flex justify-content-between align-items-center">
             <div>
-                <strong id="selectedCount">0</strong> matches selected
+                <h1 class="mb-2"><i class="ph ph-calendar-plus me-2"></i>Match Creation & Scheduling</h1>
+                <p class="mb-0 opacity-75">Create individual matches or bulk generate fixtures for your leagues</p>
             </div>
-            <div class="d-flex gap-2">
-                <button class="btn btn-sm btn-outline-primary" onclick="showBulkReschedule()">
-                    <i class="ph ph-calendar me-1"></i>Reschedule
-                </button>
-                <button class="btn btn-sm btn-outline-info" onclick="showBulkStatusUpdate()">
-                    <i class="ph ph-clock me-1"></i>Update Status
-                </button>
-                <button class="btn btn-sm btn-outline-danger" onclick="showBulkDelete()">
-                    <i class="ph ph-trash me-1"></i>Delete
-                </button>
-                <button class="btn btn-sm btn-outline-secondary" onclick="clearSelection()">
-                    <i class="ph ph-x me-1"></i>Clear
-                </button>
+            <div class="text-center">
+                <div class="display-6 fw-bold">{{ total_matches }}</div>
+                <small class="opacity-75">Total Matches</small>
             </div>
         </div>
     </div>
 
-    <!-- View Selector and Filters -->
-    <div class="card mb-4">
-        <div class="card-body py-3">
-            <div class="row align-items-center">
-                <div class="col-lg-6">
-                    <div class="view-selector d-inline-flex">
-                        <button class="btn active" data-view="cards" onclick="switchView('cards')">
-                            <i class="ph ph-grid-four me-2"></i>Cards
-                        </button>
-                        <button class="btn" data-view="list" onclick="switchView('list')">
-                            <i class="ph ph-list me-2"></i>List
-                        </button>
-                        <button class="btn" data-view="calendar" onclick="switchView('calendar')">
-                            <i class="ph ph-calendar me-2"></i>Calendar
-                        </button>
-                        <button class="btn" data-view="timeline" onclick="switchView('timeline')">
-                            <i class="ph ph-timeline me-2"></i>Timeline
-                        </button>
+    <div class="row g-4">
+        <!-- Match Creation Methods -->
+        <div class="col-lg-8">
+            <h3 class="mb-3">Choose Creation Method</h3>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="creation-method-card" onclick="selectCreationMethod('single')">
+                        <div class="text-center">
+                            <i class="ph ph-plus-circle display-4 text-primary mb-3"></i>
+                            <h5>Single Match</h5>
+                            <p class="text-muted small">Create one match at a time</p>
+                        </div>
                     </div>
                 </div>
-                <div class="col-lg-6">
-                    <div class="d-flex gap-2">
-                        <select class="form-select form-select-sm" id="filterLeague" onchange="applyFilters()">
-                            <option value="">All Leagues</option>
-                            {% for league in leagues %}
-                            <option value="{{ league[1] }}">{{ league[1] }}</option>
-                            {% endfor %}
-                        </select>
-                        <select class="form-select form-select-sm" id="filterStatus" onchange="applyFilters()">
-                            <option value="">All Status</option>
-                            <option value="scheduled">Scheduled</option>
-                            <option value="live">Live</option>
-                            <option value="completed">Completed</option>
-                            <option value="postponed">Postponed</option>
-                            <option value="cancelled">Cancelled</option>
-                        </select>
-                        <input type="text" class="form-control form-control-sm" id="searchInput" placeholder="Search teams..." onkeyup="applyFilters()">
+
+                <div class="col-md-4">
+                    <div class="creation-method-card" onclick="selectCreationMethod('round-robin')">
+                        <div class="text-center">
+                            <i class="ph ph-arrows-clockwise display-4 text-success mb-3"></i>
+                            <h5>Round Robin</h5>
+                            <p class="text-muted small">Each team plays each other (1x or 2x)</p>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Cards View -->
-    <div id="cardsView" class="view-container">
-        <div class="row" id="matchCards">
-            {% for match in matches %}
-            <div class="col-xl-4 col-lg-6 col-md-6 col-sm-12 mb-4 match-item"
-                 data-league="{{ match[5] }}"
-                 data-status="{{ match[10] or 'scheduled' }}"
-                 data-search="{{ match[2] }} {{ match[3] }}">
-                <div class="card match-card match-card-modern h-100">
-                    <!-- Selection checkbox -->
-                    <div class="position-absolute" style="top: 10px; left: 10px; z-index: 10;">
-                        <input type="checkbox" class="form-check-input match-checkbox" value="{{ match[0] }}" onchange="updateSelection()">
-                    </div>
-
-                    <!-- Match Header -->
-                    <div class="card-header bg-transparent border-0 text-end">
-                        <span class="status-badge status-{{ match[10] or 'scheduled' }}">
-                            {{ (match[10] or 'scheduled').title() }}
-                        </span>
-                    </div>
-
-                    <!-- Match Content -->
-                    <div class="card-body text-center">
-                        <!-- Date and Time -->
-                        <div class="mb-3">
-                            <h6 class="text-muted mb-1">
-                                <i class="ph ph-calendar me-1"></i>
-                                {{ match[1].strftime('%B %d, %Y') if match[1] else 'TBD' }}
-                            </h6>
-                            {% if match[11] %}
-                            <small class="text-muted">
-                                <i class="ph ph-clock me-1"></i>
-                                {{ match[11].strftime('%I:%M %p') }}
-                            </small>
-                            {% endif %}
-                        </div>
-
-                        <!-- Teams -->
-                        <div class="row align-items-center mb-3">
-                            <div class="col-5 text-end">
-                                <h5 class="mb-0 fw-bold">{{ match[2] }}</h5>
-                            </div>
-                            <div class="col-2">
-                                {% if match[13] is not none and match[14] is not none %}
-                                <div class="badge bg-primary fs-6">{{ match[13] }} - {{ match[14] }}</div>
-                                {% else %}
-                                <span class="vs-divider">VS</span>
-                                {% endif %}
-                            </div>
-                            <div class="col-5 text-start">
-                                <h5 class="mb-0 fw-bold">{{ match[3] }}</h5>
-                            </div>
-                        </div>
-
-                        <!-- Venue -->
-                        {% if match[9] %}
-                        <div class="mb-3">
-                            <small class="text-muted">
-                                <i class="ph ph-map-pin me-1"></i>{{ match[9] }}
-                            </small>
-                        </div>
-                        {% endif %}
-
-                        <!-- League and Season -->
-                        <div class="mb-3">
-                            <small class="badge bg-light text-dark me-1">{{ match[5] }}</small>
-                            <small class="badge bg-light text-dark">{{ match[4] }}</small>
-                        </div>
-                    </div>
-
-                    <!-- Match Actions -->
-                    <div class="card-footer bg-transparent text-center">
-                        <div class="btn-group" role="group">
-                            <button class="btn btn-sm btn-outline-primary" onclick="editMatch({{ match[0] }})">
-                                <i class="ph ph-pencil"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-success" onclick="quickStatus({{ match[0] }})">
-                                <i class="ph ph-clock"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-info" onclick="viewDetails({{ match[0] }})">
-                                <i class="ph ph-eye"></i>
-                            </button>
+                <div class="col-md-4">
+                    <div class="creation-method-card" onclick="selectCreationMethod('custom-bulk')">
+                        <div class="text-center">
+                            <i class="ph ph-stack display-4 text-warning mb-3"></i>
+                            <h5>Custom Bulk</h5>
+                            <p class="text-muted small">Advanced fixture generation</p>
                         </div>
                     </div>
                 </div>
             </div>
-            {% endfor %}
-        </div>
-    </div>
 
-    <!-- List View -->
-    <div id="listView" class="view-container" style="display: none;">
-        <div class="card">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th width="30"><input type="checkbox" class="form-check-input" id="selectAll" onchange="toggleSelectAll()"></th>
-                            <th>Date & Time</th>
-                            <th>Match</th>
-                            <th>Venue</th>
-                            <th>League</th>
-                            <th>Status</th>
-                            <th>Score</th>
-                            <th class="text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="matchTableBody">
-                        {% for match in matches %}
-                        <tr class="match-row" data-league="{{ match[5] }}" data-status="{{ match[10] or 'scheduled' }}" data-search="{{ match[2] }} {{ match[3] }}">
-                            <td><input type="checkbox" class="form-check-input match-checkbox" value="{{ match[0] }}" onchange="updateSelection()"></td>
-                            <td>
-                                <div>
-                                    <strong>{{ match[1].strftime('%m/%d/%Y') if match[1] else 'TBD' }}</strong>
-                                    {% if match[11] %}
-                                    <br><small class="text-muted">{{ match[11].strftime('%I:%M %p') }}</small>
-                                    {% endif %}
-                                </div>
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center justify-content-center">
-                                    <strong>{{ match[2] }}</strong>
-                                    <span class="mx-3 text-muted">vs</span>
-                                    <strong>{{ match[3] }}</strong>
-                                </div>
-                            </td>
-                            <td>{{ match[9] or 'TBD' }}</td>
-                            <td>{{ match[5] }}</td>
-                            <td>
-                                <span class="status-badge status-{{ match[10] or 'scheduled' }}">
-                                    {{ (match[10] or 'scheduled').title() }}
-                                </span>
-                            </td>
-                            <td class="text-center">
-                                {% if match[13] is not none and match[14] is not none %}
-                                <span class="badge bg-light text-dark">{{ match[13] }} - {{ match[14] }}</span>
-                                {% else %}
-                                <span class="text-muted">-</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-center">
-                                <div class="btn-group" role="group">
-                                    <button class="btn btn-sm btn-outline-primary" onclick="editMatch({{ match[0] }})">
-                                        <i class="ph ph-pencil"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-success" onclick="quickStatus({{ match[0] }})">
-                                        <i class="ph ph-clock"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-info" onclick="viewDetails({{ match[0] }})">
-                                        <i class="ph ph-eye"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+            <!-- Single Match Creation -->
+            <div id="single-match-wizard" class="wizard-step">
+                <h4 class="mb-3">Create Single Match</h4>
+                <form method="post" action="{{ url_for('admin.manage_matches') }}">
+                    <input type="hidden" name="action" value="create_single">
 
-    <!-- Calendar View -->
-    <div id="calendarView" class="view-container" style="display: none;">
-        <div class="calendar-view">
-            <div class="calendar-header">
-                <h4 id="calendarMonth" class="mb-0">Loading...</h4>
-                <div class="calendar-nav">
-                    <button class="btn" onclick="previousMonth()">
-                        <i class="ph ph-caret-left"></i>
-                    </button>
-                    <button class="btn" onclick="nextMonth()">
-                        <i class="ph ph-caret-right"></i>
-                    </button>
-                    <button class="btn btn-outline-primary btn-sm" onclick="goToToday()">Today</button>
-                </div>
-            </div>
-            <div class="calendar-grid" id="calendarGrid">
-                <!-- Calendar will be generated by JavaScript -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Timeline View -->
-    <div id="timelineView" class="view-container" style="display: none;">
-        <div class="timeline-view">
-            {% for match in matches %}
-            <div class="timeline-item match-timeline-item" data-league="{{ match[5] }}" data-status="{{ match[10] or 'scheduled' }}" data-search="{{ match[2] }} {{ match[3] }}">
-                <div class="timeline-date">
-                    <div class="fw-bold">{{ match[1].strftime('%b %d') if match[1] else 'TBD' }}</div>
-                    {% if match[11] %}
-                    <small class="text-muted">{{ match[11].strftime('%I:%M %p') }}</small>
-                    {% endif %}
-                </div>
-                <div class="timeline-content">
-                    <div class="d-flex align-items-center">
-                        <input type="checkbox" class="form-check-input match-checkbox me-3" value="{{ match[0] }}" onchange="updateSelection()">
-                        <div>
-                            <h6 class="mb-1">{{ match[2] }} vs {{ match[3] }}</h6>
-                            <div class="d-flex align-items-center gap-2">
-                                <small class="badge bg-light text-dark">{{ match[5] }}</small>
-                                {% if match[9] %}
-                                <small class="text-muted">
-                                    <i class="ph ph-map-pin me-1"></i>{{ match[9] }}
-                                </small>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="d-flex align-items-center gap-3">
-                        {% if match[13] is not none and match[14] is not none %}
-                        <span class="badge bg-primary">{{ match[13] }} - {{ match[14] }}</span>
-                        {% endif %}
-                        <span class="status-badge status-{{ match[10] or 'scheduled' }}">
-                            {{ (match[10] or 'scheduled').title() }}
-                        </span>
-                        <div class="btn-group">
-                            <button class="btn btn-sm btn-outline-primary" onclick="editMatch({{ match[0] }})">
-                                <i class="ph ph-pencil"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-success" onclick="quickStatus({{ match[0] }})">
-                                <i class="ph ph-clock"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- Floating Action Button -->
-    <button class="floating-fab" data-bs-toggle="modal" data-bs-target="#addMatchModal" title="Add New Match">
-        <i class="ph ph-plus"></i>
-    </button>
-</div>
-
-<!-- Add/Edit Match Modal -->
-<div class="modal fade" id="addMatchModal" tabindex="-1">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <form action="{{ url_for('admin.manage_matches') }}" method="POST">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="matchModalTitle">
-                        <i class="ph ph-plus me-2"></i>Add New Match
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <input type="hidden" id="match_id" name="match_id">
-
-                    <div class="row">
+                    <div class="row g-3">
                         <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="date" class="form-label">Date *</label>
-                                <input type="date" class="form-control" id="date" name="date" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="time" class="form-label">Time</label>
-                                <input type="time" class="form-control" id="time" name="time">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="team1_id" class="form-label">Home Team *</label>
-                                <select class="form-select" id="team1_id" name="team1_id" required>
-                                    <option value="">Select Home Team</option>
-                                    {% for team in teams %}
-                                    <option value="{{ team[0] }}">{{ team[1] }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="team2_id" class="form-label">Away Team *</label>
-                                <select class="form-select" id="team2_id" name="team2_id" required>
-                                    <option value="">Select Away Team</option>
-                                    {% for team in teams %}
-                                    <option value="{{ team[0] }}">{{ team[1] }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="league_id" class="form-label">League *</label>
-                                <select class="form-select" id="league_id" name="league_id" required>
-                                    <option value="">Select League</option>
-                                    {% for league in leagues %}
-                                    <option value="{{ league[0] }}">{{ league[1] }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="season_id" class="form-label">Season *</label>
-                                <select class="form-select" id="season_id" name="season_id" required>
-                                    <option value="">Select Season</option>
-                                    {% for season in seasons %}
-                                    <option value="{{ season[0] }}">{{ season[1] }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label for="venue" class="form-label">Venue</label>
-                                <input type="text" class="form-control" id="venue" name="venue" placeholder="Stadium/Field">
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label for="status" class="form-label">Status</label>
-                                <select class="form-select" id="status" name="status">
-                                    <option value="scheduled">Scheduled</option>
-                                    <option value="live">Live</option>
-                                    <option value="completed">Completed</option>
-                                    <option value="postponed">Postponed</option>
-                                    <option value="cancelled">Cancelled</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label for="matchday" class="form-label">Matchday</label>
-                                <input type="number" class="form-control" id="matchday" name="matchday" min="1">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="home_score" class="form-label">Home Score</label>
-                                <input type="number" class="form-control" id="home_score" name="home_score" min="0">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="away_score" class="form-label">Away Score</label>
-                                <input type="number" class="form-control" id="away_score" name="away_score" min="0">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="public_notes" class="form-label">Public Notes</label>
-                                <textarea class="form-control" id="public_notes" name="public_notes" rows="3" placeholder="Notes visible to fans"></textarea>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="ticket_url" class="form-label">Ticket URL</label>
-                                <input type="url" class="form-control" id="ticket_url" name="ticket_url" placeholder="https://tickets.example.com">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" name="submit" class="btn btn-primary" id="submitButton">
-                        <i class="ph ph-plus me-2"></i>Add Match
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Customization Modal -->
-<div class="modal fade" id="customizeModal" tabindex="-1">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="ph ph-gear me-2"></i>Customize Display Settings
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form action="{{ url_for('admin.manage_matches') }}" method="POST" id="settingsForm">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                    <input type="hidden" name="update_display_settings" value="1">
-                    <input type="hidden" name="intentional_save" value="0" id="intentionalSave">
-
-                    <div class="customization-panel">
-                        <div class="customization-section">
-                            <h6><i class="ph ph-target me-2"></i>League Selection</h6>
-                            <select class="form-select" name="settings_league_id" required>
-                                <option value="">Select League to Customize</option>
+                            <label class="form-label">League</label>
+                            <select class="form-select" name="league_id" required onchange="loadSeasons(this.value)">
+                                <option value="">Select League</option>
                                 {% for league in leagues %}
-                                <option value="{{ league[0] }}">{{ league[1] }}</option>
+                                <option value="{{ league.league_id }}">{{ league.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
 
-                        <div class="customization-section">
-                            <h6><i class="ph ph-eye me-2"></i>Default View</h6>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <select class="form-select" name="default_view">
-                                        <option value="cards">Cards View</option>
-                                        <option value="list">List View</option>
-                                        <option value="calendar">Calendar View</option>
-                                        <option value="timeline">Timeline View</option>
-                                    </select>
+                        <div class="col-md-6">
+                            <label class="form-label">Season</label>
+                            <select class="form-select" name="season_id" id="seasonSelect" required>
+                                <option value="">Select Season</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Home Team</label>
+                            <select class="form-select" name="home_team_id" required>
+                                <option value="">Select Home Team</option>
+                                {% for team in teams %}
+                                <option value="{{ team.team_id }}">{{ team.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Away Team</label>
+                            <select class="form-select" name="away_team_id" required>
+                                <option value="">Select Away Team</option>
+                                {% for team in teams %}
+                                <option value="{{ team.team_id }}">{{ team.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Match Date</label>
+                            <input type="date" class="form-control" name="match_date" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Match Time</label>
+                            <input type="time" class="form-control" name="match_time">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Matchday</label>
+                            <input type="number" class="form-control" name="matchday" min="1">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Venue</label>
+                            <select class="form-select" name="venue_id">
+                                <option value="">Select Venue</option>
+                                {% for venue in venues %}
+                                <option value="{{ venue.venue_id }}">{{ venue.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="ph ph-plus me-2"></i>Create Match
+                        </button>
+                        <button type="button" class="btn btn-secondary ms-2" onclick="clearCreationMethod()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Round Robin Wizard -->
+            <div id="round-robin-wizard" class="wizard-step">
+                <div class="step-indicator">
+                    <div class="step active" id="rr-step-1">1</div>
+                    <div class="step-line"></div>
+                    <div class="step" id="rr-step-2">2</div>
+                    <div class="step-line"></div>
+                    <div class="step" id="rr-step-3">3</div>
+                </div>
+
+                <form method="post" action="{{ url_for('admin.manage_matches') }}" id="roundRobinForm">
+                    <input type="hidden" name="action" value="create_round_robin">
+
+                    <!-- Step 1: Basic Settings -->
+                    <div class="wizard-content" id="rr-content-1">
+                        <h4 class="mb-3">Round Robin Settings</h4>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">League</label>
+                                <select class="form-select" name="rr_league_id" required>
+                                    <option value="">Select League</option>
+                                    {% for league in leagues %}
+                                    <option value="{{ league.league_id }}">{{ league.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Season</label>
+                                <select class="form-select" name="rr_season_id" required>
+                                    <option value="">Select Season</option>
+                                    {% for season in seasons %}
+                                    <option value="{{ season.season_id }}">{{ season.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Fixture Type</label>
+                                <select class="form-select" name="fixture_type" required>
+                                    <option value="single">Single Round Robin (Each team plays once)</option>
+                                    <option value="double">Double Round Robin (Each team plays twice)</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Start Date</label>
+                                <input type="date" class="form-control" name="start_date" required>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <button type="button" class="btn btn-primary" onclick="nextRRStep(2)">
+                                Next <i class="ph ph-arrow-right ms-2"></i>
+                            </button>
+                            <button type="button" class="btn btn-secondary ms-2" onclick="clearCreationMethod()">Cancel</button>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Team Selection -->
+                    <div class="wizard-content" id="rr-content-2" style="display: none;">
+                        <h4 class="mb-3">Select Teams</h4>
+
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h6>Available Teams</h6>
+                                <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                                    {% for team in teams %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="selected_teams"
+                                               value="{{ team.team_id }}" id="team-{{ team.team_id }}">
+                                        <label class="form-check-label" for="team-{{ team.team_id }}">
+                                            {{ team.name }}
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+
+                                <div class="mt-2">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAllTeams()">Select All</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="clearAllTeams()">Clear All</button>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">Fixture Preview</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="fixture-preview">
+                                            <p class="text-muted small">Select teams to see fixture count</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="customization-section">
-                            <h6><i class="ph ph-toggle-left me-2"></i>Display Elements</h6>
-                            <div class="row">
-                                <div class="col-md-3">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="show_venue" id="show_venue" checked>
-                                        <label class="form-check-label" for="show_venue">Show Venue</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="show_time" id="show_time" checked>
-                                        <label class="form-check-label" for="show_time">Show Time</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="show_scores" id="show_scores" checked>
-                                        <label class="form-check-label" for="show_scores">Show Scores</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="show_status" id="show_status" checked>
-                                        <label class="form-check-label" for="show_status">Show Status</label>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="mt-4">
+                            <button type="button" class="btn btn-secondary" onclick="prevRRStep(1)">
+                                <i class="ph ph-arrow-left me-2"></i>Previous
+                            </button>
+                            <button type="button" class="btn btn-primary ms-2" onclick="nextRRStep(3)">
+                                Next <i class="ph ph-arrow-right ms-2"></i>
+                            </button>
                         </div>
+                    </div>
 
-                        <div class="customization-section">
-                            <h6><i class="ph ph-users me-2"></i>Public Views Enabled</h6>
-                            <div class="row">
-                                <div class="col-md-3">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="public_calendar_enabled" id="public_calendar_enabled" checked>
-                                        <label class="form-check-label" for="public_calendar_enabled">Public Calendar</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="public_list_enabled" id="public_list_enabled" checked>
-                                        <label class="form-check-label" for="public_list_enabled">Public List</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="public_cards_enabled" id="public_cards_enabled" checked>
-                                        <label class="form-check-label" for="public_cards_enabled">Public Cards</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="public_timeline_enabled" id="public_timeline_enabled">
-                                        <label class="form-check-label" for="public_timeline_enabled">Public Timeline</label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    <!-- Step 3: Review & Generate -->
+                    <div class="wizard-content" id="rr-content-3" style="display: none;">
+                        <h4 class="mb-3">Review & Generate</h4>
 
-                        <div class="customization-section">
-                            <h6><i class="ph ph-palette me-2"></i>Style Settings</h6>
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <label class="form-label">Calendar Theme</label>
-                                    <select class="form-select" name="calendar_theme">
-                                        <option value="default">Default</option>
-                                        <option value="dark">Dark</option>
-                                        <option value="colorful">Colorful</option>
-                                        <option value="minimal">Minimal</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Card Style</label>
-                                    <select class="form-select" name="card_style">
-                                        <option value="modern">Modern</option>
-                                        <option value="compact">Compact</option>
-                                        <option value="elegant">Elegant</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Timezone</label>
-                                    <select class="form-select" name="timezone">
-                                        <option value="UTC">UTC</option>
-                                        <option value="America/New_York">Eastern Time</option>
-                                        <option value="America/Chicago">Central Time</option>
-                                        <option value="America/Denver">Mountain Time</option>
-                                        <option value="America/Los_Angeles">Pacific Time</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
+                        <div id="generation-preview"></div>
 
-                        <div class="customization-section">
-                            <h6><i class="ph ph-calendar-dots me-2"></i>Format Settings</h6>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <label class="form-label">Date Format</label>
-                                    <select class="form-select" name="date_format">
-                                        <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                                        <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                                        <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-                                        <option value="Month DD, YYYY">Month DD, YYYY</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Time Format</label>
-                                    <select class="form-select" name="time_format">
-                                        <option value="12h">12 Hour (AM/PM)</option>
-                                        <option value="24h">24 Hour</option>
-                                    </select>
-                                </div>
-                            </div>
+                        <div class="mt-4">
+                            <button type="button" class="btn btn-secondary" onclick="prevRRStep(2)">
+                                <i class="ph ph-arrow-left me-2"></i>Previous
+                            </button>
+                            <button type="submit" class="btn btn-success ms-2">
+                                <i class="ph ph-magic-wand me-2"></i>Generate Fixtures
+                            </button>
                         </div>
                     </div>
                 </form>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="saveSettings()">
-                    <i class="ph ph-check me-2"></i>Save Settings
-                </button>
+
+            <!-- Custom Bulk Creation -->
+            <div id="custom-bulk-wizard" class="wizard-step">
+                <h4 class="mb-3">Custom Bulk Creation</h4>
+                <div class="alert alert-info">
+                    <i class="ph ph-info me-2"></i>
+                    Advanced fixture generation coming soon. This will allow you to create custom tournament brackets,
+                    group stages, and other complex fixture formats.
+                </div>
+            </div>
+        </div>
+
+        <!-- Existing Matches Sidebar -->
+        <div class="col-lg-4">
+            <div class="existing-matches-section">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Recent Matches</h5>
+                    <a href="{{ url_for('admin.manage_scores') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="ph ph-pencil me-1"></i>Manage Scores
+                    </a>
+                </div>
+
+                {% if recent_matches %}
+                    {% for match in recent_matches %}
+                    <div class="match-item">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <div class="fw-bold">{{ match.home_team }} vs {{ match.away_team }}</div>
+                                <small class="text-muted">{{ match.utc_date }} - Matchday {{ match.matchday }}</small>
+                            </div>
+                            <span class="status-badge status-{{ match.status }}">{{ match.status }}</span>
+                        </div>
+
+                        {% if match.status == 'completed' and match.home_score is not none %}
+                        <div class="text-center py-2">
+                            <span class="badge bg-light text-dark fs-6">{{ match.home_score }} - {{ match.away_score }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="ph ph-calendar-x display-6 mb-3"></i>
+                        <p>No matches created yet</p>
+                    </div>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
 
 <script>
-let currentView = 'cards';
-let currentDate = new Date();
-let selectedMatches = new Set();
-let matches = {{ matches_json|tojson }};
+let currentRRStep = 1;
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize default view
-    switchView('cards');
-
-    // Initialize calendar if needed
-    if (currentView === 'calendar') {
-        generateCalendar();
-    }
-});
-
-// View switching functionality
-function switchView(view) {
-    currentView = view;
-
-    // Update buttons
-    document.querySelectorAll('.view-selector .btn').forEach(btn => {
-        btn.classList.remove('active');
+function selectCreationMethod(method) {
+    // Clear all selections
+    document.querySelectorAll('.creation-method-card').forEach(card => {
+        card.classList.remove('selected');
     });
-    document.querySelector(`[data-view="${view}"]`).classList.add('active');
-
-    // Show/hide views
-    document.querySelectorAll('.view-container').forEach(container => {
-        container.style.display = 'none';
+    document.querySelectorAll('.wizard-step').forEach(step => {
+        step.classList.remove('active');
     });
 
-    document.getElementById(view + 'View').style.display = 'block';
-
-    // Special handling for calendar
-    if (view === 'calendar') {
-        generateCalendar();
-    }
-
-    applyFilters();
+    // Select method and show wizard
+    event.target.closest('.creation-method-card').classList.add('selected');
+    document.getElementById(method + '-wizard').classList.add('active');
 }
 
-// Filter functionality
-function applyFilters() {
-    const league = document.getElementById('filterLeague').value.toLowerCase();
-    const status = document.getElementById('filterStatus').value.toLowerCase();
-    const search = document.getElementById('searchInput').value.toLowerCase();
-
-    let visibleCount = 0;
-
-    // Filter items based on current view
-    const selector = currentView === 'cards' ? '.match-item' :
-                    currentView === 'list' ? '.match-row' : '.match-timeline-item';
-
-    document.querySelectorAll(selector).forEach(item => {
-        const itemLeague = item.dataset.league.toLowerCase();
-        const itemStatus = item.dataset.status.toLowerCase();
-        const itemSearch = item.dataset.search.toLowerCase();
-
-        const matches = (!league || itemLeague.includes(league)) &&
-                       (!status || itemStatus === status) &&
-                       (!search || itemSearch.includes(search));
-
-        if (matches) {
-            item.style.display = '';
-            visibleCount++;
-        } else {
-            item.style.display = 'none';
-        }
+function clearCreationMethod() {
+    document.querySelectorAll('.creation-method-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    document.querySelectorAll('.wizard-step').forEach(step => {
+        step.classList.remove('active');
     });
 }
 
-// Calendar functionality
-function generateCalendar() {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
+function nextRRStep(step) {
+    // Hide current step
+    document.getElementById(`rr-content-${currentRRStep}`).style.display = 'none';
+    document.getElementById(`rr-step-${currentRRStep}`).classList.remove('active');
+    document.getElementById(`rr-step-${currentRRStep}`).classList.add('completed');
 
-    // Update header
-    document.getElementById('calendarMonth').textContent =
-        new Date(year, month).toLocaleDateString('en-US', {
-            month: 'long',
-            year: 'numeric'
-        });
+    // Show next step
+    currentRRStep = step;
+    document.getElementById(`rr-content-${currentRRStep}`).style.display = 'block';
+    document.getElementById(`rr-step-${currentRRStep}`).classList.add('active');
 
-    // Generate calendar grid
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const startDate = new Date(firstDay);
-    startDate.setDate(startDate.getDate() - firstDay.getDay());
-
-    const calendarGrid = document.getElementById('calendarGrid');
-    calendarGrid.innerHTML = '';
-
-    // Day headers
-    const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    dayHeaders.forEach(day => {
-        const header = document.createElement('div');
-        header.className = 'calendar-day-header p-2 text-center fw-bold bg-light';
-        header.textContent = day;
-        calendarGrid.appendChild(header);
-    });
-
-    // Calendar days
-    const currentDate = new Date(startDate);
-    for (let i = 0; i < 42; i++) {
-        const dayElement = document.createElement('div');
-        dayElement.className = 'calendar-day';
-
-        if (currentDate.getMonth() !== month) {
-            dayElement.classList.add('other-month');
-        }
-
-        if (currentDate.toDateString() === new Date().toDateString()) {
-            dayElement.classList.add('today');
-        }
-
-        dayElement.innerHTML = `<div class="calendar-day-number">${currentDate.getDate()}</div>`;
-
-        // Add matches for this day
-        const dayMatches = matches.filter(match => {
-            if (!match[1]) return false;
-            const matchDate = new Date(match[1]);
-            return matchDate.toDateString() === currentDate.toDateString();
-        });
-
-        dayMatches.forEach(match => {
-            const matchElement = document.createElement('div');
-            matchElement.className = 'calendar-match';
-            matchElement.textContent = `${match[2]} vs ${match[3]}`;
-            matchElement.onclick = () => viewDetails(match[0]);
-            dayElement.appendChild(matchElement);
-        });
-
-        calendarGrid.appendChild(dayElement);
-        currentDate.setDate(currentDate.getDate() + 1);
+    // Update preview if on step 3
+    if (step === 3) {
+        updateGenerationPreview();
     }
 }
 
-function previousMonth() {
-    currentDate.setMonth(currentDate.getMonth() - 1);
-    generateCalendar();
+function prevRRStep(step) {
+    // Hide current step
+    document.getElementById(`rr-content-${currentRRStep}`).style.display = 'none';
+    document.getElementById(`rr-step-${currentRRStep}`).classList.remove('active');
+
+    // Show previous step
+    currentRRStep = step;
+    document.getElementById(`rr-content-${currentRRStep}`).style.display = 'block';
+    document.getElementById(`rr-step-${currentRRStep}`).classList.add('active');
+    document.getElementById(`rr-step-${currentRRStep}`).classList.remove('completed');
 }
 
-function nextMonth() {
-    currentDate.setMonth(currentDate.getMonth() + 1);
-    generateCalendar();
-}
-
-function goToToday() {
-    currentDate = new Date();
-    generateCalendar();
-}
-
-// Selection functionality
-function updateSelection() {
-    selectedMatches.clear();
-    document.querySelectorAll('.match-checkbox:checked').forEach(checkbox => {
-        selectedMatches.add(parseInt(checkbox.value));
+function selectAllTeams() {
+    document.querySelectorAll('input[name="selected_teams"]').forEach(checkbox => {
+        checkbox.checked = true;
     });
-
-    const count = selectedMatches.size;
-    document.getElementById('selectedCount').textContent = count;
-
-    if (count > 0) {
-        document.getElementById('bulkActions').classList.add('show');
-    } else {
-        document.getElementById('bulkActions').classList.remove('show');
-    }
+    updateFixturePreview();
 }
 
-function toggleSelectAll() {
-    const selectAll = document.getElementById('selectAll').checked;
-    document.querySelectorAll('.match-checkbox').forEach(checkbox => {
-        checkbox.checked = selectAll;
-    });
-    updateSelection();
-}
-
-function clearSelection() {
-    document.querySelectorAll('.match-checkbox').forEach(checkbox => {
+function clearAllTeams() {
+    document.querySelectorAll('input[name="selected_teams"]').forEach(checkbox => {
         checkbox.checked = false;
     });
-    updateSelection();
+    updateFixturePreview();
 }
 
-// Match actions
-function editMatch(matchId) {
-    // Implementation for editing matches
-    console.log('Edit match:', matchId);
+function updateFixturePreview() {
+    const selectedTeams = document.querySelectorAll('input[name="selected_teams"]:checked');
+    const count = selectedTeams.length;
+    const fixtureType = document.querySelector('select[name="fixture_type"]').value;
+
+    if (count < 2) {
+        document.getElementById('fixture-preview').innerHTML = '<p class="text-muted small">Select at least 2 teams</p>';
+        return;
+    }
+
+    const matchesPerRound = count * (count - 1) / 2;
+    const totalMatches = fixtureType === 'double' ? matchesPerRound * 2 : matchesPerRound;
+
+    document.getElementById('fixture-preview').innerHTML = `
+        <div class="text-center">
+            <div class="display-6 text-primary">${totalMatches}</div>
+            <small class="text-muted">Total Matches</small>
+            <hr>
+            <div><strong>${count}</strong> Teams</div>
+            <div><strong>${fixtureType === 'double' ? '2' : '1'}</strong> Rounds</div>
+        </div>
+    `;
 }
 
-function quickStatus(matchId) {
-    // Implementation for quick status update
-    console.log('Quick status:', matchId);
+function updateGenerationPreview() {
+    const selectedTeams = Array.from(document.querySelectorAll('input[name="selected_teams"]:checked'));
+    const league = document.querySelector('select[name="rr_league_id"] option:checked').text;
+    const season = document.querySelector('select[name="rr_season_id"] option:checked').text;
+    const fixtureType = document.querySelector('select[name="fixture_type"]').value;
+    const startDate = document.querySelector('input[name="start_date"]').value;
+
+    const count = selectedTeams.length;
+    const matchesPerRound = count * (count - 1) / 2;
+    const totalMatches = fixtureType === 'double' ? matchesPerRound * 2 : matchesPerRound;
+
+    document.getElementById('generation-preview').innerHTML = `
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Generation Summary</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <strong>League:</strong> ${league}<br>
+                        <strong>Season:</strong> ${season}<br>
+                        <strong>Start Date:</strong> ${startDate}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Teams:</strong> ${count}<br>
+                        <strong>Type:</strong> ${fixtureType === 'double' ? 'Double' : 'Single'} Round Robin<br>
+                        <strong>Total Matches:</strong> ${totalMatches}
+                    </div>
+                </div>
+
+                <hr>
+
+                <h6>Selected Teams:</h6>
+                <div class="d-flex flex-wrap gap-2">
+                    ${selectedTeams.map(team => `<span class="badge bg-primary">${team.nextElementSibling.textContent}</span>`).join('')}
+                </div>
+            </div>
+        </div>
+    `;
 }
 
-function viewDetails(matchId) {
-    // Implementation for viewing match details
-    console.log('View details:', matchId);
-}
-
-// Bulk actions
-function showBulkReschedule() {
-    if (selectedMatches.size === 0) return;
-    // Implementation for bulk reschedule
-    console.log('Bulk reschedule:', Array.from(selectedMatches));
-}
-
-function showBulkStatusUpdate() {
-    if (selectedMatches.size === 0) return;
-    // Implementation for bulk status update
-    console.log('Bulk status update:', Array.from(selectedMatches));
-}
-
-function showBulkDelete() {
-    if (selectedMatches.size === 0) return;
-    // Implementation for bulk delete
-    console.log('Bulk delete:', Array.from(selectedMatches));
-}
-
-// Settings
-function saveSettings() {
-    document.getElementById('intentionalSave').value = '1';
-    document.getElementById('settingsForm').submit();
-}
-
-// Team selection validation
-document.getElementById('team1_id').addEventListener('change', function() {
-    const team2Select = document.getElementById('team2_id');
-    team2Select.querySelectorAll('option').forEach(option => {
-        option.disabled = option.value === this.value && option.value !== '';
+// Add event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Update fixture preview when teams are selected
+    document.querySelectorAll('input[name="selected_teams"]').forEach(checkbox => {
+        checkbox.addEventListener('change', updateFixturePreview);
     });
+
+    // Update preview when fixture type changes
+    document.querySelector('select[name="fixture_type"]').addEventListener('change', updateFixturePreview);
 });
 
-document.getElementById('team2_id').addEventListener('change', function() {
-    const team1Select = document.getElementById('team1_id');
-    team1Select.querySelectorAll('option').forEach(option => {
-        option.disabled = option.value === this.value && option.value !== '';
-    });
-});
+function loadSeasons(leagueId) {
+    if (!leagueId) {
+        document.getElementById('seasonSelect').innerHTML = '<option value="">Select Season</option>';
+        return;
+    }
+
+    fetch(`/admin/api/seasons/${leagueId}`)
+        .then(response => response.json())
+        .then(seasons => {
+            const select = document.getElementById('seasonSelect');
+            select.innerHTML = '<option value="">Select Season</option>';
+            seasons.forEach(season => {
+                select.innerHTML += `<option value="${season.season_id}">${season.name}</option>`;
+            });
+        });
+}
 </script>
 {% endblock %}

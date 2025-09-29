@@ -3867,8 +3867,11 @@ def manage_scores():
             cur.close()
         return redirect(url_for('admin.manage_scores'))
 
+    # Get filter parameters
+    league_filter = request.args.get('league_filter', '')
+
     # Enhanced data retrieval with match details
-    cur.execute('''
+    base_query = '''
         SELECT
             m.match_id,
             m.utc_date,
@@ -3876,8 +3879,10 @@ def manage_scores():
             m.status,
             ht.name as home_team,
             at.name as away_team,
-            s.full_time_home,
-            s.full_time_away,
+            ht.cresturl as home_crest,
+            at.cresturl as away_crest,
+            s.full_time_home as home_score,
+            s.full_time_away as away_score,
             s.half_time_home,
             s.half_time_away,
             s.score_id,
@@ -3890,6 +3895,20 @@ def manage_scores():
         LEFT JOIN scores s ON m.match_id = s.match_id
         LEFT JOIN leagues l ON m.league_id = l.league_id
         LEFT JOIN seasons se ON m.season_id = se.season_id
+    '''
+
+    # Add WHERE clause for filtering
+    where_conditions = []
+    params = []
+
+    if league_filter:
+        where_conditions.append('m.league_id = %s')
+        params.append(league_filter)
+
+    if where_conditions:
+        base_query += ' WHERE ' + ' AND '.join(where_conditions)
+
+    base_query += '''
         ORDER BY
             CASE m.status
                 WHEN 'live' THEN 1
@@ -3898,7 +3917,9 @@ def manage_scores():
                 ELSE 4
             END,
             m.utc_date DESC, m.match_id DESC
-    ''')
+    '''
+
+    cur.execute(base_query, params)
 
     matches = cur.fetchall()
 
@@ -3934,8 +3955,12 @@ def manage_scores():
         # Fallback statistics if query fails
         stats = (0, 0, 0, 0)
 
+    # Get leagues for filter dropdown
+    cur.execute('SELECT league_id, name FROM leagues ORDER BY name')
+    leagues = cur.fetchall()
+
     cur.close()
-    return render_template('manage_scores.html', matches=matches, stats=stats)
+    return render_template('manage_scores.html', matches=matches, stats=stats, leagues=leagues)
 
 
 
