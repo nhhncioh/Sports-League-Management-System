@@ -153,17 +153,6 @@
                     </a>
                 </div>
                 <div class="col-sm-6 col-lg-3">
-                    <a class="card h-100 text-decoration-none" href="{{ url_for('admin.generate_fixtures') }}">
-                        <div class="card-body d-flex align-items-center">
-                            <i class="ph ph-magic-wand fs-3 text-primary me-3"></i>
-                            <div>
-                                <div class="fw-semibold">Generate Fixtures</div>
-                                <small class="text-muted">Auto-schedule</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-sm-6 col-lg-3">
                     <a class="card h-100 text-decoration-none" href="{{ url_for('admin.recalculate_standings') }}">
                         <div class="card-body d-flex align-items-center">
                             <i class="ph ph-arrow-clockwise fs-3 text-primary me-3"></i>
@@ -187,12 +176,12 @@
                     </a>
                 </div>
                 <div class="col-sm-6 col-lg-3">
-                    <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_league_homepage') }}">
+                    <a class="card h-100 text-decoration-none" href="{{ url_for('admin.homepage_builder') }}">
                         <div class="card-body d-flex align-items-center">
                             <i class="ph ph-browser fs-3 text-primary me-3"></i>
                             <div>
-                                <div class="fw-semibold">League Homepage</div>
-                                <small class="text-muted">Hero &amp; highlights</small>
+                                <div class="fw-semibold">Homepage Builder</div>
+                                <small class="text-muted">Drag & drop editor</small>
                             </div>
                         </div>
                     </a>
@@ -281,6 +270,17 @@
                             <div>
                                 <div class="fw-semibold">Referees</div>
                                 <small class="text-muted">Officials</small>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_media') }}">
+                        <div class="card-body d-flex align-items-center">
+                            <i class="ph ph-images fs-3 text-primary me-3"></i>
+                            <div>
+                                <div class="fw-semibold">Media Gallery</div>
+                                <small class="text-muted">Photos & videos</small>
                             </div>
                         </div>
                     </a>

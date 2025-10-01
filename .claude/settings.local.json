@@ -29,7 +29,8 @@
       "Bash(start \"Docker Desktop\" \"C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe\")",
       "Bash(dir:*)",
       "Bash(copy:*)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

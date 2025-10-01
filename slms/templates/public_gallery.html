@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}Media Gallery{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h1 class="display-4 mb-3">Media Gallery</h1>
+        <p class="lead text-muted">Photos and videos from our league</p>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" action="{{ url_for('public.media_gallery') }}" class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Category</label>
+                            <select class="form-select" name="category" onchange="this.form.submit()">
+                                <option value="">All Categories</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat }}" {% if cat == selected_category %}selected{% endif %}>
+                                    {{ cat.replace('_', ' ').title() }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Type</label>
+                            <select class="form-select" name="type" onchange="this.form.submit()">
+                                <option value="">All Types</option>
+                                <option value="image" {% if selected_type == 'image' %}selected{% endif %}>Images</option>
+                                <option value="video" {% if selected_type == 'video' %}selected{% endif %}>Videos</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gallery Grid -->
+    {% if media_items %}
+    <div class="row g-4">
+        {% for item in media_items %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm gallery-card" onclick="viewMedia('{{ item.url }}', '{{ item.media_type }}', '{{ item.title }}', '{{ item.description }}')">
+                <div class="gallery-thumbnail">
+                    {% if item.media_type == 'image' %}
+                        <img src="{{ item.url }}" alt="{{ item.title }}" class="card-img-top" style="height: 250px; object-fit: cover; cursor: pointer;">
+                    {% elif item.media_type == 'video' %}
+                        <div class="video-placeholder" style="height: 250px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                            <i class="ph ph-play-circle" style="font-size: 5rem; color: white; opacity: 0.9;"></i>
+                        </div>
+                    {% endif %}
+                    {% if item.category %}
+                    <div class="category-badge">
+                        {{ item.category.replace('_', ' ').title() }}
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ item.title }}</h5>
+                    {% if item.description %}
+                    <p class="card-text text-muted small">{{ item.description[:100] }}{{ '...' if item.description|length > 100 else '' }}</p>
+                    {% endif %}
+                    <small class="text-muted">
+                        <i class="ph ph-calendar me-1"></i>
+                        {{ item.created_at.strftime('%B %d, %Y') if item.created_at else 'N/A' }}
+                    </small>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="ph ph-images-square display-1 text-muted mb-3"></i>
+        <h3 class="text-muted">No media found</h3>
+        <p class="text-muted">
+            {% if selected_category or selected_type %}
+            Try adjusting your filters to see more content.
+            {% else %}
+            Check back later for photos and videos.
+            {% endif %}
+        </p>
+        {% if selected_category or selected_type %}
+        <a href="{{ url_for('public.media_gallery') }}" class="btn btn-primary mt-3">
+            <i class="ph ph-arrow-counter-clockwise me-2"></i>Clear Filters
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- View Media Modal -->
+<div class="modal fade" id="viewMediaModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewMediaTitle"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="viewMediaContent">
+                <!-- Content will be dynamically inserted -->
+            </div>
+            <div class="modal-footer">
+                <p class="text-muted small mb-0 me-auto" id="viewMediaDescription"></p>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.gallery-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+}
+
+.gallery-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.15) !important;
+}
+
+.gallery-thumbnail {
+    position: relative;
+    overflow: hidden;
+}
+
+.category-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: rgba(0,0,0,0.75);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.video-placeholder {
+    transition: background 0.3s ease;
+}
+
+.gallery-card:hover .video-placeholder {
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}
+
+.card-img-top {
+    transition: transform 0.3s ease;
+}
+
+.gallery-card:hover .card-img-top {
+    transform: scale(1.05);
+}
+</style>
+
+<script>
+function viewMedia(url, type, title, description) {
+    document.getElementById('viewMediaTitle').textContent = title;
+    document.getElementById('viewMediaDescription').textContent = description || '';
+    const content = document.getElementById('viewMediaContent');
+
+    if (type === 'image') {
+        content.innerHTML = `<img src="${url}" class="img-fluid w-100" alt="${title}" style="max-height: 70vh; object-fit: contain;">`;
+    } else if (type === 'video') {
+        if (url.includes('youtube.com') || url.includes('youtu.be')) {
+            // Convert regular YouTube URLs to embed URLs
+            let embedUrl = url;
+            if (url.includes('watch?v=')) {
+                const videoId = url.split('watch?v=')[1].split('&')[0];
+                embedUrl = `https://www.youtube.com/embed/${videoId}`;
+            } else if (url.includes('youtu.be/')) {
+                const videoId = url.split('youtu.be/')[1].split('?')[0];
+                embedUrl = `https://www.youtube.com/embed/${videoId}`;
+            }
+            content.innerHTML = `<div class="ratio ratio-16x9"><iframe src="${embedUrl}" frameborder="0" allowfullscreen></iframe></div>`;
+        } else {
+            content.innerHTML = `<video class="w-100" controls style="max-height: 70vh;"><source src="${url}">Your browser does not support the video tag.</video>`;
+        }
+    }
+
+    new bootstrap.Modal(document.getElementById('viewMediaModal')).show();
+}
+</script>
+{% endblock %}

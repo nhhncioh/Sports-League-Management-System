@@ -66,8 +66,8 @@
         --slms-gradient-start: {{ gradient_start }};
         --slms-gradient-end: {{ gradient_end }};
         --slms-shadow-color: {{ palette.shadow or 'rgba(15, 23, 42, 0.12)' }};
-        --slms-font-base: {{ (typography.base_family or 'Inter, system-ui, sans-serif')|tojson }};
-        --slms-font-heading: {{ (typography.heading_family or typography.base_family or 'Inter, system-ui, sans-serif')|tojson }};
+        --slms-font-base: {{ typography.base_family or 'Inter, system-ui, sans-serif' }};
+        --slms-font-heading: {{ typography.heading_family or typography.base_family or 'Inter, system-ui, sans-serif' }};
         --slms-font-size-base: {{ typography.base_size or '16px' }};
         --slms-line-height: {{ typography.line_height or 1.6 }};
         --slms-heading-line-height: {{ typography.heading_line_height or 1.3 }};

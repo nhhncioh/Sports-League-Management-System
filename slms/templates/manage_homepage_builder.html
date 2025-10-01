@@ -1,0 +1,1856 @@
+{% extends "base.html" %}
+{% block title %}Homepage Builder - Admin Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+.block-list {
+    min-height: 200px;
+    background: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.block-item {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    cursor: move;
+    transition: all 0.2s ease;
+}
+
+.block-item:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.block-item.dragging {
+    opacity: 0.5;
+}
+
+.block-header {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.block-type-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.available-blocks {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.75rem;
+}
+
+.block-template {
+    background: white;
+    border: 2px solid #dee2e6;
+    border-radius: 6px;
+    padding: 0.75rem 0.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.block-template:hover {
+    border-color: #0d6efd;
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.2);
+    transform: translateY(-2px);
+}
+
+.block-template i {
+    font-size: 2rem;
+    margin-bottom: 0.25rem;
+    display: block;
+}
+
+.block-template .fw-semibold {
+    font-size: 0.875rem;
+}
+
+.block-template small {
+    font-size: 0.7rem;
+    display: block;
+}
+
+.preview-panel {
+    position: sticky;
+    top: 20px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Homepage Builder</h1>
+            <p class="text-muted">Design your league homepage with drag-and-drop blocks</p>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-outline-secondary" onclick="previewHomepage()">
+                <i class="ph ph-eye me-2"></i>Preview
+            </button>
+            <button class="btn btn-primary" onclick="saveHomepage()">
+                <i class="ph ph-floppy-disk me-2"></i>Save Homepage
+            </button>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <label class="form-label fw-semibold">Select League</label>
+                    <select class="form-select" id="leagueSelect" onchange="loadHomepage()">
+                        {% for league in leagues %}
+                        <option value="{{ league.id }}" {% if league.id|string == selected_league_id %}selected{% endif %}>
+                            {{ league.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Block Library -->
+        <div class="col-lg-3">
+            <div class="card sticky-top" style="top: 20px;">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="ph ph-plus-circle me-2"></i>Add Blocks</h5>
+                </div>
+                <div class="card-body">
+                    <div class="available-blocks">
+                        <div class="block-template" onclick="addBlock('hero')">
+                            <i class="ph ph-image text-primary"></i>
+                            <div class="fw-semibold">Hero</div>
+                            <small class="text-muted">Large banner</small>
+                        </div>
+                        <div class="block-template" onclick="addBlock('stats')">
+                            <i class="ph ph-chart-line text-success"></i>
+                            <div class="fw-semibold">Stats</div>
+                            <small class="text-muted">League stats</small>
+                        </div>
+                        <div class="block-template" onclick="addBlock('gallery')">
+                            <i class="ph ph-images text-warning"></i>
+                            <div class="fw-semibold">Gallery</div>
+                            <small class="text-muted">Photo grid</small>
+                        </div>
+                        <div class="block-template" onclick="addBlock('news')">
+                            <i class="ph ph-newspaper text-info"></i>
+                            <div class="fw-semibold">News</div>
+                            <small class="text-muted">Articles</small>
+                        </div>
+                        <div class="block-template" onclick="addBlock('matches')">
+                            <i class="ph ph-calendar text-danger"></i>
+                            <div class="fw-semibold">Matches</div>
+                            <small class="text-muted">Upcoming games</small>
+                        </div>
+                        <div class="block-template" onclick="addBlock('standings')">
+                            <i class="ph ph-list-numbers text-secondary"></i>
+                            <div class="fw-semibold">Standings</div>
+                            <small class="text-muted">League table</small>
+                        </div>
+                        <div class="block-template" onclick="addBlock('text')">
+                            <i class="ph ph-text-aa text-dark"></i>
+                            <div class="fw-semibold">Text</div>
+                            <small class="text-muted">Custom content</small>
+                        </div>
+                        <div class="block-template" onclick="addBlock('sponsors')">
+                            <i class="ph ph-handshake text-primary"></i>
+                            <div class="fw-semibold">Sponsors</div>
+                            <small class="text-muted">Partner logos</small>
+                        </div>
+                        <div class="block-template" onclick="addBlock('cta')">
+                            <i class="ph ph-megaphone text-success"></i>
+                            <div class="fw-semibold">Call to Action</div>
+                            <small class="text-muted">Large button</small>
+                        </div>
+                        <div class="block-template" onclick="addBlock('features')">
+                            <i class="ph ph-squares-four text-info"></i>
+                            <div class="fw-semibold">Features</div>
+                            <small class="text-muted">Icon grid</small>
+                        </div>
+                        <div class="block-template" onclick="addBlock('spacer')">
+                            <i class="ph ph-arrows-out-line-vertical text-secondary"></i>
+                            <div class="fw-semibold">Spacer</div>
+                            <small class="text-muted">Vertical space</small>
+                        </div>
+                        <div class="block-template" onclick="addBlock('divider')">
+                            <i class="ph ph-minus text-muted"></i>
+                            <div class="fw-semibold">Divider</div>
+                            <small class="text-muted">Separator line</small>
+                        </div>
+                        <div class="block-template" onclick="addBlock('video')">
+                            <i class="ph ph-video text-danger"></i>
+                            <div class="fw-semibold">Video</div>
+                            <small class="text-muted">Embed video</small>
+                        </div>
+                        <div class="block-template" onclick="addBlock('testimonials')">
+                            <i class="ph ph-quotes text-warning"></i>
+                            <div class="fw-semibold">Testimonials</div>
+                            <small class="text-muted">Player quotes</small>
+                        </div>
+                        <div class="block-template" onclick="addBlock('countdown')">
+                            <i class="ph ph-timer text-danger"></i>
+                            <div class="fw-semibold">Countdown</div>
+                            <small class="text-muted">Season timer</small>
+                        </div>
+                    </div>
+                    <hr class="my-3">
+                    <h6 class="mb-3"><i class="ph ph-columns me-2"></i>Layout Containers</h6>
+                    <div class="available-blocks">
+                        <div class="block-template" onclick="addContainer()">
+                            <i class="ph ph-columns text-primary"></i>
+                            <div class="fw-semibold">Split Layout</div>
+                            <small class="text-muted">Two columns</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Builder Area -->
+        <div class="col-lg-9">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="ph ph-layout me-2"></i>Homepage Layout</h5>
+                    <small class="text-muted">Drag blocks to reorder</small>
+                </div>
+                <div class="card-body">
+                    <div id="blockList" class="block-list">
+                        <!-- Blocks will be added here -->
+                        <div class="text-center text-muted py-5" id="emptyState">
+                            <i class="ph ph-plus-circle display-4 mb-3"></i>
+                            <p>Click on a block type to add it to your homepage</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Block Settings Modal -->
+<div class="modal fade" id="blockSettingsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Block Settings</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="blockSettingsContent">
+                <!-- Settings will be dynamically inserted -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveBlockSettings()">Save Settings</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let blocks = {{ blocks|tojson|safe }};
+// Ensure blocks is always an array
+if (!Array.isArray(blocks)) {
+    blocks = [];
+}
+let currentBlockIndex = null;
+let settingsModal = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    settingsModal = new bootstrap.Modal(document.getElementById('blockSettingsModal'));
+    console.log('Initial blocks:', blocks);
+    renderBlocks();
+});
+
+function addBlock(type) {
+    try {
+        console.log('Adding block of type:', type);
+
+        const block = {
+            id: Date.now(),
+            type: type,
+            settings: getDefaultSettings(type),
+            layout: 'full' // Default to full-width
+        };
+
+        console.log('Created block:', block);
+
+        blocks.push(block);
+        console.log('Added block. Total blocks:', blocks.length);
+        console.log('Current blocks array:', blocks);
+
+        renderBlocks();
+    } catch (error) {
+        console.error('Error adding block:', error);
+        alert('Error adding block: ' + error.message);
+    }
+}
+
+function addContainer() {
+    try {
+        const block = {
+            id: Date.now(),
+            type: 'container',
+            layout: 'split-50-50',
+            leftBlock: null,
+            rightBlock: null,
+            settings: {
+                backgroundColor: '#ffffff',
+                padding: 'medium',
+                verticalAlign: 'top',
+                mobileStack: true,
+                gap: 'medium',
+                borderRadius: 0,
+                addShadow: false,
+                reverseOnMobile: false
+            }
+        };
+
+        blocks.push(block);
+        renderBlocks();
+    } catch (error) {
+        console.error('Error adding container:', error);
+        alert('Error adding container: ' + error.message);
+    }
+}
+
+function getDefaultSettings(type) {
+    // Common settings for all blocks
+    const commonSettings = {
+        blockBackgroundColor: '#ffffff',
+        blockPadding: 'medium',
+        blockMarginTop: 'medium',
+        blockMarginBottom: 'medium',
+        blockMaxWidth: 'full',
+        blockBorderRadius: 0,
+        blockShadow: false,
+        blockAnimate: false
+    };
+
+    const defaults = {
+        hero: { ...commonSettings, title: 'Welcome to Our League', subtitle: '', backgroundUrl: '', ctaText: 'View Schedule', ctaUrl: '/schedule', height: 'medium', overlay: true, overlayOpacity: 50, textColor: '#ffffff', parallax: false },
+        stats: { ...commonSettings, showTeams: true, showPlayers: true, showMatches: true, showSeasons: false, showGoals: false, showAttendance: false, showVenues: false, showYellowCards: false, showRedCards: false, backgroundColor: '#f8f9fa', columns: 3 },
+        gallery: { ...commonSettings, displayMode: 'auto', limit: 6, category: '', columns: 3, showTitles: true, selectedMedia: [] },
+        news: { ...commonSettings, limit: 3, layout: 'grid', selectedArticles: [] },
+        matches: { ...commonSettings, matchDisplayMode: 'auto', limit: 5, showPast: false, compact: false, selectedMatches: [], filterBySeason: '' },
+        standings: { ...commonSettings, limit: 10, showLogos: true, showPlayed: true, showWins: true, showDraws: true, showLosses: true, showGoalsFor: false, showGoalsAgainst: false, showGoalDiff: true, showPoints: true, showForm: false, tableStyle: 'striped', highlightTop3: false, seasonId: '' },
+        text: { ...commonSettings, title: '', content: '', alignment: 'left', backgroundColor: '#ffffff', padding: 'medium', maxWidth: 'full', animate: false },
+        sponsors: { ...commonSettings, limit: 8, columns: 4, grayscale: false },
+        cta: { ...commonSettings, title: 'Join Our League', subtitle: 'Sign up today and be part of the action', buttonText: 'Get Started', buttonUrl: '/register', backgroundColor: '#0d6efd', textColor: '#ffffff', buttonStyle: 'solid' },
+        features: { ...commonSettings, items: [
+            { icon: 'ph-trophy', title: 'Professional League', description: 'Compete at the highest level' },
+            { icon: 'ph-calendar', title: 'Regular Schedule', description: 'Matches every week' },
+            { icon: 'ph-users', title: 'Great Community', description: 'Join passionate players' }
+        ], columns: 3, backgroundColor: '#ffffff' },
+        spacer: { ...commonSettings, height: 60 },
+        divider: { ...commonSettings, style: 'solid', width: 100, color: '#dee2e6', thickness: 1 },
+        video: { ...commonSettings, videoSource: 'url', url: '', aspectRatio: '16:9', autoplay: false, selectedVideo: '' },
+        testimonials: { ...commonSettings, items: [
+            { quote: 'Great league experience!', author: 'Player Name', team: 'Team Name', rating: 5, photo: '', date: '' }
+        ], layout: 'slider', columns: 2, showRatings: false, showPhotos: true, showDate: false, backgroundColor: '#f8f9fa' },
+        countdown: { ...commonSettings, targetDate: '', title: 'Season Starts In', showDays: true, showHours: true, showMinutes: true, backgroundColor: '#0d6efd', textColor: '#ffffff' }
+    };
+    return defaults[type] || commonSettings;
+}
+
+function renderBlocks() {
+    const container = document.getElementById('blockList');
+    const emptyState = document.getElementById('emptyState');
+
+    console.log('Rendering blocks. Total:', blocks.length);
+
+    if (blocks.length === 0) {
+        if (emptyState) emptyState.style.display = 'block';
+        container.innerHTML = `
+            <div class="text-center text-muted py-5" id="emptyState">
+                <i class="ph ph-plus-circle display-4 mb-3"></i>
+                <p>Click on a block type to add it to your homepage</p>
+            </div>
+        `;
+        return;
+    }
+
+    try {
+        const html = blocks.map((block, index) => {
+            console.log(`Rendering block ${index}:`, block.type);
+
+            if (block.type === 'container') {
+                return renderContainerBlock(block, index);
+            }
+
+            return `
+        <div class="block-item" draggable="true" data-index="${index}" ondragstart="handleDragStart(event)" ondragover="handleDragOver(event)" ondrop="handleDrop(event)" ondragend="handleDragEnd(event)">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="ph ph-dots-six-vertical text-muted" style="cursor: move;"></i>
+                    <span class="block-type-badge bg-primary text-white">${block.type}</span>
+                    <strong>${getBlockTitle(block)}</strong>
+                </div>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-secondary" onclick="event.stopPropagation(); editBlock(${index})" title="Settings">
+                        <i class="ph ph-gear"></i>
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="event.stopPropagation(); duplicateBlock(${index})" title="Duplicate">
+                        <i class="ph ph-copy"></i>
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="event.stopPropagation(); deleteBlock(${index})" title="Delete">
+                        <i class="ph ph-trash"></i>
+                    </button>
+                </div>
+            </div>
+            <small class="text-muted">${getBlockDescription(block)}</small>
+        </div>
+    `;
+        }).join('');
+
+        container.innerHTML = html;
+        console.log('Blocks rendered successfully');
+    } catch (error) {
+        console.error('Error rendering blocks:', error);
+        container.innerHTML = `<div class="alert alert-danger">Error rendering blocks: ${error.message}</div>`;
+    }
+}
+
+function renderContainerBlock(block, index) {
+    const layoutPercents = {
+        'split-50-50': ['50%', '50%'],
+        'split-33-67': ['33%', '67%'],
+        'split-67-33': ['67%', '33%'],
+        'split-25-75': ['25%', '75%'],
+        'split-75-25': ['75%', '25%']
+    };
+    const [leftWidth, rightWidth] = layoutPercents[block.layout] || ['50%', '50%'];
+
+    return `
+        <div class="block-item container-block" draggable="true" data-index="${index}" ondragstart="handleDragStart(event)" ondragover="handleDragOver(event)" ondrop="handleDrop(event)" ondragend="handleDragEnd(event)">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="ph ph-dots-six-vertical text-muted" style="cursor: move;"></i>
+                    <span class="block-type-badge bg-success text-white">container</span>
+                    <strong>Split Layout (${leftWidth} / ${rightWidth})</strong>
+                </div>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-secondary" onclick="event.stopPropagation(); editContainerLayout(${index})" title="Layout Settings">
+                        <i class="ph ph-gear"></i>
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="event.stopPropagation(); deleteBlock(${index})" title="Delete">
+                        <i class="ph ph-trash"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <div class="container-slot" style="min-height: 100px; border: 2px dashed #dee2e6; border-radius: 6px; padding: 1rem; background: #f8f9fa;">
+                        ${block.leftBlock ? renderNestedBlock(block.leftBlock, index, 'left') : `
+                            <div class="text-center text-muted py-3">
+                                <i class="ph ph-plus-circle mb-2" style="font-size: 2rem;"></i>
+                                <p class="mb-2 small">Left Column (${leftWidth})</p>
+                                <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); addBlockToContainer(${index}, 'left')">
+                                    <i class="ph ph-plus me-1"></i>Add Block
+                                </button>
+                            </div>
+                        `}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="container-slot" style="min-height: 100px; border: 2px dashed #dee2e6; border-radius: 6px; padding: 1rem; background: #f8f9fa;">
+                        ${block.rightBlock ? renderNestedBlock(block.rightBlock, index, 'right') : `
+                            <div class="text-center text-muted py-3">
+                                <i class="ph ph-plus-circle mb-2" style="font-size: 2rem;"></i>
+                                <p class="mb-2 small">Right Column (${rightWidth})</p>
+                                <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); addBlockToContainer(${index}, 'right')">
+                                    <i class="ph ph-plus me-1"></i>Add Block
+                                </button>
+                            </div>
+                        `}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderNestedBlock(block, containerIndex, side) {
+    return `
+        <div class="nested-block" style="background: white; border: 1px solid #dee2e6; border-radius: 4px; padding: 0.75rem;">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="block-type-badge bg-primary text-white" style="font-size: 0.7rem;">${block.type}</span>
+                    <strong style="font-size: 0.85rem;">${getBlockTitle(block)}</strong>
+                </div>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-secondary btn-sm" onclick="event.stopPropagation(); editNestedBlock(${containerIndex}, '${side}')" title="Settings">
+                        <i class="ph ph-gear" style="font-size: 0.8rem;"></i>
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm" onclick="event.stopPropagation(); removeNestedBlock(${containerIndex}, '${side}')" title="Remove">
+                        <i class="ph ph-trash" style="font-size: 0.8rem;"></i>
+                    </button>
+                </div>
+            </div>
+            <small class="text-muted" style="font-size: 0.75rem;">${getBlockDescription(block)}</small>
+        </div>
+    `;
+}
+
+function getBlockTitle(block) {
+    const titles = {
+        hero: 'Hero Section',
+        stats: 'League Statistics',
+        gallery: 'Media Gallery',
+        news: 'Latest News',
+        matches: 'Match Schedule',
+        standings: 'League Standings',
+        text: 'Text Block',
+        sponsors: 'Sponsors',
+        cta: 'Call to Action',
+        features: 'Features Grid',
+        spacer: 'Spacer',
+        divider: 'Divider',
+        video: 'Video Embed',
+        testimonials: 'Testimonials',
+        countdown: 'Countdown Timer'
+    };
+    return titles[block.type] || block.type;
+}
+
+function getBlockDescription(block) {
+    if (!block || !block.settings) return 'No description';
+
+    const descriptions = {
+        hero: `${block.settings.height || 'medium'} height, ${block.settings.title || 'No title'}`,
+        stats: `${block.settings.columns || 3} columns`,
+        gallery: block.settings.displayMode === 'manual' && block.settings.selectedMedia && block.settings.selectedMedia.length > 0
+            ? `${block.settings.selectedMedia.length} selected photos in ${block.settings.columns || 3} columns`
+            : `${block.settings.limit || 6} photos in ${block.settings.columns || 3} columns`,
+        news: `${block.settings.limit || 3} articles, ${block.settings.layout || 'grid'} layout`,
+        matches: block.settings.matchDisplayMode === 'manual' && block.settings.selectedMatches && block.settings.selectedMatches.length > 0
+            ? `${block.settings.selectedMatches.length} selected matches${block.settings.compact ? ', compact view' : ''}`
+            : `${block.settings.limit || 5} matches${block.settings.compact ? ', compact view' : ''}`,
+        standings: block.settings.seasonId ? `Top ${block.settings.limit || 10} teams (specific season)` : `Top ${block.settings.limit || 10} teams`,
+        text: block.settings.title || 'Custom text content',
+        sponsors: `${block.settings.limit || 8} logos in ${block.settings.columns || 4} columns`,
+        cta: block.settings.title || 'Call to action button',
+        features: `${(block.settings.items && block.settings.items.length) || 3} features in ${block.settings.columns || 3} columns`,
+        spacer: `${block.settings.height || 60}px height`,
+        divider: `${block.settings.style || 'solid'} line, ${block.settings.width || 100}% width`,
+        video: block.settings.videoSource === 'library' && block.settings.selectedVideo
+            ? 'Video from library'
+            : (block.settings.url || 'No video URL set'),
+        testimonials: `${(block.settings.items && block.settings.items.length) || 1} testimonial(s)`,
+        countdown: block.settings.title || 'Countdown timer'
+    };
+    return descriptions[block.type] || 'No description available';
+}
+
+function editBlock(index) {
+    currentBlockIndex = index;
+    const block = blocks[index];
+    const content = document.getElementById('blockSettingsContent');
+
+    content.innerHTML = getSettingsForm(block);
+    settingsModal.show();
+}
+
+function getUniversalSettingsHTML(block) {
+    return `
+        <hr class="my-4">
+        <h6 class="mb-3"><i class="ph ph-sliders me-2"></i>Block Styling</h6>
+
+        <div class="mb-3">
+            <label class="form-label">Background</label>
+            <div class="btn-group w-100 mb-2" role="group">
+                <input type="radio" class="btn-check" name="bgType_${block.id || Date.now()}" id="bgColor_${block.id}" ${(!block.settings.blockBackgroundType || block.settings.blockBackgroundType === 'color') ? 'checked' : ''} onclick="toggleBackgroundType('color')">
+                <label class="btn btn-outline-secondary btn-sm" for="bgColor_${block.id}">Color</label>
+
+                <input type="radio" class="btn-check" name="bgType_${block.id || Date.now()}" id="bgGradient_${block.id}" ${block.settings.blockBackgroundType === 'gradient' ? 'checked' : ''} onclick="toggleBackgroundType('gradient')">
+                <label class="btn btn-outline-secondary btn-sm" for="bgGradient_${block.id}">Gradient</label>
+
+                <input type="radio" class="btn-check" name="bgType_${block.id || Date.now()}" id="bgImage_${block.id}" ${block.settings.blockBackgroundType === 'image' ? 'checked' : ''} onclick="toggleBackgroundType('image')">
+                <label class="btn btn-outline-secondary btn-sm" for="bgImage_${block.id}">Image</label>
+            </div>
+
+            <div id="bgColorOptions" style="display: ${(!block.settings.blockBackgroundType || block.settings.blockBackgroundType === 'color') ? 'block' : 'none'}">
+                <input type="color" class="form-control form-control-color" id="setting_blockBackgroundColor" value="${block.settings.blockBackgroundColor || '#ffffff'}">
+            </div>
+
+            <div id="bgGradientOptions" style="display: ${block.settings.blockBackgroundType === 'gradient' ? 'block' : 'none'}">
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label class="form-label small">Color 1</label>
+                        <input type="color" class="form-control form-control-color" id="setting_gradientColor1" value="${block.settings.gradientColor1 || '#667eea'}">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small">Color 2</label>
+                        <input type="color" class="form-control form-control-color" id="setting_gradientColor2" value="${block.settings.gradientColor2 || '#764ba2'}">
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <label class="form-label small">Direction</label>
+                    <select class="form-select form-select-sm" id="setting_gradientDirection">
+                        <option value="to right" ${block.settings.gradientDirection === 'to right' ? 'selected' : ''}>Left to Right</option>
+                        <option value="to left" ${block.settings.gradientDirection === 'to left' ? 'selected' : ''}>Right to Left</option>
+                        <option value="to bottom" ${block.settings.gradientDirection === 'to bottom' ? 'selected' : ''}>Top to Bottom</option>
+                        <option value="to top" ${block.settings.gradientDirection === 'to top' ? 'selected' : ''}>Bottom to Top</option>
+                        <option value="135deg" ${block.settings.gradientDirection === '135deg' ? 'selected' : ''}>Diagonal ↘</option>
+                        <option value="45deg" ${block.settings.gradientDirection === '45deg' ? 'selected' : ''}>Diagonal ↗</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="bgImageOptions" style="display: ${block.settings.blockBackgroundType === 'image' ? 'block' : 'none'}">
+                <input type="url" class="form-control form-control-sm" id="setting_blockBackgroundImage" value="${block.settings.blockBackgroundImage || ''}" placeholder="Image URL">
+                <div class="row g-2 mt-2">
+                    <div class="col-6">
+                        <label class="form-label small">Size</label>
+                        <select class="form-select form-select-sm" id="setting_bgImageSize">
+                            <option value="cover" ${(!block.settings.bgImageSize || block.settings.bgImageSize === 'cover') ? 'selected' : ''}>Cover</option>
+                            <option value="contain" ${block.settings.bgImageSize === 'contain' ? 'selected' : ''}>Contain</option>
+                            <option value="auto" ${block.settings.bgImageSize === 'auto' ? 'selected' : ''}>Auto</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small">Position</label>
+                        <select class="form-select form-select-sm" id="setting_bgImagePosition">
+                            <option value="center" ${(!block.settings.bgImagePosition || block.settings.bgImagePosition === 'center') ? 'selected' : ''}>Center</option>
+                            <option value="top" ${block.settings.bgImagePosition === 'top' ? 'selected' : ''}>Top</option>
+                            <option value="bottom" ${block.settings.bgImagePosition === 'bottom' ? 'selected' : ''}>Bottom</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="setting_bgImageParallax" ${block.settings.bgImageParallax ? 'checked' : ''}>
+                    <label class="form-check-label small">Parallax Effect</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <label class="form-label">Padding</label>
+                <select class="form-select" id="setting_blockPadding">
+                    <option value="none" ${block.settings.blockPadding === 'none' ? 'selected' : ''}>None</option>
+                    <option value="small" ${block.settings.blockPadding === 'small' ? 'selected' : ''}>Small</option>
+                    <option value="medium" ${(!block.settings.blockPadding || block.settings.blockPadding === 'medium') ? 'selected' : ''}>Medium</option>
+                    <option value="large" ${block.settings.blockPadding === 'large' ? 'selected' : ''}>Large</option>
+                    <option value="xlarge" ${block.settings.blockPadding === 'xlarge' ? 'selected' : ''}>Extra Large</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Max Width</label>
+                <select class="form-select" id="setting_blockMaxWidth">
+                    <option value="full" ${(!block.settings.blockMaxWidth || block.settings.blockMaxWidth === 'full') ? 'selected' : ''}>Full Width</option>
+                    <option value="wide" ${block.settings.blockMaxWidth === 'wide' ? 'selected' : ''}>Wide (1400px)</option>
+                    <option value="standard" ${block.settings.blockMaxWidth === 'standard' ? 'selected' : ''}>Standard (1200px)</option>
+                    <option value="narrow" ${block.settings.blockMaxWidth === 'narrow' ? 'selected' : ''}>Narrow (900px)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <label class="form-label">Margin Top</label>
+                <select class="form-select" id="setting_blockMarginTop">
+                    <option value="none" ${block.settings.blockMarginTop === 'none' ? 'selected' : ''}>None</option>
+                    <option value="small" ${block.settings.blockMarginTop === 'small' ? 'selected' : ''}>Small</option>
+                    <option value="medium" ${(!block.settings.blockMarginTop || block.settings.blockMarginTop === 'medium') ? 'selected' : ''}>Medium</option>
+                    <option value="large" ${block.settings.blockMarginTop === 'large' ? 'selected' : ''}>Large</option>
+                    <option value="xlarge" ${block.settings.blockMarginTop === 'xlarge' ? 'selected' : ''}>Extra Large</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Margin Bottom</label>
+                <select class="form-select" id="setting_blockMarginBottom">
+                    <option value="none" ${block.settings.blockMarginBottom === 'none' ? 'selected' : ''}>None</option>
+                    <option value="small" ${block.settings.blockMarginBottom === 'small' ? 'selected' : ''}>Small</option>
+                    <option value="medium" ${(!block.settings.blockMarginBottom || block.settings.blockMarginBottom === 'medium') ? 'selected' : ''}>Medium</option>
+                    <option value="large" ${block.settings.blockMarginBottom === 'large' ? 'selected' : ''}>Large</option>
+                    <option value="xlarge" ${block.settings.blockMarginBottom === 'xlarge' ? 'selected' : ''}>Extra Large</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Border Radius (px)</label>
+            <input type="range" class="form-range" id="setting_blockBorderRadius" min="0" max="50" value="${block.settings.blockBorderRadius || 0}"
+                oninput="document.getElementById('blockBorderRadiusValue').textContent = this.value">
+            <small class="text-muted">Current: <span id="blockBorderRadiusValue">${block.settings.blockBorderRadius || 0}</span>px</small>
+        </div>
+
+        <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="setting_blockShadow" ${block.settings.blockShadow ? 'checked' : ''}>
+            <label class="form-check-label">Add Shadow</label>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Border</label>
+            <div class="row g-2">
+                <div class="col-4">
+                    <label class="form-label small">Width (px)</label>
+                    <input type="number" class="form-control form-control-sm" id="setting_blockBorderWidth" value="${block.settings.blockBorderWidth || 0}" min="0" max="10">
+                </div>
+                <div class="col-4">
+                    <label class="form-label small">Style</label>
+                    <select class="form-select form-select-sm" id="setting_blockBorderStyle">
+                        <option value="solid" ${(!block.settings.blockBorderStyle || block.settings.blockBorderStyle === 'solid') ? 'selected' : ''}>Solid</option>
+                        <option value="dashed" ${block.settings.blockBorderStyle === 'dashed' ? 'selected' : ''}>Dashed</option>
+                        <option value="dotted" ${block.settings.blockBorderStyle === 'dotted' ? 'selected' : ''}>Dotted</option>
+                    </select>
+                </div>
+                <div class="col-4">
+                    <label class="form-label small">Color</label>
+                    <input type="color" class="form-control form-control-color" id="setting_blockBorderColor" value="${block.settings.blockBorderColor || '#dee2e6'}">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="setting_blockAnimate" ${block.settings.blockAnimate ? 'checked' : ''}>
+            <label class="form-check-label">Fade in on scroll</label>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Animation Type</label>
+            <select class="form-select" id="setting_animationType">
+                <option value="fade" ${(!block.settings.animationType || block.settings.animationType === 'fade') ? 'selected' : ''}>Fade In</option>
+                <option value="slideUp" ${block.settings.animationType === 'slideUp' ? 'selected' : ''}>Slide Up</option>
+                <option value="slideLeft" ${block.settings.animationType === 'slideLeft' ? 'selected' : ''}>Slide from Left</option>
+                <option value="slideRight" ${block.settings.animationType === 'slideRight' ? 'selected' : ''}>Slide from Right</option>
+                <option value="zoom" ${block.settings.animationType === 'zoom' ? 'selected' : ''}>Zoom In</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Custom CSS Class (Advanced)</label>
+            <input type="text" class="form-control" id="setting_customClass" value="${block.settings.customClass || ''}" placeholder="custom-class-name">
+            <small class="text-muted">Add your own CSS class for custom styling</small>
+        </div>
+
+        <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="setting_hideOnMobile" ${block.settings.hideOnMobile ? 'checked' : ''}>
+            <label class="form-check-label">Hide on Mobile</label>
+        </div>
+
+        <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="setting_hideOnDesktop" ${block.settings.hideOnDesktop ? 'checked' : ''}>
+            <label class="form-check-label">Hide on Desktop</label>
+        </div>
+    `;
+}
+
+function getSettingsForm(block) {
+    const forms = {
+        hero: `
+            <div class="mb-3">
+                <label class="form-label">Title</label>
+                <input type="text" class="form-control" id="setting_title" value="${block.settings.title || ''}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Subtitle</label>
+                <input type="text" class="form-control" id="setting_subtitle" value="${block.settings.subtitle || ''}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Background Image URL</label>
+                <input type="url" class="form-control" id="setting_backgroundUrl" value="${block.settings.backgroundUrl || ''}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Height</label>
+                <select class="form-select" id="setting_height">
+                    <option value="small" ${block.settings.height === 'small' ? 'selected' : ''}>Small (300px)</option>
+                    <option value="medium" ${block.settings.height === 'medium' ? 'selected' : ''}>Medium (500px)</option>
+                    <option value="large" ${block.settings.height === 'large' ? 'selected' : ''}>Large (700px)</option>
+                    <option value="fullscreen" ${block.settings.height === 'fullscreen' ? 'selected' : ''}>Fullscreen</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Text Color</label>
+                <input type="color" class="form-control form-control-color" id="setting_textColor" value="${block.settings.textColor || '#ffffff'}">
+            </div>
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="setting_overlay" ${block.settings.overlay !== false ? 'checked' : ''}>
+                <label class="form-check-label">Dark Overlay</label>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Overlay Opacity (%)</label>
+                <input type="range" class="form-range" id="setting_overlayOpacity" min="0" max="100" value="${block.settings.overlayOpacity || 50}" oninput="document.getElementById('overlayOpacityValue').textContent = this.value">
+                <small class="text-muted">Current: <span id="overlayOpacityValue">${block.settings.overlayOpacity || 50}</span>%</small>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Button Text</label>
+                <input type="text" class="form-control" id="setting_ctaText" value="${block.settings.ctaText || ''}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Button Link</label>
+                <input type="text" class="form-control" id="setting_ctaUrl" value="${block.settings.ctaUrl || ''}">
+            </div>
+        `,
+        cta: `
+            <div class="mb-3">
+                <label class="form-label">Title</label>
+                <input type="text" class="form-control" id="setting_title" value="${block.settings.title || ''}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Subtitle</label>
+                <textarea class="form-control" id="setting_subtitle" rows="2">${block.settings.subtitle || ''}</textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Button Text</label>
+                <input type="text" class="form-control" id="setting_buttonText" value="${block.settings.buttonText || ''}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Button URL</label>
+                <input type="text" class="form-control" id="setting_buttonUrl" value="${block.settings.buttonUrl || ''}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Background Color</label>
+                <input type="color" class="form-control form-control-color" id="setting_backgroundColor" value="${block.settings.backgroundColor || '#0d6efd'}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Text Color</label>
+                <input type="color" class="form-control form-control-color" id="setting_textColor" value="${block.settings.textColor || '#ffffff'}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Button Style</label>
+                <select class="form-select" id="setting_buttonStyle">
+                    <option value="solid" ${block.settings.buttonStyle === 'solid' ? 'selected' : ''}>Solid</option>
+                    <option value="outline" ${block.settings.buttonStyle === 'outline' ? 'selected' : ''}>Outline</option>
+                </select>
+            </div>
+        `,
+        spacer: `
+            <div class="mb-3">
+                <label class="form-label">Height (px)</label>
+                <input type="number" class="form-control" id="setting_height" value="${block.settings.height || 60}" min="20" max="200" step="10">
+            </div>
+        `,
+        divider: `
+            <div class="mb-3">
+                <label class="form-label">Style</label>
+                <select class="form-select" id="setting_style">
+                    <option value="solid" ${block.settings.style === 'solid' ? 'selected' : ''}>Solid</option>
+                    <option value="dashed" ${block.settings.style === 'dashed' ? 'selected' : ''}>Dashed</option>
+                    <option value="dotted" ${block.settings.style === 'dotted' ? 'selected' : ''}>Dotted</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Width (%)</label>
+                <input type="number" class="form-control" id="setting_width" value="${block.settings.width || 100}" min="10" max="100" step="10">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Color</label>
+                <input type="color" class="form-control form-control-color" id="setting_color" value="${block.settings.color || '#dee2e6'}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Thickness (px)</label>
+                <input type="number" class="form-control" id="setting_thickness" value="${block.settings.thickness || 1}" min="1" max="5">
+            </div>
+        `,
+        video: `
+            <div class="mb-3">
+                <label class="form-label">Video Source</label>
+                <select class="form-select" id="setting_videoSource" onchange="toggleVideoSource()">
+                    <option value="url" ${!block.settings.videoSource || block.settings.videoSource === 'url' ? 'selected' : ''}>Enter URL</option>
+                    <option value="library" ${block.settings.videoSource === 'library' ? 'selected' : ''}>From Media Library</option>
+                </select>
+            </div>
+            <div id="videoUrlSettings" style="display: ${!block.settings.videoSource || block.settings.videoSource === 'url' ? 'block' : 'none'}">
+                <div class="mb-3">
+                    <label class="form-label">Video URL</label>
+                    <input type="url" class="form-control" id="setting_url" value="${block.settings.url || ''}" placeholder="YouTube or direct video URL">
+                    <small class="text-muted">YouTube, Vimeo, or direct video file URL</small>
+                </div>
+            </div>
+            <div id="videoLibrarySettings" style="display: ${block.settings.videoSource === 'library' ? 'block' : 'none'}">
+                <div class="mb-3">
+                    <label class="form-label">Select Video from Library</label>
+                    <select class="form-select" id="setting_selectedVideo">
+                        <option value="">-- Select a video --</option>
+                        ${getMediaOptions(block.settings.selectedVideo ? [block.settings.selectedVideo] : [], 'video')}
+                    </select>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Aspect Ratio</label>
+                <select class="form-select" id="setting_aspectRatio">
+                    <option value="16:9" ${block.settings.aspectRatio === '16:9' ? 'selected' : ''}>16:9 (Widescreen)</option>
+                    <option value="4:3" ${block.settings.aspectRatio === '4:3' ? 'selected' : ''}>4:3 (Standard)</option>
+                    <option value="1:1" ${block.settings.aspectRatio === '1:1' ? 'selected' : ''}>1:1 (Square)</option>
+                </select>
+            </div>
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="setting_autoplay" ${block.settings.autoplay ? 'checked' : ''}>
+                <label class="form-check-label">Autoplay (muted)</label>
+            </div>
+        `,
+        countdown: `
+            <div class="mb-3">
+                <label class="form-label">Title</label>
+                <input type="text" class="form-control" id="setting_title" value="${block.settings.title || ''}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Target Date & Time</label>
+                <input type="datetime-local" class="form-control" id="setting_targetDate" value="${block.settings.targetDate || ''}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Background Color</label>
+                <input type="color" class="form-control form-control-color" id="setting_backgroundColor" value="${block.settings.backgroundColor || '#0d6efd'}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Text Color</label>
+                <input type="color" class="form-control form-control-color" id="setting_textColor" value="${block.settings.textColor || '#ffffff'}">
+            </div>
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="setting_showDays" ${block.settings.showDays !== false ? 'checked' : ''}>
+                <label class="form-check-label">Show Days</label>
+            </div>
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="setting_showHours" ${block.settings.showHours !== false ? 'checked' : ''}>
+                <label class="form-check-label">Show Hours</label>
+            </div>
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="setting_showMinutes" ${block.settings.showMinutes !== false ? 'checked' : ''}>
+                <label class="form-check-label">Show Minutes</label>
+            </div>
+        `,
+        gallery: `
+            <div class="mb-3">
+                <label class="form-label">Display Mode</label>
+                <select class="form-select" id="setting_displayMode" onchange="toggleGalleryMode()">
+                    <option value="auto" ${!block.settings.displayMode || block.settings.displayMode === 'auto' ? 'selected' : ''}>Auto (Latest from category)</option>
+                    <option value="manual" ${block.settings.displayMode === 'manual' ? 'selected' : ''}>Manual Selection</option>
+                </select>
+            </div>
+            <div id="galleryAutoSettings" style="display: ${!block.settings.displayMode || block.settings.displayMode === 'auto' ? 'block' : 'none'}">
+                <div class="mb-3">
+                    <label class="form-label">Number of Photos</label>
+                    <input type="number" class="form-control" id="setting_limit" value="${block.settings.limit || 6}" min="3" max="12">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Category Filter (optional)</label>
+                    <select class="form-select" id="setting_category">
+                        <option value="">All Categories</option>
+                        <option value="match_highlights" ${block.settings.category === 'match_highlights' ? 'selected' : ''}>Match Highlights</option>
+                        <option value="training" ${block.settings.category === 'training' ? 'selected' : ''}>Training</option>
+                        <option value="team_photos" ${block.settings.category === 'team_photos' ? 'selected' : ''}>Team Photos</option>
+                        <option value="events" ${block.settings.category === 'events' ? 'selected' : ''}>Events</option>
+                    </select>
+                </div>
+            </div>
+            <div id="galleryManualSettings" style="display: ${block.settings.displayMode === 'manual' ? 'block' : 'none'}">
+                <div class="mb-3">
+                    <label class="form-label">Select Media Items (Hold Ctrl/Cmd to select multiple)</label>
+                    <select class="form-select" id="setting_selectedMedia" multiple size="8" style="height: auto;">
+                        ${getMediaOptions(block.settings.selectedMedia || [], 'image')}
+                    </select>
+                    <small class="text-muted">Only images are shown. Hold Ctrl (Windows) or Cmd (Mac) to select multiple.</small>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Columns</label>
+                <select class="form-select" id="setting_columns">
+                    <option value="2" ${block.settings.columns == 2 ? 'selected' : ''}>2 Columns</option>
+                    <option value="3" ${block.settings.columns == 3 ? 'selected' : ''}>3 Columns</option>
+                    <option value="4" ${block.settings.columns == 4 ? 'selected' : ''}>4 Columns</option>
+                </select>
+            </div>
+        `,
+        news: `
+            <div class="alert alert-info">
+                <i class="ph ph-info me-2"></i>
+                <small>News/Articles feature coming soon. This block will automatically display your latest articles once the articles system is added.</small>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Number of Articles</label>
+                <input type="number" class="form-control" id="setting_limit" value="${block.settings.limit || 3}" min="1" max="10">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Layout</label>
+                <select class="form-select" id="setting_layout">
+                    <option value="grid" ${block.settings.layout === 'grid' ? 'selected' : ''}>Grid</option>
+                    <option value="list" ${block.settings.layout === 'list' ? 'selected' : ''}>List</option>
+                </select>
+            </div>
+        `,
+        matches: `
+            <div class="mb-3">
+                <label class="form-label">Display Mode</label>
+                <select class="form-select" id="setting_matchDisplayMode" onchange="toggleMatchMode()">
+                    <option value="auto" ${!block.settings.matchDisplayMode || block.settings.matchDisplayMode === 'auto' ? 'selected' : ''}>Auto (Upcoming/Recent)</option>
+                    <option value="manual" ${block.settings.matchDisplayMode === 'manual' ? 'selected' : ''}>Manual Selection</option>
+                </select>
+            </div>
+            <div id="matchAutoSettings" style="display: ${!block.settings.matchDisplayMode || block.settings.matchDisplayMode === 'auto' ? 'block' : 'none'}">
+                <div class="mb-3">
+                    <label class="form-label">Number of Matches</label>
+                    <input type="number" class="form-control" id="setting_limit" value="${block.settings.limit || 5}" min="1" max="20">
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="setting_showPast" ${block.settings.showPast ? 'checked' : ''}>
+                    <label class="form-check-label">Include past matches</label>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Filter by Season (optional)</label>
+                    <select class="form-select" id="setting_filterBySeason">
+                        <option value="">All Seasons</option>
+                        ${getSeasonOptions(block.settings.filterBySeason || '')}
+                    </select>
+                </div>
+            </div>
+            <div id="matchManualSettings" style="display: ${block.settings.matchDisplayMode === 'manual' ? 'block' : 'none'}">
+                <div class="mb-3">
+                    <label class="form-label">Select Matches (Hold Ctrl/Cmd to select multiple)</label>
+                    <select class="form-select" id="setting_selectedMatches" multiple size="10" style="height: auto;">
+                        ${getMatchOptions(block.settings.selectedMatches || [])}
+                    </select>
+                    <small class="text-muted">Hold Ctrl (Windows) or Cmd (Mac) to select multiple matches.</small>
+                </div>
+            </div>
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="setting_compact" ${block.settings.compact ? 'checked' : ''}>
+                <label class="form-check-label">Compact view</label>
+            </div>
+        `,
+        standings: `
+            <div class="mb-3">
+                <label class="form-label">Number of Teams</label>
+                <input type="number" class="form-control" id="setting_limit" value="${block.settings.limit || 10}" min="3" max="50">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Season (optional)</label>
+                <select class="form-select" id="setting_seasonId">
+                    <option value="">Current Season</option>
+                    ${getSeasonOptions(block.settings.seasonId || '')}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Columns to Display</label>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="setting_showLogos" ${block.settings.showLogos !== false ? 'checked' : ''}>
+                    <label class="form-check-label">Team Logos</label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="setting_showPlayed" ${block.settings.showPlayed !== false ? 'checked' : ''}>
+                    <label class="form-check-label">Matches Played (P)</label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="setting_showWins" ${block.settings.showWins !== false ? 'checked' : ''}>
+                    <label class="form-check-label">Wins (W)</label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="setting_showDraws" ${block.settings.showDraws !== false ? 'checked' : ''}>
+                    <label class="form-check-label">Draws (D)</label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="setting_showLosses" ${block.settings.showLosses !== false ? 'checked' : ''}>
+                    <label class="form-check-label">Losses (L)</label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="setting_showGoalsFor" ${block.settings.showGoalsFor ? 'checked' : ''}>
+                    <label class="form-check-label">Goals For (GF)</label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="setting_showGoalsAgainst" ${block.settings.showGoalsAgainst ? 'checked' : ''}>
+                    <label class="form-check-label">Goals Against (GA)</label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="setting_showGoalDiff" ${block.settings.showGoalDiff !== false ? 'checked' : ''}>
+                    <label class="form-check-label">Goal Difference (GD)</label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="setting_showPoints" ${block.settings.showPoints !== false ? 'checked' : ''}>
+                    <label class="form-check-label">Points (Pts)</label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="setting_showForm" ${block.settings.showForm ? 'checked' : ''}>
+                    <label class="form-check-label">Recent Form (Last 5)</label>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Table Style</label>
+                <select class="form-select" id="setting_tableStyle">
+                    <option value="striped" ${block.settings.tableStyle === 'striped' ? 'selected' : ''}>Striped</option>
+                    <option value="bordered" ${block.settings.tableStyle === 'bordered' ? 'selected' : ''}>Bordered</option>
+                    <option value="hover" ${block.settings.tableStyle === 'hover' ? 'selected' : ''}>Hover</option>
+                    <option value="compact" ${block.settings.tableStyle === 'compact' ? 'selected' : ''}>Compact</option>
+                </select>
+            </div>
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="setting_highlightTop3" ${block.settings.highlightTop3 ? 'checked' : ''}>
+                <label class="form-check-label">Highlight Top 3 Teams</label>
+            </div>
+        `,
+        text: `
+            <div class="mb-3">
+                <label class="form-label">Title</label>
+                <input type="text" class="form-control" id="setting_title" value="${block.settings.title || ''}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Content</label>
+                <textarea class="form-control" id="setting_content" rows="5">${block.settings.content || ''}</textarea>
+                <small class="text-muted">Supports HTML for formatting</small>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Text Alignment</label>
+                <select class="form-select" id="setting_alignment">
+                    <option value="left" ${block.settings.alignment === 'left' ? 'selected' : ''}>Left</option>
+                    <option value="center" ${block.settings.alignment === 'center' ? 'selected' : ''}>Center</option>
+                    <option value="right" ${block.settings.alignment === 'right' ? 'selected' : ''}>Right</option>
+                    <option value="justify" ${block.settings.alignment === 'justify' ? 'selected' : ''}>Justify</option>
+                </select>
+            </div>
+            <hr class="my-4">
+            <h6 class="mb-3"><i class="ph ph-palette me-2"></i>Styling</h6>
+            <div class="mb-3">
+                <label class="form-label">Background Color</label>
+                <input type="color" class="form-control form-control-color" id="setting_backgroundColor" value="${block.settings.backgroundColor || '#ffffff'}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Padding</label>
+                <select class="form-select" id="setting_padding">
+                    <option value="none" ${block.settings.padding === 'none' ? 'selected' : ''}>None</option>
+                    <option value="small" ${block.settings.padding === 'small' ? 'selected' : ''}>Small</option>
+                    <option value="medium" ${block.settings.padding === 'medium' ? 'selected' : ''}>Medium</option>
+                    <option value="large" ${block.settings.padding === 'large' ? 'selected' : ''}>Large</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Maximum Width</label>
+                <select class="form-select" id="setting_maxWidth">
+                    <option value="full" ${block.settings.maxWidth === 'full' ? 'selected' : ''}>Full Width</option>
+                    <option value="wide" ${block.settings.maxWidth === 'wide' ? 'selected' : ''}>Wide (1200px)</option>
+                    <option value="medium" ${block.settings.maxWidth === 'medium' ? 'selected' : ''}>Medium (900px)</option>
+                    <option value="narrow" ${block.settings.maxWidth === 'narrow' ? 'selected' : ''}>Narrow (700px)</option>
+                </select>
+            </div>
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="setting_animate" ${block.settings.animate ? 'checked' : ''}>
+                <label class="form-check-label">Fade in on scroll</label>
+            </div>
+        `,
+        sponsors: `
+            <div class="mb-3">
+                <label class="form-label">Number of Sponsors</label>
+                <input type="number" class="form-control" id="setting_limit" value="${block.settings.limit || 8}" min="4" max="20">
+            </div>
+        `,
+        stats: `
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Select Statistics to Display</label>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="setting_showTeams" ${block.settings.showTeams !== false ? 'checked' : ''}>
+                    <label class="form-check-label">Total Teams</label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="setting_showPlayers" ${block.settings.showPlayers !== false ? 'checked' : ''}>
+                    <label class="form-check-label">Total Players</label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="setting_showMatches" ${block.settings.showMatches !== false ? 'checked' : ''}>
+                    <label class="form-check-label">Total Matches</label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="setting_showSeasons" ${block.settings.showSeasons ? 'checked' : ''}>
+                    <label class="form-check-label">Total Seasons</label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="setting_showGoals" ${block.settings.showGoals ? 'checked' : ''}>
+                    <label class="form-check-label">Total Goals Scored</label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="setting_showAttendance" ${block.settings.showAttendance ? 'checked' : ''}>
+                    <label class="form-check-label">Average Attendance</label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="setting_showVenues" ${block.settings.showVenues ? 'checked' : ''}>
+                    <label class="form-check-label">Total Venues</label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="setting_showYellowCards" ${block.settings.showYellowCards ? 'checked' : ''}>
+                    <label class="form-check-label">Total Yellow Cards</label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="setting_showRedCards" ${block.settings.showRedCards ? 'checked' : ''}>
+                    <label class="form-check-label">Total Red Cards</label>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Columns</label>
+                <select class="form-select" id="setting_columns">
+                    <option value="2" ${block.settings.columns == 2 ? 'selected' : ''}>2 Columns</option>
+                    <option value="3" ${block.settings.columns == 3 ? 'selected' : ''}>3 Columns</option>
+                    <option value="4" ${block.settings.columns == 4 ? 'selected' : ''}>4 Columns</option>
+                    <option value="5" ${block.settings.columns == 5 ? 'selected' : ''}>5 Columns</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Background Color</label>
+                <input type="color" class="form-control form-control-color" id="setting_backgroundColor" value="${block.settings.backgroundColor || '#f8f9fa'}">
+            </div>
+        `,
+        features: `
+            <div class="mb-3">
+                <label class="form-label">Number of Columns</label>
+                <select class="form-select" id="setting_columns">
+                    <option value="2" ${block.settings.columns === 2 ? 'selected' : ''}>2 Columns</option>
+                    <option value="3" ${block.settings.columns === 3 ? 'selected' : ''}>3 Columns</option>
+                    <option value="4" ${block.settings.columns === 4 ? 'selected' : ''}>4 Columns</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Background Color</label>
+                <input type="color" class="form-control form-control-color" id="setting_backgroundColor" value="${block.settings.backgroundColor || '#ffffff'}">
+            </div>
+            <div class="alert alert-info">
+                <small>Feature items can be customized after saving. Default features will be created.</small>
+            </div>
+        `,
+        testimonials: `
+            <div class="mb-3">
+                <label class="form-label">Layout</label>
+                <select class="form-select" id="setting_layout">
+                    <option value="slider" ${block.settings.layout === 'slider' ? 'selected' : ''}>Slider/Carousel</option>
+                    <option value="grid" ${block.settings.layout === 'grid' ? 'selected' : ''}>Grid</option>
+                    <option value="list" ${block.settings.layout === 'list' ? 'selected' : ''}>List</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Columns (for grid layout)</label>
+                <select class="form-select" id="setting_columns">
+                    <option value="1" ${block.settings.columns == 1 ? 'selected' : ''}>1 Column</option>
+                    <option value="2" ${block.settings.columns == 2 ? 'selected' : ''}>2 Columns</option>
+                    <option value="3" ${block.settings.columns == 3 ? 'selected' : ''}>3 Columns</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Background Color</label>
+                <input type="color" class="form-control form-control-color" id="setting_backgroundColor" value="${block.settings.backgroundColor || '#f8f9fa'}">
+            </div>
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="setting_showRatings" ${block.settings.showRatings ? 'checked' : ''}>
+                <label class="form-check-label">Show Star Ratings</label>
+            </div>
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="setting_showPhotos" ${block.settings.showPhotos !== false ? 'checked' : ''}>
+                <label class="form-check-label">Show Author Photos</label>
+            </div>
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="setting_showDate" ${block.settings.showDate ? 'checked' : ''}>
+                <label class="form-check-label">Show Date</label>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Manage Testimonials</label>
+                <div id="testimonialsList">
+                    ${(block.settings.items || []).map((item, idx) => `
+                        <div class="card mb-2">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <strong>Testimonial ${idx + 1}</strong>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeTestimonial(${idx})">
+                                        <i class="ph ph-trash"></i>
+                                    </button>
+                                </div>
+                                <small class="text-muted d-block">"${item.quote.substring(0, 50)}${item.quote.length > 50 ? '...' : ''}"</small>
+                                <small class="text-muted">- ${item.author}</small>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addTestimonial()">
+                    <i class="ph ph-plus me-1"></i>Add Testimonial
+                </button>
+            </div>
+            <div class="alert alert-info">
+                <small><i class="ph ph-info me-1"></i>Click "Add Testimonial" to create custom testimonials with quotes, authors, ratings, and photos.</small>
+            </div>
+        `
+    };
+
+    const blockSpecificForm = forms[block.type] || '<p>No settings available for this block type.</p>';
+
+    // Don't add universal settings to spacer and divider (they're layout-only elements)
+    if (block.type === 'spacer' || block.type === 'divider') {
+        return blockSpecificForm;
+    }
+
+    return blockSpecificForm + getUniversalSettingsHTML(block);
+}
+
+function saveBlockSettings() {
+    const settings = {};
+
+    // Collect all setting inputs
+    document.querySelectorAll('[id^="setting_"]').forEach(input => {
+        const key = input.id.replace('setting_', '');
+        if (input.type === 'checkbox') {
+            settings[key] = input.checked;
+        } else if (input.type === 'number') {
+            settings[key] = parseInt(input.value) || 0;
+        } else if (input.multiple) {
+            // For multi-select, get all selected values
+            settings[key] = Array.from(input.selectedOptions).map(opt => opt.value);
+        } else {
+            settings[key] = input.value;
+        }
+    });
+
+    // Check if we're editing a nested block in a container
+    if (currentNestedSide) {
+        const container = blocks[currentBlockIndex];
+        if (currentNestedSide === 'left') {
+            container.leftBlock.settings = settings;
+        } else {
+            container.rightBlock.settings = settings;
+        }
+        currentNestedSide = null;
+    } else {
+        blocks[currentBlockIndex].settings = settings;
+    }
+
+    renderBlocks();
+    settingsModal.hide();
+}
+
+// Helper functions for generating options
+const mediaItems = {{ media_items|tojson|safe }};
+const seasons = {{ seasons|tojson|safe }};
+const matches = {{ matches|tojson|safe }};
+
+function getMediaOptions(selectedIds, filterType = null) {
+    const filteredMedia = filterType ? mediaItems.filter(m => m.type === filterType) : mediaItems;
+    return filteredMedia.map(item => {
+        const isSelected = Array.isArray(selectedIds) ? selectedIds.includes(String(item.id)) : String(item.id) === String(selectedIds);
+        return `<option value="${item.id}" ${isSelected ? 'selected' : ''}>${item.title} (${item.type})</option>`;
+    }).join('');
+}
+
+function getSeasonOptions(selectedId) {
+    return seasons.map(season => {
+        const isSelected = String(season.id) === String(selectedId);
+        return `<option value="${season.id}" ${isSelected ? 'selected' : ''}>${season.year}</option>`;
+    }).join('');
+}
+
+function getMatchOptions(selectedIds) {
+    return matches.map(match => {
+        const isSelected = Array.isArray(selectedIds) ? selectedIds.includes(String(match.id)) : false;
+        const label = `${match.home} vs ${match.away} - ${match.date} (${match.league})`;
+        return `<option value="${match.id}" ${isSelected ? 'selected' : ''}>${label}</option>`;
+    }).join('');
+}
+
+// Toggle functions for conditional display
+function toggleBackgroundType(type) {
+    document.getElementById('bgColorOptions').style.display = type === 'color' ? 'block' : 'none';
+    document.getElementById('bgGradientOptions').style.display = type === 'gradient' ? 'block' : 'none';
+    document.getElementById('bgImageOptions').style.display = type === 'image' ? 'block' : 'none';
+}
+
+function toggleGalleryMode() {
+    const mode = document.getElementById('setting_displayMode').value;
+    document.getElementById('galleryAutoSettings').style.display = mode === 'auto' ? 'block' : 'none';
+    document.getElementById('galleryManualSettings').style.display = mode === 'manual' ? 'block' : 'none';
+}
+
+function toggleVideoSource() {
+    const source = document.getElementById('setting_videoSource').value;
+    document.getElementById('videoUrlSettings').style.display = source === 'url' ? 'block' : 'none';
+    document.getElementById('videoLibrarySettings').style.display = source === 'library' ? 'block' : 'none';
+}
+
+function toggleMatchMode() {
+    const mode = document.getElementById('setting_matchDisplayMode').value;
+    document.getElementById('matchAutoSettings').style.display = mode === 'auto' ? 'block' : 'none';
+    document.getElementById('matchManualSettings').style.display = mode === 'manual' ? 'block' : 'none';
+}
+
+// Container management functions
+let blockSelectionModal = null;
+let targetContainerIndex = null;
+let targetContainerSide = null;
+
+function addBlockToContainer(containerIndex, side) {
+    targetContainerIndex = containerIndex;
+    targetContainerSide = side;
+    showBlockSelectionModal();
+}
+
+function showBlockSelectionModal() {
+    const blockTypes = [
+        { type: 'stats', name: 'League Statistics', icon: 'ph-chart-line' },
+        { type: 'gallery', name: 'Media Gallery', icon: 'ph-images' },
+        { type: 'news', name: 'Latest News', icon: 'ph-newspaper' },
+        { type: 'matches', name: 'Match Schedule', icon: 'ph-calendar' },
+        { type: 'standings', name: 'League Standings', icon: 'ph-list-numbers' },
+        { type: 'text', name: 'Text Block', icon: 'ph-text-aa' },
+        { type: 'video', name: 'Video Embed', icon: 'ph-video' },
+        { type: 'testimonials', name: 'Testimonials', icon: 'ph-quotes' },
+        { type: 'countdown', name: 'Countdown Timer', icon: 'ph-timer' },
+        { type: 'cta', name: 'Call to Action', icon: 'ph-megaphone' }
+    ];
+
+    const modalHtml = `
+        <div class="modal fade" id="blockSelectionModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Select Block Type</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            ${blockTypes.map(bt => `
+                                <div class="col-md-4">
+                                    <button class="btn btn-outline-primary w-100 text-start" onclick="selectBlockForContainer('${bt.type}')">
+                                        <i class="${bt.icon} me-2"></i>${bt.name}
+                                    </button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const existingModal = document.getElementById('blockSelectionModal');
+    if (existingModal) existingModal.remove();
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    blockSelectionModal = new bootstrap.Modal(document.getElementById('blockSelectionModal'));
+    blockSelectionModal.show();
+}
+
+function selectBlockForContainer(blockType) {
+    const newBlock = {
+        id: Date.now(),
+        type: blockType,
+        settings: getDefaultSettings(blockType),
+        layout: 'full'
+    };
+
+    if (targetContainerSide === 'left') {
+        blocks[targetContainerIndex].leftBlock = newBlock;
+    } else {
+        blocks[targetContainerIndex].rightBlock = newBlock;
+    }
+
+    blockSelectionModal.hide();
+    renderBlocks();
+}
+
+function editNestedBlock(containerIndex, side) {
+    const block = side === 'left' ? blocks[containerIndex].leftBlock : blocks[containerIndex].rightBlock;
+    if (!block) return;
+
+    currentBlockIndex = containerIndex;
+    currentNestedSide = side;
+    const content = document.getElementById('blockSettingsContent');
+    content.innerHTML = getSettingsForm(block);
+    settingsModal.show();
+}
+
+function removeNestedBlock(containerIndex, side) {
+    if (confirm('Remove this block from the container?')) {
+        if (side === 'left') {
+            blocks[containerIndex].leftBlock = null;
+        } else {
+            blocks[containerIndex].rightBlock = null;
+        }
+        renderBlocks();
+    }
+}
+
+function editContainerLayout(containerIndex) {
+    const container = blocks[containerIndex];
+    const settings = container.settings || {};
+
+    const modalHtml = `
+        <div class="modal fade" id="containerLayoutModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Container Settings</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <h6 class="mb-3"><i class="ph ph-columns me-2"></i>Layout</h6>
+                        <div class="mb-3">
+                            <label class="form-label">Column Split</label>
+                            <select class="form-select" id="container_layout">
+                                <option value="split-50-50" ${container.layout === 'split-50-50' ? 'selected' : ''}>50% / 50% (Equal)</option>
+                                <option value="split-33-67" ${container.layout === 'split-33-67' ? 'selected' : ''}>33% / 67% (Sidebar Left)</option>
+                                <option value="split-67-33" ${container.layout === 'split-67-33' ? 'selected' : ''}>67% / 33% (Sidebar Right)</option>
+                                <option value="split-25-75" ${container.layout === 'split-25-75' ? 'selected' : ''}>25% / 75% (Narrow Left)</option>
+                                <option value="split-75-25" ${container.layout === 'split-75-25' ? 'selected' : ''}>75% / 25% (Narrow Right)</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Vertical Alignment</label>
+                            <select class="form-select" id="container_verticalAlign">
+                                <option value="top" ${settings.verticalAlign === 'top' ? 'selected' : ''}>Top</option>
+                                <option value="center" ${settings.verticalAlign === 'center' ? 'selected' : ''}>Center</option>
+                                <option value="bottom" ${settings.verticalAlign === 'bottom' ? 'selected' : ''}>Bottom</option>
+                                <option value="stretch" ${settings.verticalAlign === 'stretch' ? 'selected' : ''}>Stretch (Equal Height)</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Gap Between Columns</label>
+                            <select class="form-select" id="container_gap">
+                                <option value="none" ${settings.gap === 'none' ? 'selected' : ''}>None (0px)</option>
+                                <option value="small" ${settings.gap === 'small' ? 'selected' : ''}>Small (8px)</option>
+                                <option value="medium" ${(!settings.gap || settings.gap === 'medium') ? 'selected' : ''}>Medium (16px)</option>
+                                <option value="large" ${settings.gap === 'large' ? 'selected' : ''}>Large (32px)</option>
+                                <option value="xlarge" ${settings.gap === 'xlarge' ? 'selected' : ''}>Extra Large (48px)</option>
+                            </select>
+                        </div>
+
+                        <hr class="my-4">
+                        <h6 class="mb-3"><i class="ph ph-palette me-2"></i>Appearance</h6>
+
+                        <div class="mb-3">
+                            <label class="form-label">Background Color</label>
+                            <input type="color" class="form-control form-control-color" id="container_backgroundColor" value="${settings.backgroundColor || '#ffffff'}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Padding</label>
+                            <select class="form-select" id="container_padding">
+                                <option value="none" ${settings.padding === 'none' ? 'selected' : ''}>None</option>
+                                <option value="small" ${settings.padding === 'small' ? 'selected' : ''}>Small</option>
+                                <option value="medium" ${(!settings.padding || settings.padding === 'medium') ? 'selected' : ''}>Medium</option>
+                                <option value="large" ${settings.padding === 'large' ? 'selected' : ''}>Large</option>
+                                <option value="xlarge" ${settings.padding === 'xlarge' ? 'selected' : ''}>Extra Large</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Border Radius (px)</label>
+                            <input type="range" class="form-range" id="container_borderRadius" min="0" max="30" value="${settings.borderRadius || 0}"
+                                oninput="document.getElementById('borderRadiusValue').textContent = this.value">
+                            <small class="text-muted">Current: <span id="borderRadiusValue">${settings.borderRadius || 0}</span>px</small>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="container_addShadow" ${settings.addShadow ? 'checked' : ''}>
+                            <label class="form-check-label">Add Shadow</label>
+                        </div>
+
+                        <hr class="my-4">
+                        <h6 class="mb-3"><i class="ph ph-device-mobile me-2"></i>Mobile Settings</h6>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="container_mobileStack" ${settings.mobileStack !== false ? 'checked' : ''}>
+                            <label class="form-check-label">Stack on Mobile</label>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="container_reverseOnMobile" ${settings.reverseOnMobile ? 'checked' : ''}>
+                            <label class="form-check-label">Reverse Column Order on Mobile</label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="saveContainerLayout(${containerIndex})">Save Settings</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const existingModal = document.getElementById('containerLayoutModal');
+    if (existingModal) existingModal.remove();
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = new bootstrap.Modal(document.getElementById('containerLayoutModal'));
+    modal.show();
+}
+
+function saveContainerLayout(containerIndex) {
+    const layout = document.getElementById('container_layout').value;
+    blocks[containerIndex].layout = layout;
+
+    // Collect all container settings
+    blocks[containerIndex].settings = {
+        backgroundColor: document.getElementById('container_backgroundColor').value,
+        padding: document.getElementById('container_padding').value,
+        verticalAlign: document.getElementById('container_verticalAlign').value,
+        gap: document.getElementById('container_gap').value,
+        borderRadius: parseInt(document.getElementById('container_borderRadius').value),
+        addShadow: document.getElementById('container_addShadow').checked,
+        mobileStack: document.getElementById('container_mobileStack').checked,
+        reverseOnMobile: document.getElementById('container_reverseOnMobile').checked
+    };
+
+    const modal = bootstrap.Modal.getInstance(document.getElementById('containerLayoutModal'));
+    modal.hide();
+    renderBlocks();
+}
+
+let currentNestedSide = null;
+
+// Testimonial management functions
+let testimonialModalBlock = null;
+let editingTestimonialIndex = null;
+
+function addTestimonial() {
+    editingTestimonialIndex = null;
+    showTestimonialEditModal({
+        quote: '',
+        author: '',
+        team: '',
+        rating: 5,
+        photo: '',
+        date: ''
+    });
+}
+
+function removeTestimonial(index) {
+    if (!blocks[currentBlockIndex].settings.items) return;
+
+    if (confirm('Remove this testimonial?')) {
+        blocks[currentBlockIndex].settings.items.splice(index, 1);
+        // Re-render the settings form
+        editBlock(currentBlockIndex);
+    }
+}
+
+function showTestimonialEditModal(testimonial) {
+    const modalHtml = `
+        <div class="modal fade" id="testimonialEditModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">${editingTestimonialIndex !== null ? 'Edit' : 'Add'} Testimonial</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Quote</label>
+                            <textarea class="form-control" id="testimonial_quote" rows="3" required>${testimonial.quote || ''}</textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Author Name</label>
+                            <input type="text" class="form-control" id="testimonial_author" value="${testimonial.author || ''}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Team/Organization (optional)</label>
+                            <input type="text" class="form-control" id="testimonial_team" value="${testimonial.team || ''}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Rating (1-5 stars)</label>
+                            <input type="number" class="form-control" id="testimonial_rating" min="1" max="5" value="${testimonial.rating || 5}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Photo URL (optional)</label>
+                            <input type="url" class="form-control" id="testimonial_photo" value="${testimonial.photo || ''}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Date (optional)</label>
+                            <input type="date" class="form-control" id="testimonial_date" value="${testimonial.date || ''}">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="saveTestimonialEdit()">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Remove existing modal if any
+    const existingModal = document.getElementById('testimonialEditModal');
+    if (existingModal) existingModal.remove();
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = new bootstrap.Modal(document.getElementById('testimonialEditModal'));
+    modal.show();
+}
+
+function saveTestimonialEdit() {
+    const testimonial = {
+        quote: document.getElementById('testimonial_quote').value,
+        author: document.getElementById('testimonial_author').value,
+        team: document.getElementById('testimonial_team').value,
+        rating: parseInt(document.getElementById('testimonial_rating').value) || 5,
+        photo: document.getElementById('testimonial_photo').value,
+        date: document.getElementById('testimonial_date').value
+    };
+
+    if (!testimonial.quote || !testimonial.author) {
+        alert('Quote and Author are required');
+        return;
+    }
+
+    if (!blocks[currentBlockIndex].settings.items) {
+        blocks[currentBlockIndex].settings.items = [];
+    }
+
+    if (editingTestimonialIndex !== null) {
+        blocks[currentBlockIndex].settings.items[editingTestimonialIndex] = testimonial;
+    } else {
+        blocks[currentBlockIndex].settings.items.push(testimonial);
+    }
+
+    // Close modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('testimonialEditModal'));
+    modal.hide();
+
+    // Re-render settings
+    editBlock(currentBlockIndex);
+}
+
+function duplicateBlock(index) {
+    const originalBlock = blocks[index];
+    const duplicatedBlock = JSON.parse(JSON.stringify(originalBlock)); // Deep clone
+    duplicatedBlock.id = Date.now(); // New unique ID
+
+    // Insert right after the original block
+    blocks.splice(index + 1, 0, duplicatedBlock);
+    renderBlocks();
+}
+
+function deleteBlock(index) {
+    console.log('Attempting to delete block at index:', index);
+    console.log('Blocks before delete:', blocks.length);
+
+    if (confirm('Are you sure you want to delete this block?')) {
+        blocks.splice(index, 1);
+        console.log('Blocks after delete:', blocks.length);
+        renderBlocks();
+    }
+}
+
+// Drag and drop functions
+let draggedElement = null;
+
+function handleDragStart(e) {
+    draggedElement = e.target;
+    e.target.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+}
+
+function handleDragOver(e) {
+    if (e.preventDefault) {
+        e.preventDefault();
+    }
+    e.dataTransfer.dropEffect = 'move';
+    return false;
+}
+
+function handleDrop(e) {
+    if (e.stopPropagation) {
+        e.stopPropagation();
+    }
+
+    if (draggedElement !== e.currentTarget) {
+        const fromIndex = parseInt(draggedElement.dataset.index);
+        const toIndex = parseInt(e.currentTarget.dataset.index);
+
+        const item = blocks.splice(fromIndex, 1)[0];
+        blocks.splice(toIndex, 0, item);
+
+        renderBlocks();
+    }
+
+    return false;
+}
+
+function handleDragEnd(e) {
+    e.target.classList.remove('dragging');
+}
+
+function saveHomepage() {
+    const leagueId = document.getElementById('leagueSelect').value;
+
+    // Get CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ||
+                     document.querySelector('input[name="csrf_token"]')?.value;
+
+    fetch('{{ url_for("admin.save_homepage_blocks") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+            league_id: leagueId,
+            blocks: blocks
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Homepage saved successfully!');
+        } else {
+            alert('Error saving homepage: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error);
+    });
+}
+
+function loadHomepage() {
+    const leagueId = document.getElementById('leagueSelect').value;
+    window.location.href = `{{ url_for('admin.homepage_builder') }}?league_id=${leagueId}`;
+}
+
+function previewHomepage() {
+    const leagueId = document.getElementById('leagueSelect').value;
+
+    // Get CSRF token from meta tag or form
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ||
+                     document.querySelector('input[name="csrf_token"]')?.value;
+
+    // Send current blocks to preview endpoint
+    fetch('{{ url_for("admin.preview_homepage") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+            league_id: leagueId,
+            blocks: blocks
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(text => {
+                throw new Error(`Server returned ${response.status}: ${text.substring(0, 200)}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            window.open(data.preview_url, '_blank');
+        } else {
+            alert('Error generating preview: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Preview error:', error);
+        alert('Error: ' + error.message);
+    });
+}
+</script>
+{% endblock %}

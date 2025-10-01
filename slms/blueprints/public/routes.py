@@ -799,4 +799,61 @@ def profile():
     return render_template('profile.html', user=user)
 
 
+@public_bp.route('/gallery')
+def media_gallery():
+    """Public media gallery - photos and videos"""
+    db = get_db()
+    cur = db.cursor()
+
+    # Get filter parameters
+    category = request.args.get('category', '')
+    media_type = request.args.get('type', '')
+
+    # Build query
+    query = """
+        SELECT media_id, title, description, url, media_type, category, created_at
+        FROM media
+        WHERE 1=1
+    """
+    params = []
+
+    if category:
+        query += " AND category = %s"
+        params.append(category)
+
+    if media_type:
+        query += " AND media_type = %s"
+        params.append(media_type)
+
+    query += " ORDER BY created_at DESC"
+
+    cur.execute(query, params)
+    media_raw = cur.fetchall()
+
+    # Convert to list of dicts
+    media_items = []
+    for item in media_raw:
+        media_items.append({
+            'media_id': item[0],
+            'title': item[1],
+            'description': item[2],
+            'url': item[3],
+            'media_type': item[4],
+            'category': item[5],
+            'created_at': item[6]
+        })
+
+    # Get available categories for filter
+    cur.execute("SELECT DISTINCT category FROM media WHERE category IS NOT NULL AND category != ''")
+    categories = [row[0] for row in cur.fetchall()]
+
+    cur.close()
+
+    return render_template('public_gallery.html',
+                         media_items=media_items,
+                         categories=categories,
+                         selected_category=category,
+                         selected_type=media_type)
+
+
 

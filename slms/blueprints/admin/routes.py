@@ -902,7 +902,13 @@ def _build_league_insights():
 @admin_bp.route('/')
 @admin_required
 def admin_dashboard():
-    insights = _build_league_insights()
+    try:
+        insights = _build_league_insights()
+    except Exception as e:
+        print(f"Error building insights: {e}")
+        import traceback
+        traceback.print_exc()
+        insights = None
     return render_template('admin.html', insights=insights)
 
 @admin_bp.route('/manage_stadiums', methods=['GET', 'POST'])
@@ -1012,6 +1018,325 @@ def manage_leagues():
     return render_template('manage_leagues.html', leagues=leagues)
 
 
+
+
+@admin_bp.route('/homepage_builder', methods=['GET'])
+@admin_required
+def homepage_builder():
+    """New drag-and-drop homepage builder"""
+    db = get_db()
+    cur = db.cursor()
+
+    # Create homepage_blocks table if it doesn't exist
+    try:
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS homepage_blocks (
+                id SERIAL PRIMARY KEY,
+                league_id INTEGER REFERENCES leagues(league_id) ON DELETE CASCADE,
+                blocks JSONB NOT NULL DEFAULT '[]'::jsonb,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(league_id)
+            )
+        """)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+
+    # Get leagues
+    cur.execute('SELECT league_id, name FROM leagues ORDER BY name')
+    leagues = [{'id': row[0], 'name': row[1]} for row in cur.fetchall()]
+
+    selected_league_id = request.args.get('league_id')
+    if not selected_league_id and leagues:
+        selected_league_id = str(leagues[0]['id'])
+
+    # Load blocks for selected league
+    blocks = []
+    if selected_league_id:
+        cur.execute('SELECT blocks FROM homepage_blocks WHERE league_id = %s', (selected_league_id,))
+        result = cur.fetchone()
+        if result and result[0]:
+            blocks = result[0]
+
+    # Get available media for selection
+    cur.execute('''
+        SELECT media_id, title, media_type, category, url
+        FROM media
+        ORDER BY created_at DESC
+    ''')
+    media_items = [{'id': row[0], 'title': row[1], 'type': row[2], 'category': row[3], 'url': row[4]}
+                   for row in cur.fetchall()]
+
+    # Get available seasons
+    cur.execute('SELECT season_id, year FROM seasons ORDER BY year DESC')
+    seasons = [{'id': row[0], 'year': row[1]} for row in cur.fetchall()]
+
+    # Get upcoming matches for selection
+    cur.execute('''
+        SELECT m.match_id, t1.name as home_team, t2.name as away_team,
+               m.utc_date, s.year, l.name as league_name
+        FROM matches m
+        JOIN teams t1 ON m.home_team_id = t1.team_id
+        JOIN teams t2 ON m.away_team_id = t2.team_id
+        JOIN seasons s ON m.season_id = s.season_id
+        JOIN leagues l ON m.league_id = l.league_id
+        WHERE m.utc_date >= CURRENT_DATE
+        ORDER BY m.utc_date ASC
+        LIMIT 50
+    ''')
+    matches = [{'id': row[0], 'home': row[1], 'away': row[2], 'date': row[3].isoformat() if row[3] else '',
+                'season': row[4], 'league': row[5]} for row in cur.fetchall()]
+
+    cur.close()
+
+    return render_template('manage_homepage_builder.html',
+                         leagues=leagues,
+                         selected_league_id=selected_league_id,
+                         blocks=blocks,
+                         media_items=media_items,
+                         seasons=seasons,
+                         matches=matches)
+
+
+@admin_bp.route('/save_homepage_blocks', methods=['POST'])
+@admin_required
+def save_homepage_blocks():
+    """Save homepage blocks configuration"""
+    from flask import jsonify
+
+    try:
+        data = request.get_json()
+        league_id = data.get('league_id')
+        blocks = data.get('blocks', [])
+
+        db = get_db()
+        cur = db.cursor()
+
+        cur.execute("""
+            INSERT INTO homepage_blocks (league_id, blocks, updated_at)
+            VALUES (%s, %s, CURRENT_TIMESTAMP)
+            ON CONFLICT (league_id) DO UPDATE SET
+                blocks = EXCLUDED.blocks,
+                updated_at = CURRENT_TIMESTAMP
+        """, (league_id, json.dumps(blocks)))
+
+        db.commit()
+        cur.close()
+
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@admin_bp.route('/preview_homepage', methods=['POST'])
+@admin_required
+def preview_homepage():
+    """Store blocks in session for preview"""
+    from flask import jsonify, session
+    import traceback
+
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'No data received'}), 400
+
+        league_id = data.get('league_id')
+        blocks = data.get('blocks', [])
+
+        # Store in session for preview
+        session['preview_blocks'] = blocks
+        session['preview_league_id'] = league_id
+        session.modified = True
+
+        preview_url = url_for('admin.preview_homepage_view')
+        return jsonify({'success': True, 'preview_url': preview_url})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@admin_bp.route('/preview_homepage_view')
+@admin_required
+def preview_homepage_view():
+    """Render preview of homepage with blocks from session"""
+    from flask import session
+
+    blocks = session.get('preview_blocks', [])
+    league_id = session.get('preview_league_id')
+
+    db = get_db()
+    cur = db.cursor()
+
+    # Get league info
+    league_name = "Preview"
+    if league_id:
+        cur.execute('SELECT name FROM leagues WHERE league_id = %s', (league_id,))
+        result = cur.fetchone()
+        if result:
+            league_name = result[0]
+
+    # Helper function to process a single block
+    def process_block(block):
+        block_data = {'type': block['type'], 'settings': block.get('settings', {})}
+
+        # Fetch actual data based on block type
+        if block['type'] == 'stats':
+            cur.execute('SELECT COUNT(*) FROM teams')
+            total_teams = cur.fetchone()[0]
+            cur.execute('SELECT COUNT(*) FROM players')
+            total_players = cur.fetchone()[0]
+            cur.execute('SELECT COUNT(*) FROM matches')
+            total_matches = cur.fetchone()[0]
+            block_data['data'] = {
+                'total_teams': total_teams,
+                'total_players': total_players,
+                'total_matches': total_matches
+            }
+
+        elif block['type'] == 'gallery':
+            settings = block.get('settings', {})
+            if settings.get('displayMode') == 'manual' and settings.get('selectedMedia'):
+                # Get specific media items
+                media_ids = settings['selectedMedia']
+                if media_ids:
+                    placeholders = ','.join(['%s'] * len(media_ids))
+                    cur.execute(f'''
+                        SELECT media_id, title, url, media_type, category
+                        FROM media
+                        WHERE media_id IN ({placeholders})
+                        ORDER BY created_at DESC
+                    ''', media_ids)
+                    block_data['data'] = [{'id': r[0], 'title': r[1], 'url': r[2], 'type': r[3], 'category': r[4]}
+                                         for r in cur.fetchall()]
+                else:
+                    block_data['data'] = []
+            else:
+                # Auto mode - get latest
+                limit = settings.get('limit', 6)
+                category = settings.get('category', '')
+                query = 'SELECT media_id, title, url, media_type, category FROM media WHERE media_type = %s'
+                params = ['image']
+                if category:
+                    query += ' AND category = %s'
+                    params.append(category)
+                query += ' ORDER BY created_at DESC LIMIT %s'
+                params.append(limit)
+                cur.execute(query, params)
+                block_data['data'] = [{'id': r[0], 'title': r[1], 'url': r[2], 'type': r[3], 'category': r[4]}
+                                     for r in cur.fetchall()]
+
+        elif block['type'] == 'video':
+            settings = block.get('settings', {})
+            if settings.get('videoSource') == 'library' and settings.get('selectedVideo'):
+                cur.execute('SELECT url FROM media WHERE media_id = %s', (settings['selectedVideo'],))
+                result = cur.fetchone()
+                if result:
+                    block_data['data'] = {'url': result[0]}
+
+        elif block['type'] == 'matches':
+            settings = block.get('settings', {})
+            if settings.get('matchDisplayMode') == 'manual' and settings.get('selectedMatches'):
+                match_ids = settings['selectedMatches']
+                if match_ids:
+                    placeholders = ','.join(['%s'] * len(match_ids))
+                    cur.execute(f'''
+                        SELECT m.match_id, t1.name as home_team, t2.name as away_team,
+                               m.utc_date, m.match_time, l.name as league_name
+                        FROM matches m
+                        JOIN teams t1 ON m.home_team_id = t1.team_id
+                        JOIN teams t2 ON m.away_team_id = t2.team_id
+                        JOIN leagues l ON m.league_id = l.league_id
+                        WHERE m.match_id IN ({placeholders})
+                        ORDER BY m.utc_date ASC
+                    ''', match_ids)
+                    block_data['data'] = [{'id': r[0], 'home': r[1], 'away': r[2], 'date': r[3],
+                                          'time': r[4], 'league': r[5]} for r in cur.fetchall()]
+                else:
+                    block_data['data'] = []
+            else:
+                # Auto mode
+                limit = settings.get('limit', 5)
+                show_past = settings.get('showPast', False)
+                filter_season = settings.get('filterBySeason', '')
+
+                query = '''
+                    SELECT m.match_id, t1.name as home_team, t2.name as away_team,
+                           m.utc_date, m.match_time, l.name as league_name
+                    FROM matches m
+                    JOIN teams t1 ON m.home_team_id = t1.team_id
+                    JOIN teams t2 ON m.away_team_id = t2.team_id
+                    JOIN leagues l ON m.league_id = l.league_id
+                    WHERE 1=1
+                '''
+                params = []
+                if not show_past:
+                    query += ' AND m.utc_date >= CURRENT_DATE'
+                if filter_season:
+                    query += ' AND m.season_id = %s'
+                    params.append(filter_season)
+                query += ' ORDER BY m.utc_date ASC LIMIT %s'
+                params.append(limit)
+
+                cur.execute(query, params)
+                block_data['data'] = [{'id': r[0], 'home': r[1], 'away': r[2], 'date': r[3],
+                                      'time': r[4], 'league': r[5]} for r in cur.fetchall()]
+
+        elif block['type'] == 'standings':
+            settings = block.get('settings', {})
+            limit = settings.get('limit', 10)
+            season_id = settings.get('seasonId', '')
+
+            # Get standings data (simplified - you may need to adjust based on your standings calculation)
+            query = '''
+                SELECT t.name, t.logo_url,
+                       COUNT(DISTINCT m.match_id) as played,
+                       0 as points
+                FROM teams t
+                LEFT JOIN matches m ON (t.team_id = m.home_team_id OR t.team_id = m.away_team_id)
+            '''
+            params = []
+            if season_id:
+                query += ' AND m.season_id = %s'
+                params.append(season_id)
+            query += ' GROUP BY t.team_id, t.name, t.logo_url LIMIT %s'
+            params.append(limit)
+
+            cur.execute(query, params)
+            block_data['data'] = [{'name': r[0], 'logo': r[1], 'played': r[2], 'points': r[3]}
+                                 for r in cur.fetchall()]
+
+        return block_data
+
+    # Get data for rendering blocks
+    rendered_blocks = []
+    for block in blocks:
+        if block['type'] == 'container':
+            # Process container with nested blocks
+            container_data = {
+                'type': 'container',
+                'layout': block.get('layout', 'split-50-50'),
+                'leftBlock': None,
+                'rightBlock': None
+            }
+
+            # Process left block if it exists
+            if block.get('leftBlock'):
+                container_data['leftBlock'] = process_block(block['leftBlock'])
+
+            # Process right block if it exists
+            if block.get('rightBlock'):
+                container_data['rightBlock'] = process_block(block['rightBlock'])
+
+            rendered_blocks.append(container_data)
+        else:
+            # Regular block
+            rendered_blocks.append(process_block(block))
+
+    cur.close()
+
+    return render_template('preview_homepage.html',
+                         blocks=rendered_blocks,
+                         league_name=league_name)
 
 
 @admin_bp.route('/league_homepage', methods=['GET', 'POST'])
@@ -2839,6 +3164,90 @@ def generate_fixtures():
     return render_template('generate_fixtures.html', leagues=leagues, seasons=seasons)
 
 
+@admin_bp.route('/download_bulk_template')
+@admin_required
+def download_bulk_template():
+    """Generate and download Excel template for bulk match upload"""
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill
+        from flask import send_file
+        import io
+
+        # Create workbook
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Match Upload Template"
+
+        # Define headers
+        headers = [
+            "League Name",
+            "Season Name",
+            "Home Team",
+            "Away Team",
+            "Match Date",
+            "Match Time",
+            "Venue",
+            "Matchday"
+        ]
+
+        # Style the header row
+        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF")
+
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col_num)
+            cell.value = header
+            cell.fill = header_fill
+            cell.font = header_font
+
+        # Add example row
+        example_data = [
+            "Premier League",
+            "2024-25 Season",
+            "Manchester United",
+            "Liverpool",
+            "2025-10-15",
+            "14:30",
+            "Old Trafford",
+            "1"
+        ]
+
+        for col_num, value in enumerate(example_data, 1):
+            ws.cell(row=2, column=col_num, value=value)
+
+        # Adjust column widths
+        for col in ws.columns:
+            max_length = 0
+            column = col[0].column_letter
+            for cell in col:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(cell.value)
+                except:
+                    pass
+            adjusted_width = (max_length + 2)
+            ws.column_dimensions[column].width = adjusted_width
+
+        # Save to bytes
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name='bulk_match_template.xlsx'
+        )
+
+    except ImportError:
+        flash('Excel processing library not available. Please install openpyxl.', 'error')
+        return redirect(url_for('admin.manage_matches'))
+    except Exception as e:
+        flash(f'Error generating template: {str(e)}', 'error')
+        return redirect(url_for('admin.manage_matches'))
+
 @admin_bp.route('/manage_matches', methods=['GET', 'POST'])
 @admin_required
 def manage_matches():
@@ -3007,6 +3416,173 @@ def manage_matches():
                     flash(f'Deleted {len(selected_matches)} matches', 'success')
 
                 db.commit()
+
+            # Handle bulk upload from Excel
+            elif request.form.get('action') == 'bulk_upload':
+                if 'bulk_file' not in request.files:
+                    flash('No file uploaded', 'error')
+                    return redirect(url_for('admin.manage_matches'))
+
+                file = request.files['bulk_file']
+                if file.filename == '':
+                    flash('No file selected', 'error')
+                    return redirect(url_for('admin.manage_matches'))
+
+                if not file.filename.endswith(('.xlsx', '.xls')):
+                    flash('Invalid file format. Please upload an Excel file (.xlsx or .xls)', 'error')
+                    return redirect(url_for('admin.manage_matches'))
+
+                try:
+                    import openpyxl
+                    from datetime import datetime, time as datetime_time
+
+                    # Load workbook
+                    workbook = openpyxl.load_workbook(file)
+                    sheet = workbook.active
+
+                    skip_errors = 'skip_errors' in request.form
+                    created_count = 0
+                    error_count = 0
+                    errors = []
+
+                    # Skip header row, process data rows
+                    for row_num, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+                        if not row or not any(row):  # Skip empty rows
+                            continue
+
+                        if row_num > 502:  # Max 500 matches + header + 1
+                            errors.append(f"Row {row_num}: Exceeded maximum of 500 matches")
+                            break
+
+                        try:
+                            # Extract data from columns
+                            league_name = row[0]
+                            season_name = row[1]
+                            home_team_name = row[2]
+                            away_team_name = row[3]
+                            match_date = row[4]
+                            match_time = row[5] if len(row) > 5 else None
+                            venue_name = row[6] if len(row) > 6 else None
+                            matchday = row[7] if len(row) > 7 else None
+
+                            # Validate required fields
+                            if not all([league_name, season_name, home_team_name, away_team_name, match_date]):
+                                error_msg = f"Row {row_num}: Missing required fields"
+                                errors.append(error_msg)
+                                error_count += 1
+                                if not skip_errors:
+                                    raise ValueError(error_msg)
+                                continue
+
+                            # Look up league
+                            cur.execute("SELECT league_id FROM leagues WHERE name = %s", (league_name,))
+                            league_result = cur.fetchone()
+                            if not league_result:
+                                error_msg = f"Row {row_num}: League '{league_name}' not found"
+                                errors.append(error_msg)
+                                error_count += 1
+                                if not skip_errors:
+                                    raise ValueError(error_msg)
+                                continue
+                            league_id = league_result[0]
+
+                            # Look up season
+                            cur.execute("SELECT season_id FROM seasons WHERE name = %s AND league_id = %s",
+                                       (season_name, league_id))
+                            season_result = cur.fetchone()
+                            if not season_result:
+                                error_msg = f"Row {row_num}: Season '{season_name}' not found for league '{league_name}'"
+                                errors.append(error_msg)
+                                error_count += 1
+                                if not skip_errors:
+                                    raise ValueError(error_msg)
+                                continue
+                            season_id = season_result[0]
+
+                            # Look up home team
+                            cur.execute("SELECT team_id FROM teams WHERE name = %s", (home_team_name,))
+                            home_team_result = cur.fetchone()
+                            if not home_team_result:
+                                error_msg = f"Row {row_num}: Home team '{home_team_name}' not found"
+                                errors.append(error_msg)
+                                error_count += 1
+                                if not skip_errors:
+                                    raise ValueError(error_msg)
+                                continue
+                            home_team_id = home_team_result[0]
+
+                            # Look up away team
+                            cur.execute("SELECT team_id FROM teams WHERE name = %s", (away_team_name,))
+                            away_team_result = cur.fetchone()
+                            if not away_team_result:
+                                error_msg = f"Row {row_num}: Away team '{away_team_name}' not found"
+                                errors.append(error_msg)
+                                error_count += 1
+                                if not skip_errors:
+                                    raise ValueError(error_msg)
+                                continue
+                            away_team_id = away_team_result[0]
+
+                            # Parse date
+                            if isinstance(match_date, datetime):
+                                match_date_str = match_date.strftime('%Y-%m-%d')
+                            else:
+                                match_date_str = str(match_date)
+
+                            # Parse time if provided
+                            match_time_str = None
+                            if match_time:
+                                if isinstance(match_time, datetime_time):
+                                    match_time_str = match_time.strftime('%H:%M')
+                                elif isinstance(match_time, datetime):
+                                    match_time_str = match_time.strftime('%H:%M')
+                                else:
+                                    match_time_str = str(match_time)
+
+                            # Venue is stored as VARCHAR, not an ID
+                            venue = venue_name if venue_name else None
+
+                            # Insert match
+                            cur.execute('''
+                                INSERT INTO matches
+                                (home_team_id, away_team_id, season_id, league_id, utc_date, match_time, venue, matchday, status)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'scheduled')
+                            ''', (home_team_id, away_team_id, season_id, league_id, match_date_str,
+                                  match_time_str, venue, matchday))
+
+                            created_count += 1
+
+                        except Exception as e:
+                            error_msg = f"Row {row_num}: {str(e)}"
+                            errors.append(error_msg)
+                            error_count += 1
+                            if not skip_errors:
+                                db.rollback()
+                                flash(f'Upload failed: {error_msg}', 'error')
+                                return redirect(url_for('admin.manage_matches'))
+
+                    db.commit()
+
+                    # Show results
+                    if created_count > 0:
+                        flash(f'Successfully created {created_count} matches', 'success')
+                    if error_count > 0:
+                        error_summary = f'{error_count} rows had errors'
+                        if len(errors) <= 10:
+                            error_summary += ': ' + '; '.join(errors)
+                        else:
+                            error_summary += ': ' + '; '.join(errors[:10]) + f' (and {len(errors)-10} more)'
+                        flash(error_summary, 'warning')
+
+                    return redirect(url_for('admin.manage_matches'))
+
+                except ImportError:
+                    flash('Excel processing library not available. Please install openpyxl.', 'error')
+                    return redirect(url_for('admin.manage_matches'))
+                except Exception as e:
+                    db.rollback()
+                    flash(f'Error processing file: {str(e)}', 'error')
+                    return redirect(url_for('admin.manage_matches'))
 
             # Handle regular match CRUD
             else:
@@ -3204,13 +3780,162 @@ def manage_matches():
         # Fallback statistics if query fails
         match_stats = (0, 0, 0, 0, 0, 0)
 
+    # Get venues
+    try:
+        cur.execute('SELECT stadium_id, name FROM stadiums ORDER BY name')
+        venues = cur.fetchall()
+    except Exception:
+        db.rollback()
+        venues = []
+
+    # Get recent matches for sidebar
+    cur.execute('''
+        SELECT
+            m.match_id,
+            t1.name AS home_team,
+            t2.name AS away_team,
+            m.utc_date,
+            m.matchday,
+            sc.full_time_home AS home_score,
+            sc.full_time_away AS away_score,
+            CASE
+                WHEN sc.full_time_home IS NOT NULL AND sc.full_time_away IS NOT NULL THEN 'completed'
+                WHEN m.utc_date < CURRENT_DATE THEN 'completed'
+                ELSE 'scheduled'
+            END AS status
+        FROM matches m
+        JOIN teams t1 ON m.home_team_id = t1.team_id
+        JOIN teams t2 ON m.away_team_id = t2.team_id
+        LEFT JOIN scores sc ON m.match_id = sc.match_id
+        ORDER BY m.utc_date DESC, m.match_time DESC NULLS LAST
+        LIMIT 10
+    ''')
+    recent_matches_raw = cur.fetchall()
+
+    # Convert to list of dicts for template
+    recent_matches = []
+    for match in recent_matches_raw:
+        recent_matches.append({
+            'match_id': match[0],
+            'home_team': match[1],
+            'away_team': match[2],
+            'utc_date': match[3],
+            'matchday': match[4],
+            'home_score': match[5],
+            'away_score': match[6],
+            'status': match[7]
+        })
+
+    # Get total matches count
+    total_matches = match_stats[0] if match_stats else 0
+
     cur.close()
 
     return render_template('manage_matches.html',
                          matches=matches_raw, matches_json=matches, teams=teams, seasons=seasons, leagues=leagues,
                          tournaments=tournaments, display_settings=display_settings,
-                         match_stats=match_stats)
+                         match_stats=match_stats, venues=venues, recent_matches=recent_matches,
+                         total_matches=total_matches)
 
+
+
+@admin_bp.route('/manage_media', methods=['GET', 'POST'])
+@admin_required
+def manage_media():
+    """Media gallery management - images and videos"""
+    db = get_db()
+    cur = db.cursor()
+
+    # Create media table if it doesn't exist
+    try:
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS media (
+                media_id SERIAL PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                description TEXT,
+                url TEXT NOT NULL,
+                media_type VARCHAR(20) NOT NULL,
+                category VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+
+        try:
+            if action == 'add':
+                title = request.form['title']
+                description = request.form.get('description', '')
+                url = request.form['url']
+                media_type = request.form['media_type']
+                category = request.form.get('category', '')
+
+                cur.execute("""
+                    INSERT INTO media (title, description, url, media_type, category)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (title, description, url, media_type, category))
+
+                flash('Media added successfully', 'success')
+
+            elif action == 'edit':
+                media_id = request.form['media_id']
+                title = request.form['title']
+                description = request.form.get('description', '')
+                url = request.form['url']
+
+                cur.execute("""
+                    UPDATE media
+                    SET title = %s, description = %s, url = %s, updated_at = CURRENT_TIMESTAMP
+                    WHERE media_id = %s
+                """, (title, description, url, media_id))
+
+                flash('Media updated successfully', 'success')
+
+            elif action == 'delete':
+                media_id = request.form['media_id']
+                cur.execute('DELETE FROM media WHERE media_id = %s', (media_id,))
+                flash('Media deleted successfully', 'success')
+
+            db.commit()
+
+        except Exception as e:
+            db.rollback()
+            flash(f'An error occurred: {str(e)}', 'error')
+        finally:
+            cur.close()
+
+        return redirect(url_for('admin.manage_media'))
+
+    # Get all media items
+    cur.execute("""
+        SELECT media_id, title, description, url, media_type, category, created_at, updated_at
+        FROM media
+        ORDER BY created_at DESC
+    """)
+    media_raw = cur.fetchall()
+
+    # Convert to list of dicts
+    media_items = []
+    for item in media_raw:
+        media_items.append({
+            'media_id': item[0],
+            'title': item[1],
+            'description': item[2],
+            'url': item[3],
+            'media_type': item[4],
+            'category': item[5],
+            'created_at': item[6],
+            'updated_at': item[7]
+        })
+
+    cur.close()
+
+    return render_template('manage_media.html', media_items=media_items)
 
 
 @admin_bp.route('/manage_countries', methods=['GET', 'POST'])

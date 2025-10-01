@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Match Creation & Scheduling - Admin Panel{% endblock %}
 
-{% block head %}
+{% block extra_css %}
 <style>
+
 .match-creation-hub {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border-radius: 1rem;
@@ -19,6 +20,11 @@
     transition: all 0.3s ease;
     cursor: pointer;
     border: 2px solid transparent;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 180px;
 }
 
 .creation-method-card:hover {
@@ -32,16 +38,232 @@
     background: #f8f9ff;
 }
 
+/* Enhanced Creation Method Cards */
+.creation-methods-header h2 {
+    color: #1e293b;
+    font-weight: 600;
+}
+
+.creation-methods-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.creation-method-card.enhanced {
+    background: white;
+    border-radius: 1rem;
+    padding: 0;
+    box-shadow: 0 8px 32px rgba(15, 23, 42, 0.08);
+    border: 2px solid transparent;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    overflow: hidden;
+    position: relative;
+}
+
+.creation-method-card.enhanced:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 48px rgba(15, 23, 42, 0.15);
+    border-color: #3b82f6;
+}
+
+.creation-method-card.enhanced.selected {
+    border-color: #3b82f6;
+    box-shadow: 0 16px 48px rgba(59, 130, 246, 0.2);
+    transform: translateY(-4px);
+}
+
+.creation-method-card.enhanced.selected::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+}
+
+.method-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 2rem 2rem 1rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.method-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #e0f2fe, #b3e5fc);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+}
+
+.method-icon i {
+    font-size: 2rem;
+    color: #0288d1;
+}
+
+.creation-method-card.enhanced:hover .method-icon {
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    transform: scale(1.1);
+}
+
+.creation-method-card.enhanced:hover .method-icon i {
+    color: white;
+}
+
+.method-info {
+    flex: 1;
+}
+
+.method-title {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.method-subtitle {
+    color: #64748b;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* Hide wizards by default */
 .wizard-step {
     display: none;
+}
+
+.method-description {
+    padding: 0 2rem 1.5rem;
+}
+
+.method-description p {
+    color: #475569;
+    line-height: 1.6;
+    margin: 0 0 1rem 0;
+}
+
+.method-features {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.feature-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.875rem;
+    color: #64748b;
+}
+
+.feature-item i {
+    font-size: 1rem;
+}
+
+.method-example {
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    padding: 1rem 2rem;
+    border-top: 1px solid #f1f5f9;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.example-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 0.5rem;
+}
+
+.example-label i {
+    color: #f59e0b;
+}
+
+.example-text {
+    font-size: 0.875rem;
+    color: #64748b;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.method-action {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 2rem;
+    background: #fafafa;
+    transition: all 0.3s ease;
+}
+
+.action-text {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #64748b;
+    transition: all 0.3s ease;
+}
+
+.method-action i {
+    color: #cbd5e1;
+    transition: all 0.3s ease;
+}
+
+.creation-method-card.enhanced:hover .method-action {
+    background: #3b82f6;
+}
+
+.creation-method-card.enhanced:hover .action-text {
+    color: white;
+}
+
+.creation-method-card.enhanced:hover .method-action i {
+    color: white;
+    transform: translateX(4px);
+}
+
+@media (max-width: 768px) {
+    .method-header {
+        padding: 1.5rem 1.5rem 1rem;
+    }
+
+    .method-description {
+        padding: 0 1.5rem 1rem;
+    }
+
+    .method-example {
+        padding: 1rem 1.5rem;
+    }
+
+    .method-action {
+        padding: 1rem 1.5rem;
+    }
+
+    .method-icon {
+        width: 48px;
+        height: 48px;
+    }
+
+    .method-icon i {
+        font-size: 1.5rem;
+    }
+}
+
+.wizard-step {
     background: white;
     border-radius: 1rem;
     padding: 2rem;
     box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-}
-
-.wizard-step.active {
-    display: block;
+    margin-top: 2rem;
 }
 
 .step-indicator {
@@ -162,35 +384,35 @@
     <div class="row g-4">
         <!-- Match Creation Methods -->
         <div class="col-lg-8">
-            <h3 class="mb-3">Choose Creation Method</h3>
+            <h3 class="mb-4">Create Matches</h3>
 
-            <div class="row g-3 mb-4">
+            <div class="row g-4">
                 <div class="col-md-4">
-                    <div class="creation-method-card" onclick="selectCreationMethod('single')">
+                    <div class="creation-method-card" onclick="selectCreationMethod('single-match', this)">
                         <div class="text-center">
                             <i class="ph ph-plus-circle display-4 text-primary mb-3"></i>
-                            <h5>Single Match</h5>
-                            <p class="text-muted small">Create one match at a time</p>
+                            <h5>Create Single Match</h5>
+                            <p class="text-muted small">One match at a time</p>
                         </div>
                     </div>
                 </div>
 
                 <div class="col-md-4">
-                    <div class="creation-method-card" onclick="selectCreationMethod('round-robin')">
+                    <div class="creation-method-card" onclick="selectCreationMethod('round-robin', this)">
                         <div class="text-center">
                             <i class="ph ph-arrows-clockwise display-4 text-success mb-3"></i>
-                            <h5>Round Robin</h5>
-                            <p class="text-muted small">Each team plays each other (1x or 2x)</p>
+                            <h5>Complete League Schedule</h5>
+                            <p class="text-muted small">Auto-generate all league matches</p>
                         </div>
                     </div>
                 </div>
 
                 <div class="col-md-4">
-                    <div class="creation-method-card" onclick="selectCreationMethod('custom-bulk')">
+                    <div class="creation-method-card" onclick="selectCreationMethod('custom-bulk', this)">
                         <div class="text-center">
                             <i class="ph ph-stack display-4 text-warning mb-3"></i>
-                            <h5>Custom Bulk</h5>
-                            <p class="text-muted small">Advanced fixture generation</p>
+                            <h5>Bulk Entry</h5>
+                            <p class="text-muted small">Multiple matches at once</p>
                         </div>
                     </div>
                 </div>
@@ -290,7 +512,7 @@
 
                     <!-- Step 1: Basic Settings -->
                     <div class="wizard-content" id="rr-content-1">
-                        <h4 class="mb-3">Round Robin Settings</h4>
+                        <h4 class="mb-3">League Schedule Settings</h4>
 
                         <div class="row g-3">
                             <div class="col-md-6">
@@ -314,10 +536,10 @@
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label">Fixture Type</label>
+                                <label class="form-label">Schedule Type</label>
                                 <select class="form-select" name="fixture_type" required>
-                                    <option value="single">Single Round Robin (Each team plays once)</option>
-                                    <option value="double">Double Round Robin (Each team plays twice)</option>
+                                    <option value="single">Single Round (Each team plays once)</option>
+                                    <option value="double">Double Round (Home & Away)</option>
                                 </select>
                             </div>
 
@@ -404,11 +626,80 @@
 
             <!-- Custom Bulk Creation -->
             <div id="custom-bulk-wizard" class="wizard-step">
-                <h4 class="mb-3">Custom Bulk Creation</h4>
-                <div class="alert alert-info">
-                    <i class="ph ph-info me-2"></i>
-                    Advanced fixture generation coming soon. This will allow you to create custom tournament brackets,
-                    group stages, and other complex fixture formats.
+                <h4 class="mb-3">Bulk Match Upload</h4>
+                <p class="text-muted mb-4">Upload an Excel file to create multiple matches at once</p>
+
+                <div class="row">
+                    <div class="col-lg-8">
+                        <form method="post" action="{{ url_for('admin.manage_matches') }}" enctype="multipart/form-data" id="bulkUploadForm">
+                            <input type="hidden" name="action" value="bulk_upload">
+
+                            <div class="card mb-3">
+                                <div class="card-header bg-primary text-white">
+                                    <i class="ph ph-file-arrow-up me-2"></i>Upload Excel File
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Select Excel File</label>
+                                        <input type="file" class="form-control" name="bulk_file" accept=".xlsx,.xls" required>
+                                        <small class="text-muted">Supported formats: .xlsx, .xls</small>
+                                    </div>
+
+                                    <div class="alert alert-info">
+                                        <strong><i class="ph ph-info me-2"></i>Excel File Format Requirements:</strong>
+                                        <p class="mb-2 mt-2">Your Excel file should contain the following columns (in this order):</p>
+                                        <ol class="mb-0 small">
+                                            <li><strong>League Name</strong> - Name of the league (must exist)</li>
+                                            <li><strong>Season Name</strong> - Name of the season (must exist)</li>
+                                            <li><strong>Home Team</strong> - Name of home team (must exist)</li>
+                                            <li><strong>Away Team</strong> - Name of away team (must exist)</li>
+                                            <li><strong>Match Date</strong> - Format: YYYY-MM-DD (e.g., 2025-10-15)</li>
+                                            <li><strong>Match Time</strong> - Format: HH:MM (e.g., 14:30) - Optional</li>
+                                            <li><strong>Venue</strong> - Venue name (optional)</li>
+                                            <li><strong>Matchday</strong> - Matchday number (optional)</li>
+                                        </ol>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="skipErrors" name="skip_errors" value="1">
+                                            <label class="form-check-label" for="skipErrors">
+                                                Skip rows with errors (create valid matches only)
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex gap-2">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="ph ph-upload me-2"></i>Upload & Import
+                                        </button>
+                                        <button type="button" class="btn btn-secondary" onclick="clearCreationMethod()">Cancel</button>
+                                        <a href="{{ url_for('admin.download_bulk_template') }}" class="btn btn-outline-success ms-auto">
+                                            <i class="ph ph-download me-2"></i>Download Template
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="col-lg-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="ph ph-lightbulb me-2"></i>Tips
+                            </div>
+                            <div class="card-body">
+                                <ul class="small mb-0">
+                                    <li class="mb-2">Download the template to get started</li>
+                                    <li class="mb-2">Make sure all team and league names match exactly</li>
+                                    <li class="mb-2">The first row should contain column headers</li>
+                                    <li class="mb-2">Dates must be in YYYY-MM-DD format</li>
+                                    <li class="mb-2">You can leave optional fields blank</li>
+                                    <li>Maximum 500 matches per upload</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -453,28 +744,15 @@
 </div>
 
 <script>
-let currentRRStep = 1;
-
-function selectCreationMethod(method) {
-    // Clear all selections
-    document.querySelectorAll('.creation-method-card').forEach(card => {
-        card.classList.remove('selected');
-    });
-    document.querySelectorAll('.wizard-step').forEach(step => {
-        step.classList.remove('active');
-    });
-
-    // Select method and show wizard
-    event.target.closest('.creation-method-card').classList.add('selected');
-    document.getElementById(method + '-wizard').classList.add('active');
-}
-
 function clearCreationMethod() {
+    // Hide all wizards
+    document.querySelectorAll('.wizard-step').forEach(wizard => {
+        wizard.style.display = 'none';
+    });
+
+    // Deselect all cards
     document.querySelectorAll('.creation-method-card').forEach(card => {
         card.classList.remove('selected');
-    });
-    document.querySelectorAll('.wizard-step').forEach(step => {
-        step.classList.remove('active');
     });
 }
 
@@ -570,7 +848,7 @@ function updateGenerationPreview() {
                     </div>
                     <div class="col-md-6">
                         <strong>Teams:</strong> ${count}<br>
-                        <strong>Type:</strong> ${fixtureType === 'double' ? 'Double' : 'Single'} Round Robin<br>
+                        <strong>Type:</strong> ${fixtureType === 'double' ? 'Double Round (Home & Away)' : 'Single Round'}<br>
                         <strong>Total Matches:</strong> ${totalMatches}
                     </div>
                 </div>
@@ -612,6 +890,55 @@ function loadSeasons(leagueId) {
                 select.innerHTML += `<option value="${season.season_id}">${season.name}</option>`;
             });
         });
+}
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Simple cache bust v2.0
+let currentRRStep = 1;
+
+function selectCreationMethod(method, element) {
+    console.log('Click detected for method:', method);
+
+    // Clear all selections
+    document.querySelectorAll('.creation-method-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+
+    // Mark this card as selected
+    if (element) {
+        element.classList.add('selected');
+    }
+
+    // Hide all wizards first
+    document.querySelectorAll('.wizard-step').forEach(wizard => {
+        wizard.style.display = 'none';
+    });
+
+    // Show the selected wizard
+    const wizardId = method + '-wizard';
+    const wizard = document.getElementById(wizardId);
+
+    if (wizard) {
+        wizard.style.display = 'block';
+        console.log('Showing wizard:', wizardId);
+    } else {
+        console.error('Wizard not found:', wizardId);
+    }
+}
+
+function backToMethodSelection() {
+    // Hide all wizards
+    document.querySelectorAll('.wizard-step').forEach(wizard => {
+        wizard.style.display = 'none';
+    });
+
+    // Deselect all cards
+    document.querySelectorAll('.creation-method-card').forEach(card => {
+        card.classList.remove('selected');
+    });
 }
 </script>
 {% endblock %}
