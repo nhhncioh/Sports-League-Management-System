@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from flask import Flask, render_template, request, redirect, url_for
 
-from slms.blueprints.admin import admin_bp
+from slms.blueprints.admin import admin_bp, registration_admin_bp
 from slms.blueprints.public import public_bp, portal_bp, registration_bp
 from slms.blueprints.api import api_bp
 from slms.blueprints.auth import auth_bp
@@ -75,6 +75,7 @@ def create_app(config_class=Config):
     # Register blueprints
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(admin_bp, url_prefix='/admin')
+    app.register_blueprint(registration_admin_bp)  # Registration admin routes
     app.register_blueprint(portal_bp)  # Portal routes at root
     app.register_blueprint(registration_bp)  # Registration routes at root
     app.register_blueprint(public_bp)

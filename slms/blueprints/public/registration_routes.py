@@ -10,8 +10,9 @@ from sqlalchemy.orm import joinedload
 from slms.blueprints.common.tenant import org_query, tenant_required
 from slms.extensions import db
 from slms.forms.registration import TeamRegistrationForm, PlayerRegistrationForm
-from slms.models import Registration, RegistrationMode, Season, Waiver, PaymentStatus
+from slms.models import Registration, RegistrationMode, RegistrationStatus, Season, Waiver, PaymentStatus
 from slms.services.queue import queue_service
+from slms.services.uploads import save_upload
 
 
 registration_bp = Blueprint('registration', __name__)
@@ -51,20 +52,39 @@ def team_registration(season_id: str):
     form = TeamRegistrationForm()
 
     if form.validate_on_submit():
+        # Handle team logo upload
+        team_logo_url = None
+        if form.team_logo.data:
+            team_logo_url = save_upload(form.team_logo.data, 'team_logos')
+
         # Create registration
         registration = Registration(
             org_id=season.org_id,
             season_id=season.id,
             waiver_id=active_waiver.id,
+            # Contact information
             name=form.name.data,
             email=form.email.data.lower().strip(),
+            phone=form.phone.data or None,
+            # Team information
             team_name=form.team_name.data,
+            team_size=form.team_size.data or None,
+            team_logo_url=team_logo_url,
+            skill_level=form.skill_level.data or None,
+            # Division and preferences
             preferred_division=form.preferred_division.data or None,
             notes=form.notes.data or None,
-            # Team color preferences (temporarily commented out until migration is run)
-            # primary_color=form.primary_color.data or None,
-            # secondary_color=form.secondary_color.data or None,
-            # accent_color=form.accent_color.data or None,
+            special_requirements=form.special_requirements.data or None,
+            # Team colors
+            primary_color=form.primary_color.data or None,
+            secondary_color=form.secondary_color.data or None,
+            accent_color=form.accent_color.data or None,
+            # Emergency contact
+            emergency_contact_name=form.emergency_contact_name.data or None,
+            emergency_contact_phone=form.emergency_contact_phone.data or None,
+            emergency_contact_relationship=form.emergency_contact_relationship.data or None,
+            # Status and waiver
+            status=RegistrationStatus.PENDING,
             waiver_signed=True,
             waiver_signed_at=datetime.utcnow(),
             payment_status=PaymentStatus.UNPAID
@@ -123,16 +143,40 @@ def player_registration(season_id: str):
     form = PlayerRegistrationForm()
 
     if form.validate_on_submit():
+        # Handle player photo upload
+        player_photo_url = None
+        if form.player_photo.data:
+            player_photo_url = save_upload(form.player_photo.data, 'player_photos')
+
         # Create registration
         registration = Registration(
             org_id=season.org_id,
             season_id=season.id,
             waiver_id=active_waiver.id,
+            # Personal information
             name=form.name.data,
             email=form.email.data.lower().strip(),
-            team_name=None,  # Not applicable for player registration
+            phone=form.phone.data or None,
+            date_of_birth=form.date_of_birth.data or None,
+            gender=form.gender.data or None,
+            player_photo_url=player_photo_url,
+            # Player details
+            skill_level=form.skill_level.data or None,
+            jersey_size=form.jersey_size.data or None,
+            jersey_number_preference=form.jersey_number_preference.data or None,
+            # Preferences
             preferred_division=form.preferred_division.data or None,
             notes=form.notes.data or None,
+            special_requirements=form.special_requirements.data or None,
+            # Emergency contact
+            emergency_contact_name=form.emergency_contact_name.data,
+            emergency_contact_phone=form.emergency_contact_phone.data,
+            emergency_contact_relationship=form.emergency_contact_relationship.data or None,
+            # Medical information
+            medical_conditions=form.medical_conditions.data or None,
+            allergies=form.allergies.data or None,
+            # Status and waiver
+            status=RegistrationStatus.PENDING,
             waiver_signed=True,
             waiver_signed_at=datetime.utcnow(),
             payment_status=PaymentStatus.UNPAID
@@ -146,7 +190,7 @@ def player_registration(season_id: str):
             queue_service.enqueue_registration_confirmation(
                 registration_id=registration.id,
                 to_email=registration.contact_email,
-                to_name=registration.team_name
+                to_name=registration.name
             )
         except Exception as e:
             print(f"Failed to queue registration confirmation email: {e}")

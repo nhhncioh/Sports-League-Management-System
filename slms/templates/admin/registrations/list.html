@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block title %}Registrations - Admin - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin.admin_dashboard') }}">Admin</a></li>
+                    <li class="breadcrumb-item active">Registrations</li>
+                </ol>
+            </nav>
+
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1>Registration Management</h1>
+                    <p class="text-muted">View and manage all player and team registrations</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="text-primary">{{ stats.total }}</h3>
+                    <small class="text-muted">Total Registrations</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="text-warning">{{ stats.pending }}</h3>
+                    <small class="text-muted">Pending Review</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="text-success">{{ stats.approved }}</h3>
+                    <small class="text-muted">Approved</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="text-danger">{{ stats.unpaid }}</h3>
+                    <small class="text-muted">Unpaid</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters and List -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="ph ph-users"></i>
+                        Registrations
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Filters -->
+                    <form method="GET" class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select" onchange="this.form.submit()">
+                                <option value="">All Statuses</option>
+                                <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                                <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
+                                <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
+                                <option value="waitlisted" {% if status_filter == 'waitlisted' %}selected{% endif %}>Waitlisted</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Season</label>
+                            <select name="season_id" class="form-select" onchange="this.form.submit()">
+                                <option value="">All Seasons</option>
+                                {% for season in seasons %}
+                                <option value="{{ season.id }}" {% if season_id == season.id %}selected{% endif %}>
+                                    {{ season.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Payment Status</label>
+                            <select name="payment_status" class="form-select" onchange="this.form.submit()">
+                                <option value="">All Payment Statuses</option>
+                                <option value="unpaid" {% if payment_status_filter == 'unpaid' %}selected{% endif %}>Unpaid</option>
+                                <option value="paid" {% if payment_status_filter == 'paid' %}selected{% endif %}>Paid</option>
+                                <option value="waived" {% if payment_status_filter == 'waived' %}selected{% endif %}>Waived</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Search</label>
+                            <div class="input-group">
+                                <input type="text" name="search" class="form-control" placeholder="Name, email, team..." value="{{ search }}">
+                                <button class="btn btn-outline-secondary" type="submit">
+                                    <i class="ph ph-magnifying-glass"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Clear Filters -->
+                    {% if status_filter or season_id or payment_status_filter or search %}
+                    <div class="mb-3">
+                        <a href="{{ url_for('registration_admin.list_registrations') }}" class="btn btn-sm btn-outline-secondary">
+                            <i class="ph ph-x me-1"></i>Clear Filters
+                        </a>
+                    </div>
+                    {% endif %}
+
+                    <!-- Registrations Table -->
+                    {% if registrations %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Name</th>
+                                    <th>Contact</th>
+                                    <th>Season</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Payment</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for reg in registrations %}
+                                <tr>
+                                    <td>
+                                        <small class="text-muted">
+                                            {{ reg.created_at.strftime('%Y-%m-%d') }}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <strong>{{ reg.name }}</strong>
+                                        {% if reg.team_name %}
+                                        <br><small class="text-muted">Team: {{ reg.team_name }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small>{{ reg.email }}</small>
+                                        {% if reg.phone %}
+                                        <br><small class="text-muted">{{ reg.phone }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small>{{ reg.season.name }}</small>
+                                    </td>
+                                    <td>
+                                        {% if reg.team_name %}
+                                        <span class="badge bg-primary">Team</span>
+                                        {% else %}
+                                        <span class="badge bg-info">Player</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if reg.status.value == 'pending' %}
+                                        <span class="badge bg-warning">Pending</span>
+                                        {% elif reg.status.value == 'approved' %}
+                                        <span class="badge bg-success">Approved</span>
+                                        {% elif reg.status.value == 'rejected' %}
+                                        <span class="badge bg-danger">Rejected</span>
+                                        {% elif reg.status.value == 'waitlisted' %}
+                                        <span class="badge bg-secondary">Waitlisted</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if reg.payment_status.value == 'paid' %}
+                                        <span class="badge bg-success">
+                                            <i class="ph ph-check-circle"></i> Paid
+                                        </span>
+                                        {% elif reg.payment_status.value == 'unpaid' %}
+                                        <span class="badge bg-danger">
+                                            <i class="ph ph-x-circle"></i> Unpaid
+                                        </span>
+                                        {% elif reg.payment_status.value == 'waived' %}
+                                        <span class="badge bg-secondary">Waived</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('registration_admin.view_registration', registration_id=reg.id) }}"
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="ph ph-eye"></i> View
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="ph ph-users display-1 text-muted mb-3"></i>
+                        <h4 class="text-muted">No registrations found</h4>
+                        {% if status_filter or season_id or payment_status_filter or search %}
+                        <p class="text-muted">Try adjusting your filters</p>
+                        {% else %}
+                        <p class="text-muted">No one has registered yet</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

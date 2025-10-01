@@ -100,6 +100,13 @@ class RegistrationMode(Enum):
     PLAYER_BASED = "player_based"
 
 
+class RegistrationStatus(Enum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    WAITLISTED = "waitlisted"
+
+
 class BlackoutScope(Enum):
     VENUE = "venue"
     TEAM = "team"
@@ -482,6 +489,10 @@ class Waiver(TimestampedBase):
 
 class Registration(TimestampedBase):
     __tablename__ = "registration"
+    __table_args__ = (
+        Index("ix_registration_status", "status"),
+        Index("ix_registration_org_status", "org_id", "status"),
+    )
 
     org_id: Mapped[str] = mapped_column(
         String(36),
@@ -500,32 +511,93 @@ class Registration(TimestampedBase):
         ForeignKey("waiver.id", ondelete="SET NULL"),
         index=True,
     )
+    reviewed_by_user_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("user.id", ondelete="SET NULL"),
+    )
 
-    # Registration details
+    # Basic registration details
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str] = mapped_column(String(255), nullable=False)
-    team_name: Mapped[str | None] = mapped_column(String(255))  # For team-based registration
+    phone: Mapped[str | None] = mapped_column(String(20))
+    date_of_birth: Mapped[date | None] = mapped_column(Date)
+    gender: Mapped[str | None] = mapped_column(String(20))
+
+    # Team-based registration fields
+    team_name: Mapped[str | None] = mapped_column(String(255))
+    team_size: Mapped[int | None] = mapped_column(Integer)
+    team_logo_url: Mapped[str | None] = mapped_column(String(512))
+
+    # Player-specific fields
+    player_photo_url: Mapped[str | None] = mapped_column(String(512))
+    skill_level: Mapped[str | None] = mapped_column(String(50))
+    jersey_size: Mapped[str | None] = mapped_column(String(10))
+    jersey_number_preference: Mapped[str | None] = mapped_column(String(10))
+
+    # Preferences and notes
     preferred_division: Mapped[str | None] = mapped_column(String(255))
     notes: Mapped[str | None] = mapped_column(Text)
 
-    # Team color preferences (temporarily commented out until migration is run)
-    # primary_color: Mapped[str | None] = mapped_column(String(7))  # Hex color code
-    # secondary_color: Mapped[str | None] = mapped_column(String(7))  # Hex color code
-    # accent_color: Mapped[str | None] = mapped_column(String(7))  # Hex color code
+    # Emergency contact
+    emergency_contact_name: Mapped[str | None] = mapped_column(String(255))
+    emergency_contact_phone: Mapped[str | None] = mapped_column(String(20))
+    emergency_contact_relationship: Mapped[str | None] = mapped_column(String(100))
 
-    # Waiver and payment
+    # Medical information
+    medical_conditions: Mapped[str | None] = mapped_column(Text)
+    allergies: Mapped[str | None] = mapped_column(Text)
+    special_requirements: Mapped[str | None] = mapped_column(Text)
+
+    # Team color preferences
+    primary_color: Mapped[str | None] = mapped_column(String(7))
+    secondary_color: Mapped[str | None] = mapped_column(String(7))
+    accent_color: Mapped[str | None] = mapped_column(String(7))
+
+    # Status and approval
+    status: Mapped[RegistrationStatus] = mapped_column(
+        SqlEnum(RegistrationStatus, name="registration_status", native_enum=False),
+        nullable=False,
+        default=RegistrationStatus.PENDING,
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    rejection_reason: Mapped[str | None] = mapped_column(Text)
+    admin_notes: Mapped[str | None] = mapped_column(Text)
+
+    # Waiver
     waiver_signed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     waiver_signed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    # Payment
     payment_status: Mapped[PaymentStatus] = mapped_column(
         SqlEnum(PaymentStatus, name="payment_status", native_enum=False),
         nullable=False,
         default=PaymentStatus.UNPAID,
     )
+    payment_method: Mapped[str | None] = mapped_column(String(50))
+    payment_transaction_id: Mapped[str | None] = mapped_column(String(255))
     payment_notes: Mapped[str | None] = mapped_column(Text)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    # Relationships
     organization: Mapped[Organization] = relationship()
     season: Mapped[Season] = relationship(back_populates="registrations")
     waiver: Mapped[Waiver | None] = relationship(back_populates="registrations")
+    reviewed_by: Mapped["User | None"] = relationship(foreign_keys=[reviewed_by_user_id])
+
+    @property
+    def contact_email(self):
+        """Convenience property for email access."""
+        return self.email
+
+    @property
+    def age(self):
+        """Calculate age from date of birth."""
+        if not self.date_of_birth:
+            return None
+        today = date.today()
+        return today.year - self.date_of_birth.year - (
+            (today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day)
+        )
 
 
 class EmailMessage(TimestampedBase):
