@@ -12,6 +12,7 @@ from flask_login import current_user
 
 from slms.services.db import get_db
 from slms.extensions import db
+from slms.services.sport_config import get_sport_config, get_all_sports
 from slms.services.site import (
     _load_site_settings,
     invalidate_site_settings_cache,
@@ -965,6 +966,7 @@ def manage_leagues():
             league_id = request.form.get('league_id')
             name = _clean(request.form.get('name'))
             country = _clean(request.form.get('country'))
+            sport = _clean(request.form.get('sport')) or 'soccer'
             primary_color = _clean(request.form.get('primary_color'))
             secondary_color = _clean(request.form.get('secondary_color'))
             accent_color = _clean(request.form.get('accent_color'))
@@ -978,14 +980,14 @@ def manage_leagues():
 
             if 'add' in request.form:
                 cur.execute(
-                    "INSERT INTO leagues (name, country, primary_color, secondary_color, accent_color, text_color, logo_url, hero_image_url) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-                    (name, country, primary_color, secondary_color, accent_color, text_color, logo_url, hero_image_url)
+                    "INSERT INTO leagues (name, country, sport, primary_color, secondary_color, accent_color, text_color, logo_url, hero_image_url) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    (name, country, sport, primary_color, secondary_color, accent_color, text_color, logo_url, hero_image_url)
                 )
                 flash('League added successfully', 'success')
             elif 'edit' in request.form and league_id:
                 cur.execute(
-                    "UPDATE leagues SET name = %s, country = %s, primary_color = %s, secondary_color = %s, accent_color = %s, text_color = %s, logo_url = %s, hero_image_url = %s WHERE league_id = %s",
-                    (name, country, primary_color, secondary_color, accent_color, text_color, logo_url, hero_image_url, league_id)
+                    "UPDATE leagues SET name = %s, country = %s, sport = %s, primary_color = %s, secondary_color = %s, accent_color = %s, text_color = %s, logo_url = %s, hero_image_url = %s WHERE league_id = %s",
+                    (name, country, sport, primary_color, secondary_color, accent_color, text_color, logo_url, hero_image_url, league_id)
                 )
                 flash('League updated successfully', 'success')
             elif 'delete' in request.form:
@@ -1004,7 +1006,7 @@ def manage_leagues():
     rows = []
     try:
         cur.execute(
-            "SELECT league_id, name, country, primary_color, secondary_color, accent_color, text_color, logo_url, hero_image_url FROM leagues ORDER BY name"
+            "SELECT league_id, name, country, sport, primary_color, secondary_color, accent_color, text_color, logo_url, hero_image_url FROM leagues ORDER BY name"
         )
         rows = cur.fetchall()
     except Exception as e:
@@ -1013,7 +1015,7 @@ def manage_leagues():
     finally:
         cur.close()
 
-    columns = ['id', 'name', 'country', 'primary_color', 'secondary_color', 'accent_color', 'text_color', 'logo_url', 'hero_image_url']
+    columns = ['id', 'name', 'country', 'sport', 'primary_color', 'secondary_color', 'accent_color', 'text_color', 'logo_url', 'hero_image_url']
     leagues = [dict(zip(columns, row)) for row in rows]
     return render_template('manage_leagues.html', leagues=leagues)
 
@@ -1775,8 +1777,9 @@ def manage_league_rules():
     custom_fields_by_league = {}
 
     try:
-        cur.execute('SELECT league_id, name FROM leagues ORDER BY name')
-        leagues = cur.fetchall()
+        cur.execute('SELECT league_id, name, sport FROM leagues ORDER BY name')
+        leagues_raw = cur.fetchall()
+        leagues = [{'id': row[0], 'name': row[1], 'sport': row[2] or 'soccer'} for row in leagues_raw]
 
         # Get all league rules with custom fields
         cur.execute("""
@@ -1812,10 +1815,14 @@ def manage_league_rules():
     finally:
         cur.close()
 
+    # Get sport configurations
+    sport_configs = {league['id']: get_sport_config(league['sport']) for league in leagues}
+
     return render_template('manage_league_rules.html',
                          leagues=leagues,
                          rules=rules,
-                         custom_fields_by_league=custom_fields_by_league)
+                         custom_fields_by_league=custom_fields_by_league,
+                         sport_configs=sport_configs)
 
 
 def _handle_add_custom_field(db):
@@ -4051,11 +4058,33 @@ def player_stats():
                     flash('Scorer entry removed.', 'success')
                 else:
                     flash('Unable to determine scorer record to delete.', 'error')
-            elif action == 'advanced':
+            else:
+                # Combined form handling - both basic and advanced stats
                 scorer_id = request.form.get('scorer_id')
-                if not scorer_id:
-                    raise ValueError('Scorer record is required for advanced statistics.')
+                player_id = request.form.get('player_id')
+                season_id = request.form.get('season_id')
+                league_id = request.form.get('league_id')
+                goals = _to_int(request.form.get('goals'))
+                assists = _to_int(request.form.get('assists'))
+                penalties = _to_int(request.form.get('penalties'))
 
+                if not player_id or not season_id or not league_id:
+                    raise ValueError('Player, season, and league are required.')
+
+                # Save basic stats to scorers table
+                if scorer_id:
+                    post_cur.execute(
+                        'UPDATE scorers SET player_id = %s, season_id = %s, league_id = %s, goals = %s, assists = %s, penalties = %s WHERE scorer_id = %s',
+                        (player_id, season_id, league_id, goals, assists, penalties, scorer_id)
+                    )
+                else:
+                    post_cur.execute(
+                        'INSERT INTO scorers (player_id, season_id, league_id, goals, assists, penalties) VALUES (%s, %s, %s, %s, %s, %s) RETURNING scorer_id',
+                        (player_id, season_id, league_id, goals, assists, penalties)
+                    )
+                    scorer_id = post_cur.fetchone()[0]
+
+                # Save advanced stats to scorer_metrics table
                 games_played = _to_int(request.form.get('games_played'))
                 minutes_played = _to_int(request.form.get('minutes_played'))
                 shots_on_target = _to_int(request.form.get('shots_on_target'))
@@ -4089,31 +4118,8 @@ def player_stats():
                 """,
                     (scorer_id, games_played, minutes_played, shots_on_target, shot_attempts, passes_completed, passes_attempted, saves, rating, json.dumps(custom_metrics) if custom_metrics else None)
                 )
-                flash('Advanced statistics saved.', 'success')
-            else:
-                scorer_id = request.form.get('scorer_id')
-                player_id = request.form.get('player_id')
-                season_id = request.form.get('season_id')
-                league_id = request.form.get('league_id')
-                goals = _to_int(request.form.get('goals'))
-                assists = _to_int(request.form.get('assists'))
-                penalties = _to_int(request.form.get('penalties'))
 
-                if not player_id or not season_id or not league_id:
-                    raise ValueError('Player, season, and league are required.')
-
-                if scorer_id:
-                    post_cur.execute(
-                        'UPDATE scorers SET player_id = %s, season_id = %s, league_id = %s, goals = %s, assists = %s, penalties = %s WHERE scorer_id = %s',
-                        (player_id, season_id, league_id, goals, assists, penalties, scorer_id)
-                    )
-                    flash('Scorer updated successfully.', 'success')
-                else:
-                    post_cur.execute(
-                        'INSERT INTO scorers (player_id, season_id, league_id, goals, assists, penalties) VALUES (%s, %s, %s, %s, %s, %s)',
-                        (player_id, season_id, league_id, goals, assists, penalties)
-                    )
-                    flash('Scorer added successfully.', 'success')
+                flash('Player statistics saved successfully.', 'success')
         except Exception as e:
             db.rollback()
             flash('An error occurred: ' + str(e), 'error')
@@ -4157,8 +4163,9 @@ def player_stats():
     players = cur.fetchall()
     cur.execute('SELECT season_id, year FROM seasons ORDER BY year DESC')
     seasons = cur.fetchall()
-    cur.execute('SELECT league_id, name FROM leagues ORDER BY name ASC')
-    leagues = cur.fetchall()
+    cur.execute('SELECT league_id, name, sport FROM leagues ORDER BY name ASC')
+    leagues_raw = cur.fetchall()
+    leagues = [{'id': row[0], 'name': row[1], 'sport': row[2] or 'soccer'} for row in leagues_raw]
     cur.close()
 
     leaderboard = []
@@ -4310,6 +4317,9 @@ def player_stats():
                 'leader': leader_entry['player_name'] if leader_entry else None
             }
 
+    # Get sport configurations for all leagues
+    sport_configs = {league['id']: get_sport_config(league['sport']) for league in leagues}
+
     return render_template(
         'player_stats.html',
         leaderboard=leaderboard,
@@ -4319,7 +4329,9 @@ def player_stats():
         analytics_summary=analytics_summary,
         custom_metric_keys=sorted(custom_metric_keys),
         advanced_metrics_map=advanced_metrics_map,
-        custom_metric_summary=custom_metric_summary
+        custom_metric_summary=custom_metric_summary,
+        sport_configs=sport_configs,
+        get_sport_config=get_sport_config
     )
 @admin_bp.route('/recalculate_standings', methods=['GET', 'POST'])
 @admin_required
@@ -4361,11 +4373,21 @@ def recalculate_standings():
                 flash('Season does not belong to the selected league.', 'error')
                 return redirect(url_for('admin.recalculate_standings'))
 
+            # Get league's sport to determine point system
+            cur.execute('SELECT sport FROM leagues WHERE league_id = %s', (league_id,))
+            league_row = cur.fetchone()
+            league_sport = league_row[0] if league_row else 'soccer'
+
+            # Get sport-specific point configuration
+            from slms.services.sport_config import get_standings_points_config
+            sport_points = get_standings_points_config(league_sport)
+
+            # Check for custom league rules, otherwise use sport defaults
             cur.execute('SELECT points_win, points_draw, points_loss, tiebreakers FROM league_rules WHERE league_id = %s', (league_id,))
             rules_row = cur.fetchone()
-            points_win = int(rules_row[0]) if rules_row and rules_row[0] is not None else 3
-            points_draw = int(rules_row[1]) if rules_row and rules_row[1] is not None else 1
-            points_loss = int(rules_row[2]) if rules_row and rules_row[2] is not None else 0
+            points_win = int(rules_row[0]) if rules_row and rules_row[0] is not None else sport_points.get('win', 3)
+            points_draw = int(rules_row[1]) if rules_row and rules_row[1] is not None else sport_points.get('draw', 1)
+            points_loss = int(rules_row[2]) if rules_row and rules_row[2] is not None else sport_points.get('loss', 0)
             tiebreakers = _parse_tiebreakers(rules_row[3] if rules_row else None)
 
             cur.execute('SELECT team_id, name FROM teams WHERE league_id = %s', (league_id,))

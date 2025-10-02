@@ -24,9 +24,25 @@
                             <label for="name" class="form-label">League name</label>
                             <input type="text" class="form-control" id="name" name="name" required placeholder="Premier League">
                         </div>
-                        <div class="mb-4">
+                        <div class="mb-3">
                             <label for="country" class="form-label">Country / Region</label>
                             <input type="text" class="form-control" id="country" name="country" required placeholder="England">
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="sport" class="form-label">Sport</label>
+                            <select class="form-select" id="sport" name="sport" required>
+                                <option value="">Choose a sport...</option>
+                                <option value="soccer" selected>Soccer / Football</option>
+                                <option value="basketball">Basketball</option>
+                                <option value="hockey">Hockey</option>
+                                <option value="volleyball">Volleyball</option>
+                                <option value="football">American Football / Flag Football</option>
+                                <option value="baseball">Baseball</option>
+                                <option value="cricket">Cricket</option>
+                                <option value="rugby">Rugby</option>
+                            </select>
+                            <small class="text-muted">This determines what statistics and scoring options are available</small>
                         </div>
 
                         <div class="row g-3 mb-4">
@@ -257,6 +273,7 @@
         document.getElementById('league_id').value = data.id || '';
         document.getElementById('name').value = data.name || '';
         document.getElementById('country').value = data.country || '';
+        document.getElementById('sport').value = data.sport || 'soccer';
         ['primary_color', 'secondary_color', 'accent_color', 'text_color'].forEach(field => {
             document.getElementById(field).value = data[field] || '';
             synchroniseColorField(field);

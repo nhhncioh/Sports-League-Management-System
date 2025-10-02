@@ -41,9 +41,16 @@
                 <select class="form-select" id="league_id" name="league_id" required onchange="loadLeagueRules()">
                   <option value="">Choose a league...</option>
                   {% for league in leagues %}
-                    <option value="{{ league[0] }}">{{ league[1] }}</option>
+                    <option value="{{ league.id }}" data-sport="{{ league.sport }}">{{ league.name }}</option>
                   {% endfor %}
                 </select>
+                <div class="mt-2">
+                  <div class="alert alert-info d-none" id="sportDefaultsInfo">
+                    <i class="ph ph-info me-2"></i>
+                    <strong><span id="sportName"></span> defaults:</strong>
+                    <span id="sportDefaults"></span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -305,6 +312,9 @@
 </div>
 
 <script>
+const leagues = {{ leagues|tojson }};
+const sportConfigs = {{ sport_configs|tojson }};
+
 function loadLeagueRules() {
     const leagueId = document.getElementById('league_id').value;
     const modalLeagueId = document.getElementById('modal_league_id');
@@ -317,7 +327,34 @@ function loadLeagueRules() {
 
     if (!leagueId) {
         resetForm();
+        document.getElementById('sportDefaultsInfo').classList.add('d-none');
         return;
+    }
+
+    // Get league sport and show defaults
+    const league = leagues.find(l => l.id == leagueId);
+    if (league && sportConfigs[leagueId]) {
+        const config = sportConfigs[leagueId];
+        const points = config.standings_points;
+
+        document.getElementById('sportName').textContent = config.display_name;
+
+        let defaultsText = `Win = ${points.win} pts`;
+        if (points.draw !== undefined) {
+            defaultsText += `, Draw = ${points.draw} pts`;
+        }
+        defaultsText += `, Loss = ${points.loss} pts`;
+        if (points.overtime_win !== undefined) {
+            defaultsText += `, OT Win = ${points.overtime_win} pts`;
+        }
+        if (points.overtime_loss !== undefined) {
+            defaultsText += `, OT Loss = ${points.overtime_loss} pts`;
+        }
+
+        document.getElementById('sportDefaults').textContent = defaultsText;
+        document.getElementById('sportDefaultsInfo').classList.remove('d-none');
+    } else {
+        document.getElementById('sportDefaultsInfo').classList.add('d-none');
     }
 
     // Load existing rules for selected league
@@ -326,13 +363,19 @@ function loadLeagueRules() {
 
     const selectedRule = existingRules.find(rule => rule[0] == leagueId);
     if (selectedRule) {
-        document.getElementById('points_win').value = selectedRule[2] || 3;
-        document.getElementById('points_draw').value = selectedRule[3] || 1;
-        document.getElementById('points_loss').value = selectedRule[4] || 0;
+        document.getElementById('points_win').value = selectedRule[2] || (sportConfigs[leagueId]?.standings_points.win || 3);
+        document.getElementById('points_draw').value = selectedRule[3] || (sportConfigs[leagueId]?.standings_points.draw || 1);
+        document.getElementById('points_loss').value = selectedRule[4] || (sportConfigs[leagueId]?.standings_points.loss || 0);
         document.getElementById('tiebreakers').value = selectedRule[5] || '';
         document.getElementById('substitution_limit').value = selectedRule[6] || '';
         document.getElementById('foreign_player_limit').value = selectedRule[7] || '';
         document.getElementById('notes').value = selectedRule[8] || '';
+    } else if (sportConfigs[leagueId]) {
+        // No existing rules - use sport defaults
+        const points = sportConfigs[leagueId].standings_points;
+        document.getElementById('points_win').value = points.win || 3;
+        document.getElementById('points_draw').value = points.draw !== undefined ? points.draw : 1;
+        document.getElementById('points_loss').value = points.loss || 0;
     }
 
     // Load custom fields for selected league

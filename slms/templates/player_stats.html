@@ -71,7 +71,7 @@
                         <select class="form-select" id="filterLeague">
                             <option value="">All Leagues</option>
                             {% for league in leagues %}
-                                <option value="{{ league[0] }}">{{ league[1] }}</option>
+                                <option value="{{ league.id }}" data-sport="{{ league.sport }}">{{ league.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -84,6 +84,13 @@
                             <option value="80">80+</option>
                             <option value="85">85+</option>
                         </select>
+                    </div>
+                    <div class="col-md-12 mt-3">
+                        <div class="alert alert-info d-none" id="sportIndicator">
+                            <i class="ph ph-info me-2"></i>
+                            <strong>Sport:</strong> <span id="sportName"></span> |
+                            <strong>Primary Stats:</strong> <span id="sportPrimaryStats"></span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -200,9 +207,12 @@
                         </td>
                         <td class="text-end leaderboard-actions">
                             <div class="btn-group btn-group-sm" role="group">
-                                <button type="button" class="btn btn-outline-primary" onclick="openBasicModal({{ entry.scorer_id }})">Edit</button>
-                                <button type="button" class="btn btn-outline-secondary" onclick="openAdvancedModal({{ entry.scorer_id }})">Advanced</button>
-                                <button type="button" class="btn btn-outline-danger" onclick="confirmDelete({{ entry.scorer_id }}, {{ entry.player_name|tojson }})">Delete</button>
+                                <button type="button" class="btn btn-outline-primary" onclick="openBasicModal({{ entry.scorer_id }})">
+                                    <i class="ph ph-pencil-simple"></i> Edit
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" onclick="confirmDelete({{ entry.scorer_id }}, {{ entry.player_name|tojson }})">
+                                    <i class="ph ph-trash"></i> Delete
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -306,18 +316,19 @@
     {% endif %}
 </div>
 
-<!-- Base Stats Modal -->
+<!-- Combined Player Stats Modal -->
 <div class="modal fade" id="basicStatsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <form class="modal-content" method="post" id="basicStatsForm">
-            <input type="hidden" name="action" value="basic">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <form class="modal-content" method="post" id="combinedStatsForm">
             <input type="hidden" name="scorer_id" id="basicScorerId">
+            <input type="hidden" name="custom_metrics_json" id="combinedCustomMetrics">
             <div class="modal-header">
                 <h5 class="modal-title" id="basicModalTitle">Add Player Statistics</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="row g-3">
+                <!-- Basic Info Section -->
+                <div class="row g-3 mb-4">
                     <div class="col-md-6">
                         <label class="form-label" for="basicPlayer">Player</label>
                         <select class="form-select" name="player_id" id="basicPlayer" required>
@@ -338,91 +349,108 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label" for="basicLeague">League</label>
-                        <select class="form-select" name="league_id" id="basicLeague" required>
+                        <select class="form-select" name="league_id" id="basicLeague" required onchange="onLeagueChange()">
                             <option value="">Select league</option>
                             {% for league in leagues %}
-                                <option value="{{ league[0] }}">{{ league[1] }}</option>
+                                <option value="{{ league.id }}" data-sport="{{ league.sport }}">{{ league.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label" for="basicGoals">Goals</label>
+                </div>
+
+                <!-- Sport Info Banner -->
+                <div class="alert alert-info d-none mb-4" id="basicSportHelp">
+                    <div class="d-flex align-items-start gap-2">
+                        <i class="ph ph-info fs-5"></i>
+                        <div>
+                            <strong><span id="basicSportName"></span> Statistics</strong>
+                            <p class="mb-0 small">Enter statistics for this player. All fields are optional except the basic stats.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Basic Stats (Required) -->
+                <h6 class="mb-3"><i class="ph ph-chart-bar me-2"></i>Basic Statistics</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <label class="form-label" for="basicGoals"><span id="basicGoalsLabel">Goals</span></label>
                         <input type="number" class="form-control" name="goals" id="basicGoals" min="0" value="0" required>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label" for="basicAssists">Assists</label>
                         <input type="number" class="form-control" name="assists" id="basicAssists" min="0" value="0" required>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label" for="basicPenalties">Penalties</label>
                         <input type="number" class="form-control" name="penalties" id="basicPenalties" min="0" value="0" required>
                     </div>
+                    <div class="col-md-3">
+                        <label class="form-label" for="combinedRating">Performance rating</label>
+                        <input type="number" step="0.1" class="form-control" id="combinedRating" name="rating" min="0" max="10" placeholder="0-10">
+                    </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" class="btn btn-primary">Save Stats</button>
-            </div>
-        </form>
-    </div>
-</div>
 
-<!-- Advanced Stats Modal -->
-<div class="modal fade" id="advancedStatsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-        <form class="modal-content" method="post" id="advancedStatsForm">
-            <input type="hidden" name="action" value="advanced">
-            <input type="hidden" name="scorer_id" id="advancedScorerId">
-            <input type="hidden" name="custom_metrics_json" id="advancedCustomMetrics">
-            <div class="modal-header">
-                <h5 class="modal-title" id="advancedModalTitle">Advanced Analytics</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label" for="advancedGames">Games played</label>
-                        <input type="number" class="form-control" id="advancedGames" name="games_played" min="0" value="0">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label" for="advancedMinutes">Minutes played</label>
-                        <input type="number" class="form-control" id="advancedMinutes" name="minutes_played" min="0" value="0">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label" for="advancedRating">Performance rating</label>
-                        <input type="number" step="0.1" class="form-control" id="advancedRating" name="rating" min="0" max="100">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label" for="advancedShotsOnTarget">Shots on target</label>
-                        <input type="number" class="form-control" id="advancedShotsOnTarget" name="shots_on_target" min="0" value="0">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label" for="advancedShotAttempts">Total shot attempts</label>
-                        <input type="number" class="form-control" id="advancedShotAttempts" name="shot_attempts" min="0" value="0">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label" for="advancedSaves">Saves / blocks</label>
-                        <input type="number" class="form-control" id="advancedSaves" name="saves" min="0" value="0">
+                <!-- Playing Time -->
+                <h6 class="mb-3"><i class="ph ph-clock me-2"></i>Playing Time</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label" for="combinedGames">Games played</label>
+                        <input type="number" class="form-control" id="combinedGames" name="games_played" min="0" value="0">
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label" for="advancedPassCompleted">Passes completed</label>
-                        <input type="number" class="form-control" id="advancedPassCompleted" name="passes_completed" min="0" value="0">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label" for="advancedPassAttempted">Passes attempted</label>
-                        <input type="number" class="form-control" id="advancedPassAttempted" name="passes_attempted" min="0" value="0">
+                        <label class="form-label" for="combinedMinutes">Minutes played</label>
+                        <input type="number" class="form-control" id="combinedMinutes" name="minutes_played" min="0" value="0">
                     </div>
                 </div>
-                <hr class="my-4">
+
+                <!-- Sport-Specific Stats (Dynamically generated based on league) -->
+                <div id="sportSpecificSection" class="d-none">
+                    <h6 class="mb-3"><i class="ph ph-trophy me-2"></i>Sport-Specific Statistics</h6>
+                    <div id="sportSpecificStatsContainer" class="row g-3 mb-4">
+                        <!-- Will be populated by JavaScript based on sport -->
+                    </div>
+                </div>
+
+                <!-- Legacy Stats (Keep for backward compatibility) -->
+                <div class="collapse" id="legacyStatsSection">
+                    <h6 class="mb-3"><i class="ph ph-archive me-2"></i>Additional Stats</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label" for="combinedShotsOnTarget">Shots on target</label>
+                            <input type="number" class="form-control" id="combinedShotsOnTarget" name="shots_on_target" min="0" value="0">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="combinedShotAttempts">Total shot attempts</label>
+                            <input type="number" class="form-control" id="combinedShotAttempts" name="shot_attempts" min="0" value="0">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="combinedSaves">Saves / blocks</label>
+                            <input type="number" class="form-control" id="combinedSaves" name="saves" min="0" value="0">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="combinedPassCompleted">Passes completed</label>
+                            <input type="number" class="form-control" id="combinedPassCompleted" name="passes_completed" min="0" value="0">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="combinedPassAttempted">Passes attempted</label>
+                            <input type="number" class="form-control" id="combinedPassAttempted" name="passes_attempted" min="0" value="0">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custom Metrics -->
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="mb-0">Custom Metrics</h6>
-                    <button type="button" class="btn btn-sm btn-outline-primary" id="addCustomMetricBtn"><i class="ph ph-plus me-1"></i>Add Metric</button>
+                    <h6 class="mb-0"><i class="ph ph-plus-circle me-2"></i>Custom Statistics</h6>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="addCustomMetricBtn">
+                        <i class="ph ph-plus me-1"></i>Add Custom Stat
+                    </button>
                 </div>
-                <div id="customMetricsContainer" class="d-flex flex-column gap-2"></div>
+                <small class="text-muted d-block mb-2">Add any additional statistics not listed above</small>
+                <div id="customMetricsContainer" class="d-flex flex-column gap-2 mb-3"></div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" class="btn btn-primary">Save Analytics</button>
+                <button type="submit" class="btn btn-primary">Save Statistics</button>
             </div>
         </form>
     </div>
@@ -454,8 +482,9 @@
 <script>
 const leaderboardData = {{ leaderboard|tojson }};
 const advancedMetricsMap = {{ advanced_metrics_map|tojson }};
+const sportConfigs = {{ sport_configs|tojson }};
+const leagues = {{ leagues|tojson }};
 const basicModal = new bootstrap.Modal(document.getElementById('basicStatsModal'));
-const advancedModal = new bootstrap.Modal(document.getElementById('advancedStatsModal'));
 const deleteModal = new bootstrap.Modal(document.getElementById('deleteScorerModal'));
 
 function findLeaderboardEntry(scorerId){
@@ -463,26 +492,57 @@ function findLeaderboardEntry(scorerId){
 }
 
 function openBasicModal(scorerId){
-    const form = document.getElementById('basicStatsForm');
+    const form = document.getElementById('combinedStatsForm');
     form.reset();
     document.getElementById('basicScorerId').value = scorerId || '';
     const title = document.getElementById('basicModalTitle');
+
     if (scorerId){
         const entry = findLeaderboardEntry(scorerId);
+        const metrics = advancedMetricsMap[String(scorerId)] || {};
+
         if (!entry){
             console.warn('Entry not found for scorer', scorerId);
         } else {
+            // Basic Info
             document.getElementById('basicPlayer').value = entry.player_id;
             document.getElementById('basicSeason').value = entry.season_id;
             document.getElementById('basicLeague').value = entry.league_id;
+
+            // Basic Stats
             document.getElementById('basicGoals').value = entry.goals;
             document.getElementById('basicAssists').value = entry.assists;
             document.getElementById('basicPenalties').value = entry.penalties;
+
+            // Advanced Stats
+            document.getElementById('combinedRating').value = metrics.rating ?? '';
+            document.getElementById('combinedGames').value = metrics.games_played || 0;
+            document.getElementById('combinedMinutes').value = metrics.minutes_played || 0;
+
+            // Legacy Stats
+            document.getElementById('combinedShotsOnTarget').value = metrics.shots_on_target || 0;
+            document.getElementById('combinedShotAttempts').value = metrics.shot_attempts || 0;
+            document.getElementById('combinedSaves').value = metrics.saves || 0;
+            document.getElementById('combinedPassCompleted').value = metrics.passes_completed || 0;
+            document.getElementById('combinedPassAttempted').value = metrics.passes_attempted || 0;
+
+            // Generate sport-specific stats
+            const leagueId = entry.league_id;
+            if (leagueId && sportConfigs[leagueId]) {
+                generateSportSpecificStats(leagueId, metrics.custom_metrics || {});
+            }
+
+            // Populate custom metrics
+            populateCustomMetrics(metrics.custom_metrics || {});
         }
         title.textContent = 'Edit Player Statistics';
     } else {
         title.textContent = 'Add Player Statistics';
+        populateCustomMetrics({});
     }
+
+    // Trigger league change to show sport-specific fields
+    onLeagueChange();
     basicModal.show();
 }
 
@@ -511,22 +571,72 @@ function populateCustomMetrics(metrics){
     }
 }
 
-function openAdvancedModal(scorerId){
-    const metrics = advancedMetricsMap[String(scorerId)] || {};
-    document.getElementById('advancedScorerId').value = scorerId;
-    document.getElementById('advancedGames').value = metrics.games_played || 0;
-    document.getElementById('advancedMinutes').value = metrics.minutes_played || 0;
-    document.getElementById('advancedRating').value = metrics.rating ?? '';
-    document.getElementById('advancedShotsOnTarget').value = metrics.shots_on_target || 0;
-    document.getElementById('advancedShotAttempts').value = metrics.shot_attempts || 0;
-    document.getElementById('advancedSaves').value = metrics.saves || 0;
-    document.getElementById('advancedPassCompleted').value = metrics.passes_completed || 0;
-    document.getElementById('advancedPassAttempted').value = metrics.passes_attempted || 0;
-    populateCustomMetrics(metrics.custom_metrics || {});
-    const entry = findLeaderboardEntry(scorerId);
-    const title = document.getElementById('advancedModalTitle');
-    title.textContent = entry ? `Advanced Analytics ? ${entry.player_name}` : 'Advanced Analytics';
-    advancedModal.show();
+function onLeagueChange() {
+    const leagueSelect = document.getElementById('basicLeague');
+    const leagueId = leagueSelect.value;
+    const sportSection = document.getElementById('sportSpecificSection');
+    const sportHelp = document.getElementById('basicSportHelp');
+    const sportNameSpan = document.getElementById('basicSportName');
+
+    if (!leagueId || !sportConfigs[leagueId]) {
+        sportSection.classList.add('d-none');
+        sportHelp.classList.add('d-none');
+        return;
+    }
+
+    const config = sportConfigs[leagueId];
+
+    // Update sport help banner
+    sportNameSpan.textContent = config.display_name;
+    sportHelp.classList.remove('d-none');
+
+    // Generate sport-specific stat fields
+    generateSportSpecificStats(leagueId, {});
+
+    // Show the section
+    sportSection.classList.remove('d-none');
+}
+
+function generateSportSpecificStats(leagueId, existingStats) {
+    const config = sportConfigs[leagueId];
+    if (!config) return;
+
+    const container = document.getElementById('sportSpecificStatsContainer');
+    const sportSection = document.getElementById('sportSpecificSection');
+
+    // Clear container
+    container.innerHTML = '';
+
+    // Generate fields for each stat in the sport config (skip the first 3 which are covered by basic stats)
+    const statsToShow = config.player_stats.slice(3); // Skip goals/points, assists, penalties which are in basic
+
+    if (statsToShow.length > 0) {
+        statsToShow.forEach(stat => {
+            const col = document.createElement('div');
+            col.className = 'col-md-4';
+
+            const label = document.createElement('label');
+            label.className = 'form-label';
+            label.innerHTML = `${stat.label} <span class="badge bg-secondary-subtle text-secondary-emphasis">${stat.abbr}</span>`;
+
+            const input = document.createElement('input');
+            input.type = stat.type === 'float' ? 'number' : 'number';
+            input.step = stat.type === 'float' ? '0.01' : '1';
+            input.className = 'form-control';
+            input.name = `sport_stat_${stat.key}`;
+            input.id = `sportStat_${stat.key}`;
+            input.min = '0';
+            input.value = existingStats[stat.key] || 0;
+
+            col.appendChild(label);
+            col.appendChild(input);
+            container.appendChild(col);
+        });
+
+        sportSection.classList.remove('d-none');
+    } else {
+        sportSection.classList.add('d-none');
+    }
 }
 
 function confirmDelete(scorerId, name){
@@ -536,18 +646,31 @@ function confirmDelete(scorerId, name){
 }
 
 function serializeCustomMetrics(){
-    const rows = document.querySelectorAll('#customMetricsContainer [data-metric-name]');
     const payload = {};
+
+    // Collect sport-specific stats
+    const sportStatInputs = document.querySelectorAll('[name^="sport_stat_"]');
+    sportStatInputs.forEach(input => {
+        const statKey = input.name.replace('sport_stat_', '');
+        const value = input.value.trim();
+        if (value && value !== '0') {
+            payload[statKey] = value;
+        }
+    });
+
+    // Collect additional custom metrics
+    const rows = document.querySelectorAll('#customMetricsContainer [data-metric-name]');
     rows.forEach(row => {
         const name = row.value.trim();
         const valueInput = row.parentElement.querySelector('[data-metric-value]');
         const value = valueInput.value.trim();
         if (name){ payload[name] = value; }
     });
-    document.getElementById('advancedCustomMetrics').value = JSON.stringify(payload);
+
+    document.getElementById('combinedCustomMetrics').value = JSON.stringify(payload);
 }
 
-document.getElementById('advancedStatsForm').addEventListener('submit', serializeCustomMetrics);
+document.getElementById('combinedStatsForm').addEventListener('submit', serializeCustomMetrics);
 document.getElementById('addCustomMetricBtn').addEventListener('click', () => addCustomMetricRow());
 
 function applyLeaderboardFilters(){
@@ -678,6 +801,79 @@ document.querySelectorAll('.sortable-header').forEach(header => {
         const column = header.dataset.sort;
         sortTable(column);
     });
+});
+
+// Sport-specific functionality
+function updateSportIndicator(leagueId) {
+    const league = leagues.find(l => l.id == leagueId);
+    if (!league || !sportConfigs[leagueId]) {
+        document.getElementById('sportIndicator').classList.add('d-none');
+        return;
+    }
+
+    const config = sportConfigs[leagueId];
+    const sportName = config.display_name || league.sport;
+    const primaryStats = config.player_stats.slice(0, 5).map(s => s.label).join(', ');
+
+    document.getElementById('sportName').textContent = sportName;
+    document.getElementById('sportPrimaryStats').textContent = primaryStats + '...';
+    document.getElementById('sportIndicator').classList.remove('d-none');
+}
+
+function updateBasicModalSportInfo(leagueId) {
+    const league = leagues.find(l => l.id == leagueId);
+    if (!league || !sportConfigs[leagueId]) {
+        document.getElementById('basicSportHelp').classList.add('d-none');
+        document.getElementById('basicGoalsLabel').textContent = 'Goals';
+        return;
+    }
+
+    const config = sportConfigs[leagueId];
+    const sportName = config.display_name || league.sport;
+
+    // Update sport name
+    document.getElementById('basicSportName').textContent = sportName;
+
+    // List primary stats
+    const statsList = config.player_stats.slice(0, 8).map(s =>
+        `<span class="badge bg-primary-subtle text-primary me-1 mb-1">${s.label} (${s.abbr})</span>`
+    ).join('');
+    document.getElementById('basicSportStatsList').innerHTML = statsList;
+
+    // Update "Goals" label based on sport
+    const primaryStat = config.scoring_type;
+    if (primaryStat === 'points') {
+        document.getElementById('basicGoalsLabel').textContent = 'Points';
+    } else if (primaryStat === 'runs') {
+        document.getElementById('basicGoalsLabel').textContent = 'Runs';
+    } else if (primaryStat === 'kills') {
+        document.getElementById('basicGoalsLabel').textContent = 'Kills';
+    } else if (primaryStat === 'tries') {
+        document.getElementById('basicGoalsLabel').textContent = 'Tries';
+    } else {
+        document.getElementById('basicGoalsLabel').textContent = 'Goals';
+    }
+
+    document.getElementById('basicSportHelp').classList.remove('d-none');
+}
+
+// Event listeners for sport-aware UI
+document.getElementById('filterLeague').addEventListener('change', function() {
+    const leagueId = this.value;
+    if (leagueId) {
+        updateSportIndicator(leagueId);
+    } else {
+        document.getElementById('sportIndicator').classList.add('d-none');
+    }
+});
+
+document.getElementById('basicLeague').addEventListener('change', function() {
+    const leagueId = this.value;
+    if (leagueId) {
+        updateBasicModalSportInfo(leagueId);
+    } else {
+        document.getElementById('basicSportHelp').classList.add('d-none');
+    }
 });
 </script>
 {% endblock %}
