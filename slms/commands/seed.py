@@ -8,8 +8,10 @@ import random
 from slms.extensions import db
 from slms.models import (
     Organization, User, UserRole, League, SportType, Season,
-    Team, Player, Venue, Game, GameStatus, Registration
+    Team, Player, Venue, Game, GameStatus, Registration, Transaction
 )
+from sqlalchemy import text as _text
+import json
 
 
 @click.group('seed')
@@ -221,6 +223,81 @@ def seed_demo(org, teams, players_per_team, venues, games):
         # Skip registration creation for now due to schema issues
         click.echo('Skipping registrations due to database schema mismatch...')
         registration_count = 0
+
+        # Finance: sample transactions (portable across Postgres & SQLite)
+        click.echo('Creating sample finance transactions...')
+        txns = [
+            Transaction(
+                org_id=organization.id,
+                transaction_date=date.today() - timedelta(days=7),
+                category='registration_fee',
+                description='Team registration fee',
+                amount=50000,
+                payment_method='credit_card'
+            ),
+            Transaction(
+                org_id=organization.id,
+                transaction_date=date.today() - timedelta(days=5),
+                category='venue_rental',
+                description='Gym rental',
+                amount=-15000,
+                payment_method='bank_transfer'
+            ),
+            Transaction(
+                org_id=organization.id,
+                transaction_date=date.today() - timedelta(days=2),
+                category='sponsorship',
+                description='Local sponsor payment',
+                amount=20000,
+                payment_method='check'
+            ),
+        ]
+        db.session.add_all(txns)
+        db.session.flush()
+
+        # Ticker: settings and items
+        click.echo('Creating sample ticker settings and items...')
+        dialect = db.engine.dialect.name
+        is_pg = dialect == 'postgresql'
+        theme = {"bg": "#0b0d12", "fg": "#ffffff", "accent": "#ffc107", "height": 40, "speed": 55, "showLogos": True, "showStatus": True}
+        source = {"mode": "manual", "externalUrl": None, "competitionIds": []}
+        if is_pg:
+            db.session.execute(
+                _text("INSERT INTO ticker_settings (league_id, enabled, theme, source) VALUES (:league_id, :enabled, CAST(:theme AS JSONB), CAST(:source AS JSONB)) ON CONFLICT (league_id) DO UPDATE SET enabled=EXCLUDED.enabled, theme=EXCLUDED.theme, source=EXCLUDED.source, updated_at=now()"),
+                {'league_id': league.id, 'enabled': True, 'theme': json.dumps(theme), 'source': json.dumps(source)}
+            )
+        else:
+            db.session.execute(
+                _text("INSERT OR REPLACE INTO ticker_settings (id, league_id, enabled, theme, source, updated_at) VALUES (COALESCE((SELECT id FROM ticker_settings WHERE league_id = :league_id), NULL), :league_id, :enabled, :theme, :source, CURRENT_TIMESTAMP)"),
+                {'league_id': league.id, 'enabled': True, 'theme': json.dumps(theme), 'source': json.dumps(source)}
+            )
+        recent_games = (
+            db.session.query(Game)
+            .filter_by(org_id=organization.id)
+            .order_by(Game.start_time.desc())
+            .limit(5)
+            .all()
+        )
+        for gm in recent_games:
+            params = {
+                'league_id': league.id,
+                'start_time': gm.start_time,
+                'status': gm.status.value if hasattr(gm.status, 'value') else str(gm.status),
+                'home_name': db.session.query(Team).get(gm.home_team_id).name if gm.home_team_id else None,
+                'away_name': db.session.query(Team).get(gm.away_team_id).name if gm.away_team_id else None,
+                'home_score': gm.home_score,
+                'away_score': gm.away_score,
+                'home_logo': None,
+                'away_logo': None,
+                'venue': db.session.query(Venue).get(gm.venue_id).name if gm.venue_id else None,
+                'link_url': None,
+                'sort_key': gm.start_time,
+            }
+            db.session.execute(
+                _text("INSERT INTO ticker_items (league_id, start_time, status, home_name, away_name, home_score, away_score, home_logo, away_logo, venue, link_url, sort_key) VALUES (:league_id, :start_time, :status, :home_name, :away_name, :home_score, :away_score, :home_logo, :away_logo, :venue, :link_url, :sort_key)"),
+                params,
+            )
+        db.session.commit()
 
         click.echo(click.style('✓ Demo data seeded successfully!', fg='green'))
         click.echo()

@@ -11,70 +11,7 @@
     </div>
 
 
-<style>
-    .icon-picker-popover {
-        position: absolute;
-        z-index: 1055;
-        background: #ffffff;
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        border-radius: 0.75rem;
-        padding: 0;
-        display: none;
-        width: 480px;
-        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
-    }
-    .icon-picker-header {
-        background: #f8fafc;
-        padding: 0.75rem 1rem;
-        border-bottom: 1px solid #e2e8f0;
-        border-radius: 0.75rem 0.75rem 0 0;
-        font-weight: 600;
-        font-size: 0.9rem;
-        color: #374151;
-    }
-    .icon-picker-body {
-        padding: 0.75rem;
-    }
-    .icon-picker-grid {
-        display: grid;
-        grid-template-columns: repeat(6, 1fr);
-        gap: 0.3rem;
-        max-height: 400px;
-        overflow-y: auto;
-    }
-    .icon-picker-option {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 0.25rem;
-        border: 1px solid transparent;
-        border-radius: 0.5rem;
-        padding: 0.5rem;
-        font-size: 0.7rem;
-        background: #f8fafc;
-        text-align: center;
-        min-height: 60px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-    .icon-picker-option i {
-        font-size: 1.2rem;
-        color: #6366f1;
-    }
-    .icon-picker-option span {
-        font-weight: 500;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 100%;
-    }
-    .icon-picker-option:hover,
-    .icon-picker-option:focus {
-        background: #e2e8f0;
-        border-color: #cbd5f5;
-    }
-</style>
+
 
 <form method="POST" action="{{ url_for('admin.manage_navigation') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -175,6 +112,8 @@
 {% endblock %}
 
 {% block extra_js %}
+<script type="application/json" id="icon-choices-data">{{ icon_choices|tojson|safe }}</script>
+
 <script>
 (function () {
     const tableBody = document.querySelector('#nav-table tbody');
@@ -185,84 +124,13 @@
 
     let nextIndex = tableBody.querySelectorAll('tr').length;
 
-    const ICON_CHOICES = [
-        // Sports & Games
-        { value: 'ph ph-football', label: 'Football' },
-        { value: 'ph ph-soccer-ball', label: 'Soccer' },
-        { value: 'ph ph-basketball', label: 'Basketball' },
-        { value: 'ph ph-baseball', label: 'Baseball' },
-        { value: 'ph ph-tennis-ball', label: 'Tennis' },
-        { value: 'ph ph-volleyball', label: 'Volleyball' },
-        { value: 'ph ph-golf', label: 'Golf' },
-        { value: 'ph ph-cricket', label: 'Cricket' },
-        { value: 'ph ph-hockey', label: 'Hockey' },
-        { value: 'ph ph-boxing-glove', label: 'Boxing' },
-        { value: 'ph ph-bowling-ball', label: 'Bowling' },
-        { value: 'ph ph-court-basketball', label: 'Court' },
-        { value: 'ph ph-tennis-racket', label: 'Racket' },
-
-        // Management & League
-        { value: 'ph ph-trophy', label: 'Trophy' },
-        { value: 'ph ph-medal', label: 'Medal' },
-        { value: 'ph ph-flag', label: 'Flag' },
-        { value: 'ph ph-crown', label: 'Crown' },
-        { value: 'ph ph-shield', label: 'Shield' },
-        { value: 'ph ph-speedometer', label: 'Dashboard' },
-        { value: 'ph ph-clipboard', label: 'Clipboard' },
-        { value: 'ph ph-calendar-dots', label: 'Schedule' },
-        { value: 'ph ph-clock', label: 'Time' },
-        { value: 'ph ph-chart-line', label: 'Stats' },
-        { value: 'ph ph-chart-bar', label: 'Charts' },
-        { value: 'ph ph-ranking', label: 'Rankings' },
-
-        // Navigation & Interface
-        { value: 'ph ph-house', label: 'Home' },
-        { value: 'ph ph-squares-four', label: 'Dashboard' },
-        { value: 'ph ph-dots-nine', label: 'Grid' },
-        { value: 'ph ph-compass', label: 'Navigate' },
-        { value: 'ph ph-map-pin', label: 'Location' },
-        { value: 'ph ph-info', label: 'Info' },
-        { value: 'ph ph-question', label: 'Help' },
-        { value: 'ph ph-gear-six', label: 'Settings' },
-        { value: 'ph ph-bell', label: 'Alerts' },
-        { value: 'ph ph-envelope', label: 'Messages' },
-
-        // People & Teams
-        { value: 'ph ph-user', label: 'User' },
-        { value: 'ph ph-users-three', label: 'Team' },
-        { value: 'ph ph-identification-badge', label: 'Badge' },
-        { value: 'ph ph-handshake', label: 'Partners' },
-        { value: 'ph ph-user-circle', label: 'Profile' },
-        { value: 'ph ph-address-book', label: 'Contacts' },
-
-        // Business & Organization
-        { value: 'ph ph-building-office', label: 'Office' },
-        { value: 'ph ph-bank', label: 'Finance' },
-        { value: 'ph ph-coins', label: 'Fees' },
-        { value: 'ph ph-credit-card', label: 'Payment' },
-        { value: 'ph ph-receipt', label: 'Receipt' },
-        { value: 'ph ph-invoice', label: 'Invoice' },
-
-        // Communication & Social
-        { value: 'ph ph-facebook-logo', label: 'Facebook' },
-        { value: 'ph ph-instagram-logo', label: 'Instagram' },
-        { value: 'ph ph-x-logo', label: 'X/Twitter' },
-        { value: 'ph ph-youtube-logo', label: 'YouTube' },
-        { value: 'ph ph-tiktok-logo', label: 'TikTok' },
-        { value: 'ph ph-phone', label: 'Phone' },
-
-        // General
-        { value: 'ph ph-star', label: 'Star' },
-        { value: 'ph ph-lightning', label: 'Lightning' },
-        { value: 'ph ph-fire', label: 'Fire' },
-        { value: 'ph ph-heart', label: 'Heart' },
-        { value: 'ph ph-thumbs-up', label: 'Like' },
-        { value: 'ph ph-download', label: 'Download' },
-        { value: 'ph ph-upload', label: 'Upload' },
-        { value: 'ph ph-link', label: 'Link' },
-        { value: 'ph ph-globe', label: 'Web' },
-        { value: 'ph ph-archive', label: 'Archive' }
-    ];
+    let iconChoices = [];
+    const iconChoicesNode = document.getElementById('icon-choices-data');
+    try {
+        iconChoices = JSON.parse(iconChoicesNode?.textContent || '[]');
+    } catch (error) {
+        iconChoices = [];
+    }
 
     let iconPopover = null;
     let iconPopoverTarget = null;
@@ -280,7 +148,7 @@
 
         const grid = document.createElement('div');
         grid.className = 'icon-picker-grid';
-        ICON_CHOICES.forEach(({ value, label }) => {
+        iconChoices.forEach(({ value, label }) => {
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'icon-picker-option';

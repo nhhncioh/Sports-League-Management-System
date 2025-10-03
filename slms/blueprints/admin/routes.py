@@ -30,6 +30,11 @@ from slms.services.site import (
     default_cta_slots,
     merge_theme_cta_slots,
     normalize_cta_slots,
+    ensure_theme_footer,
+    normalize_footer_config,
+    FOOTER_ALLOWED_STYLES,
+    FOOTER_MAX_COLUMNS,
+    FOOTER_MAX_LINKS_PER_COLUMN,
 )
 from slms.services.media_library import (
     create_media_asset,
@@ -53,6 +58,72 @@ def _default_homepage_config():
 
 
 AVERAGE_MATCH_REVENUE_USD = 7500  # fallback estimate when transaction data is unavailable
+
+ICON_PICKER_CHOICES = [
+    {"value": "ph ph-football", "label": "Football"},
+    {"value": "ph ph-soccer-ball", "label": "Soccer"},
+    {"value": "ph ph-basketball", "label": "Basketball"},
+    {"value": "ph ph-baseball", "label": "Baseball"},
+    {"value": "ph ph-tennis-ball", "label": "Tennis"},
+    {"value": "ph ph-volleyball", "label": "Volleyball"},
+    {"value": "ph ph-golf", "label": "Golf"},
+    {"value": "ph ph-cricket", "label": "Cricket"},
+    {"value": "ph ph-hockey", "label": "Hockey"},
+    {"value": "ph ph-boxing-glove", "label": "Boxing"},
+    {"value": "ph ph-bowling-ball", "label": "Bowling"},
+    {"value": "ph ph-court-basketball", "label": "Court"},
+    {"value": "ph ph-tennis-racket", "label": "Racket"},
+    {"value": "ph ph-trophy", "label": "Trophy"},
+    {"value": "ph ph-medal", "label": "Medal"},
+    {"value": "ph ph-flag", "label": "Flag"},
+    {"value": "ph ph-crown", "label": "Crown"},
+    {"value": "ph ph-shield", "label": "Shield"},
+    {"value": "ph ph-speedometer", "label": "Dashboard"},
+    {"value": "ph ph-clipboard", "label": "Clipboard"},
+    {"value": "ph ph-calendar-dots", "label": "Schedule"},
+    {"value": "ph ph-clock", "label": "Time"},
+    {"value": "ph ph-chart-line", "label": "Stats"},
+    {"value": "ph ph-chart-bar", "label": "Charts"},
+    {"value": "ph ph-ranking", "label": "Rankings"},
+    {"value": "ph ph-house", "label": "Home"},
+    {"value": "ph ph-squares-four", "label": "Dashboard"},
+    {"value": "ph ph-dots-nine", "label": "Grid"},
+    {"value": "ph ph-compass", "label": "Navigate"},
+    {"value": "ph ph-map-pin", "label": "Location"},
+    {"value": "ph ph-info", "label": "Info"},
+    {"value": "ph ph-question", "label": "Help"},
+    {"value": "ph ph-gear-six", "label": "Settings"},
+    {"value": "ph ph-bell", "label": "Alerts"},
+    {"value": "ph ph-envelope", "label": "Messages"},
+    {"value": "ph ph-user", "label": "User"},
+    {"value": "ph ph-users-three", "label": "Team"},
+    {"value": "ph ph-identification-badge", "label": "Badge"},
+    {"value": "ph ph-handshake", "label": "Partners"},
+    {"value": "ph ph-user-circle", "label": "Profile"},
+    {"value": "ph ph-address-book", "label": "Contacts"},
+    {"value": "ph ph-building-office", "label": "Office"},
+    {"value": "ph ph-bank", "label": "Finance"},
+    {"value": "ph ph-coins", "label": "Fees"},
+    {"value": "ph ph-credit-card", "label": "Payment"},
+    {"value": "ph ph-receipt", "label": "Receipt"},
+    {"value": "ph ph-invoice", "label": "Invoice"},
+    {"value": "ph ph-facebook-logo", "label": "Facebook"},
+    {"value": "ph ph-instagram-logo", "label": "Instagram"},
+    {"value": "ph ph-x-logo", "label": "X/Twitter"},
+    {"value": "ph ph-youtube-logo", "label": "YouTube"},
+    {"value": "ph ph-tiktok-logo", "label": "TikTok"},
+    {"value": "ph ph-phone", "label": "Phone"},
+    {"value": "ph ph-star", "label": "Star"},
+    {"value": "ph ph-lightning", "label": "Lightning"},
+    {"value": "ph ph-fire", "label": "Fire"},
+    {"value": "ph ph-heart", "label": "Heart"},
+    {"value": "ph ph-thumbs-up", "label": "Like"},
+    {"value": "ph ph-download", "label": "Download"},
+    {"value": "ph ph-upload", "label": "Upload"},
+    {"value": "ph ph-link", "label": "Link"},
+    {"value": "ph ph-globe", "label": "Web"},
+    {"value": "ph ph-archive", "label": "Archive"},
+]
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -1664,6 +1735,67 @@ def manage_navigation():
         nav_layout=current_layout,
         layout_choices=NAV_LAYOUT_CHOICES,
         audience_choices=NAV_AUDIENCE_CHOICES,
+        icon_choices=ICON_PICKER_CHOICES,
+    )
+
+
+@admin_bp.route('/manage_footer', methods=['GET', 'POST'])
+@admin_required
+def manage_footer():
+    settings = _load_site_settings()
+    theme_payload = copy.deepcopy(settings.get('theme', DEFAULT_THEME_CONFIG))
+    footer_config = ensure_theme_footer(theme_payload)
+    feature_flags = copy.deepcopy(settings.get('feature_flags', {}))
+    cta_slots = normalize_cta_slots(settings.get('cta_slots') or theme_payload.get('cta_slots'))
+
+    if request.method == 'POST':
+        raw_payload = request.form.get('footer_payload') or '{}'
+        try:
+            payload_data = json.loads(raw_payload)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            flash('Footer configuration could not be parsed. Please try again.', 'error')
+            return redirect(url_for('admin.manage_footer'))
+
+        normalized_footer = normalize_footer_config(payload_data)
+        show_social = bool(request.form.get('show_footer_social'))
+        feature_flags['show_footer_social'] = show_social
+
+        cta_updates = {}
+        for slot_key in ('footer_primary', 'footer_secondary'):
+            prefix = f"{slot_key}_"
+            cta_updates[slot_key] = {
+                'label': request.form.get(prefix + 'label'),
+                'url': request.form.get(prefix + 'url'),
+                'style': request.form.get(prefix + 'style'),
+                'icon': request.form.get(prefix + 'icon'),
+                'enabled': bool(request.form.get(prefix + 'enabled')),
+                'new_tab': bool(request.form.get(prefix + 'new_tab')),
+            }
+        merge_theme_cta_slots(theme_payload, cta_updates)
+        theme_payload['footer'] = normalized_footer
+
+        try:
+            apply_site_payload({
+                'theme': theme_payload,
+                'feature_flags': feature_flags,
+            })
+            flash('Footer updated successfully.', 'success')
+        except Exception as exc:
+            flash('Failed to update footer: ' + str(exc), 'error')
+        return redirect(url_for('admin.manage_footer'))
+
+    footer_styles = sorted(FOOTER_ALLOWED_STYLES)
+    show_social_flag = feature_flags.get('show_footer_social', True)
+
+    return render_template(
+        'manage_footer.html',
+        footer_config=footer_config,
+        footer_styles=footer_styles,
+        icon_choices=ICON_PICKER_CHOICES,
+        cta_slots=cta_slots,
+        show_footer_social=show_social_flag,
+        max_columns=FOOTER_MAX_COLUMNS,
+        max_links=FOOTER_MAX_LINKS_PER_COLUMN,
     )
 
 
@@ -5722,6 +5854,73 @@ def data_management():
 def automation_integrations():
     """Automation and integrations management page."""
     return render_template('automation_integrations.html')
+
+
+@admin_bp.route('/manage_branding')
+@login_required
+@admin_required
+@tenant_required
+def manage_branding():
+    """Organization branding and landing page management."""
+    from slms.services.domain_loader import (
+        get_org_hero_config,
+        get_org_modules,
+        get_footer_cta
+    )
+
+    org = g.org if hasattr(g, 'org') and g.org else None
+
+    hero = get_org_hero_config(org)
+    modules = get_org_modules(org)
+    footer_cta = get_footer_cta(org)
+
+    return render_template('manage_branding.html',
+                         hero=hero,
+                         modules=modules,
+                         footer_cta=footer_cta)
+
+
+@admin_bp.route('/api/branding/save', methods=['POST'])
+@login_required
+@admin_required
+@tenant_required
+def save_branding():
+    """Save branding configuration."""
+    try:
+        data = request.json
+        org = g.org if hasattr(g, 'org') and g.org else None
+
+        if not org:
+            return jsonify({'success': False, 'message': 'Organization not found'}), 404
+
+        # Update organization branding
+        if 'branding' in data:
+            if data['branding'].get('primary'):
+                org.primary_color = data['branding']['primary']
+            if data['branding'].get('secondary'):
+                org.secondary_color = data['branding']['secondary']
+            if data['branding'].get('logo'):
+                org.logo_url = data['branding']['logo']
+            if data['branding'].get('favicon'):
+                org.favicon_url = data['branding']['favicon']
+            if data['branding'].get('banner'):
+                org.banner_image_url = data['branding']['banner']
+
+        # Update custom domain
+        if 'custom_domain' in data and data['custom_domain']:
+            org.custom_domain = data['custom_domain'].lower().strip()
+
+        # Save hero and modules to site settings
+        # For now, we'll store in a JSON field or separate table
+        # This is a placeholder - implement proper storage based on your schema
+
+        db.session.commit()
+
+        return jsonify({'success': True, 'message': 'Branding saved successfully'})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 

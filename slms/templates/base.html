@@ -338,6 +338,112 @@
 {% set body_content %}
     {% block content %}{% endblock %}
 {% endset %}
+{% macro render_global_footer(footer, ctas, feature_flags, social_links, social_labels, brand_name, fallback_tagline) %}
+    {% set footer = footer or {} %}
+    {% set columns = footer.get('columns') if footer else [] %}
+    {% set tagline = footer.get('tagline') if footer else '' %}
+    {% if not tagline and fallback_tagline %}
+        {% set tagline = fallback_tagline %}
+    {% endif %}
+    {% set legal_text = footer.get('legal') if footer else '' %}
+    {% if not legal_text %}
+        {% set legal_text = '? ' ~ brand_name %}
+    {% endif %}
+    {% set show_social = footer.get('show_social') if footer else None %}
+    {% if show_social is none %}
+        {% set show_social = feature_flags.get('show_footer_social', True) %}
+    {% endif %}
+    {% set cta_primary = ctas.get('footer_primary', {}) %}
+    {% set cta_secondary = ctas.get('footer_secondary', {}) %}
+    {% set cta_class_map = {
+        'primary': 'btn btn-lg btn-primary shadow-sm',
+        'secondary': 'btn btn-lg btn-secondary shadow-sm',
+        'outline': 'btn btn-lg btn-outline-light',
+        'ghost': 'btn btn-lg btn-outline-light opacity-75',
+        'link': 'btn btn-lg btn-link text-white'
+    } %}
+    {% set social_icon_map = {
+        'facebook': 'ph ph-facebook-logo',
+        'instagram': 'ph ph-instagram-logo',
+        'twitter': 'ph ph-x-logo',
+        'x': 'ph ph-x-logo',
+        'youtube': 'ph ph-youtube-logo',
+        'tiktok': 'ph ph-tiktok-logo',
+        'linkedin': 'ph ph-linkedin-logo',
+        'twitch': 'ph ph-twitch-logo',
+        'custom_1': 'ph ph-link',
+        'custom_2': 'ph ph-link'
+    } %}
+    <div class="footer-shell">
+        <div class="footer-top">
+            <div class="footer-brand">
+                <div class="footer-brand-title">
+                    <span class="badge text-bg-light text-dark">League</span>
+                    <span>{{ brand_name }}</span>
+                </div>
+                {% if tagline %}
+                    <p class="footer-tagline">{{ tagline }}</p>
+                {% endif %}
+            </div>
+            <div class="footer-actions">
+                {% if cta_primary.enabled %}
+                    <a class="{{ cta_class_map.get(cta_primary.style, cta_class_map['primary']) }}" href="{{ cta_primary.url }}" {% if cta_primary.new_tab %}target="_blank" rel="noopener"{% endif %}>
+                        {% if cta_primary.icon %}<i class="{{ cta_primary.icon }} me-2"></i>{% endif %}
+                        {{ cta_primary.label }}
+                    </a>
+                {% endif %}
+                {% if cta_secondary.enabled %}
+                    <a class="{{ cta_class_map.get(cta_secondary.style, cta_class_map['outline']) }}" href="{{ cta_secondary.url }}" {% if cta_secondary.new_tab %}target="_blank" rel="noopener"{% endif %}>
+                        {% if cta_secondary.icon %}<i class="{{ cta_secondary.icon }} me-2"></i>{% endif %}
+                        {{ cta_secondary.label }}
+                    </a>
+                {% endif %}
+                {% if not cta_primary.enabled and not cta_secondary.enabled %}
+                    <a class="{{ cta_class_map['primary'] }}" href="{{ url_for('portal.index') }}">Go to Portal</a>
+                {% endif %}
+            </div>
+        </div>
+        {% if columns %}
+            <div class="footer-columns">
+                {% for column in columns %}
+                    {% if column.links %}
+                        <div class="footer-column">
+                            <div class="footer-column-title">{{ column.title }}</div>
+                            <ul class="footer-link-list">
+                                {% for link in column.links %}
+                                    <li>
+                                        <a class="footer-link" href="{{ link.url }}" {% if link.open_in_new %}target="_blank" rel="noopener"{% endif %}>
+                                            {% if link.icon %}<i class="{{ link.icon }}"></i>{% endif %}
+                                            <span>{{ link.label }}</span>
+                                        </a>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% endif %}
+        <div class="footer-meta">
+            <div class="footer-legal">{{ legal_text }}</div>
+            {% if show_social and social_links %}
+                <div class="footer-social">
+                    {% set labels = social_labels or {} %}
+                    {% for key, url in social_links.items() %}
+                        {% if url %}
+                            {% set icon = social_icon_map.get(key, 'ph ph-globe') %}
+                            {% set label = labels.get(key, key.replace('_', ' ').title()) %}
+                            <a href="{{ url }}" target="_blank" rel="noopener" aria-label="{{ label }}">
+                                <i class="{{ icon }}"></i>
+                            </a>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endmacro %}
+
 <body class="app-shell d-flex flex-column min-vh-100 bg-surface text-body{% if nav_layout == 'sidebar' %} layout-sidebar{% endif %}{% if components.use_gradients %} theme-gradients{% endif %} nav-style-{{ nav_style }} button-style-{{ button_style }} density-{{ components.layout_density or 'comfortable' }}{% if components.section_dividers %} has-section-dividers{% endif %}{% if feature_flags.enable_dark_mode %} has-dark-toggle{% endif %}">
     {% if nav_layout == 'sidebar' %}
     <div class="sidebar-wrapper d-flex flex-column flex-lg-row flex-grow-1">
@@ -409,12 +515,8 @@
                 </div>
             </div>
             <footer class="footer-modern mt-auto">
-                <div class="container d-flex flex-column flex-lg-row justify-content-between align-items-center gap-3">
-                    <div class="text-muted small">Powered by Sports League Management System</div>
-                    <div class="d-flex gap-3">
-                        <a class="text-muted" href="{{ url_for('public.about') }}">About</a>
-                        <a class="text-muted" href="{{ url_for('portal.index') }}">Portal</a>
-                    </div>
+                <div class="container">
+                    {{ render_global_footer(site_footer, site_cta_slots, feature_flags, (site_social_links or {}), theme.get('social_labels', {}), g.org.name if g.org else site_title, theme.get('hero_tagline') or theme.get('brand_message') or '') }}
                 </div>
             </footer>
         </div>
@@ -475,12 +577,8 @@
         </div>
     </div>
     <footer class="footer-modern mt-auto">
-        <div class="container d-flex flex-column flex-lg-row justify-content-between align-items-center gap-3">
-            <div class="text-muted small">Powered by Sports League Management System</div>
-            <div class="d-flex gap-3">
-                <a class="text-muted" href="{{ url_for('public.about') }}">About</a>
-                <a class="text-muted" href="{{ url_for('portal.index') }}">Portal</a>
-            </div>
+        <div class="container">
+            {{ render_global_footer(site_footer, site_cta_slots, feature_flags, (site_social_links or {}), theme.get('social_labels', {}), g.org.name if g.org else site_title, theme.get('hero_tagline') or theme.get('brand_message') or '') }}
         </div>
     </footer>
     {% endif %}

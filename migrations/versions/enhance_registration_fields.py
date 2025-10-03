@@ -19,6 +19,7 @@ depends_on = None
 def upgrade():
     # Check if columns exist before adding (some may exist from previous migrations)
     conn = op.get_bind()
+    dialect = conn.dialect.name
     inspector = sa.inspect(conn)
     existing_columns = [col['name'] for col in inspector.get_columns('registration')]
 
@@ -90,7 +91,7 @@ def upgrade():
 
     # Add foreign key for reviewed_by (check if it exists first)
     existing_fks = [fk['name'] for fk in inspector.get_foreign_keys('registration')]
-    if 'fk_registration_reviewed_by_user' not in existing_fks:
+    if dialect != 'sqlite' and 'fk_registration_reviewed_by_user' not in existing_fks:
         op.create_foreign_key(
             'fk_registration_reviewed_by_user',
             'registration',

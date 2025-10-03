@@ -635,6 +635,15 @@ def landing():
         if not org_slug:
             org_slug = session.get('org_slug')
         return redirect(url_for('public.home', org=org_slug) if org_slug else url_for('public.home'))
+
+    # Use org-branded landing if org is detected
+    if hasattr(g, 'org') and g.org:
+        return render_template('org_landing.html',
+                             hero=g.hero if hasattr(g, 'hero') else {},
+                             modules=g.modules if hasattr(g, 'modules') else [],
+                             stats=g.stats if hasattr(g, 'stats') else {},
+                             footer_cta=g.footer_cta if hasattr(g, 'footer_cta') else {})
+
     return render_template('landing.html')
 
 

@@ -17,37 +17,60 @@ depends_on = None
 
 
 def upgrade():
-    # Add new organization fields for multi-tenant features
-    op.add_column('organization', sa.Column('description', sa.Text(), nullable=True))
-    op.add_column('organization', sa.Column('contact_email', sa.String(length=255), nullable=True))
-    op.add_column('organization', sa.Column('contact_phone', sa.String(length=32), nullable=True))
-    op.add_column('organization', sa.Column('website_url', sa.String(length=512), nullable=True))
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    cols = {c['name'] for c in inspector.get_columns('organization')}
+
+    # Add new organization fields for multi-tenant features (guarded)
+    if 'description' not in cols:
+        op.add_column('organization', sa.Column('description', sa.Text(), nullable=True))
+    if 'contact_email' not in cols:
+        op.add_column('organization', sa.Column('contact_email', sa.String(length=255), nullable=True))
+    if 'contact_phone' not in cols:
+        op.add_column('organization', sa.Column('contact_phone', sa.String(length=32), nullable=True))
+    if 'website_url' not in cols:
+        op.add_column('organization', sa.Column('website_url', sa.String(length=512), nullable=True))
 
     # Branding fields
-    op.add_column('organization', sa.Column('secondary_color', sa.String(length=32), nullable=True))
-    op.add_column('organization', sa.Column('favicon_url', sa.String(length=512), nullable=True))
-    op.add_column('organization', sa.Column('banner_image_url', sa.String(length=512), nullable=True))
-    op.add_column('organization', sa.Column('custom_css', sa.Text(), nullable=True))
+    if 'secondary_color' not in cols:
+        op.add_column('organization', sa.Column('secondary_color', sa.String(length=32), nullable=True))
+    if 'favicon_url' not in cols:
+        op.add_column('organization', sa.Column('favicon_url', sa.String(length=512), nullable=True))
+    if 'banner_image_url' not in cols:
+        op.add_column('organization', sa.Column('banner_image_url', sa.String(length=512), nullable=True))
+    if 'custom_css' not in cols:
+        op.add_column('organization', sa.Column('custom_css', sa.Text(), nullable=True))
 
     # Settings
-    op.add_column('organization', sa.Column('timezone', sa.String(length=64), nullable=False, server_default='UTC'))
-    op.add_column('organization', sa.Column('locale', sa.String(length=10), nullable=False, server_default='en_US'))
-    op.add_column('organization', sa.Column('is_active', sa.Boolean(), nullable=False, server_default='true'))
+    if 'timezone' not in cols:
+        op.add_column('organization', sa.Column('timezone', sa.String(length=64), nullable=False, server_default='UTC'))
+    if 'locale' not in cols:
+        op.add_column('organization', sa.Column('locale', sa.String(length=10), nullable=False, server_default='en_US'))
+    if 'is_active' not in cols:
+        op.add_column('organization', sa.Column('is_active', sa.Boolean(), nullable=False, server_default='true'))
 
     # Custom domain
-    op.add_column('organization', sa.Column('custom_domain', sa.String(length=255), nullable=True))
+    if 'custom_domain' not in cols:
+        op.add_column('organization', sa.Column('custom_domain', sa.String(length=255), nullable=True))
 
     # Storage management
-    op.add_column('organization', sa.Column('storage_quota', sa.Integer(), nullable=True))
-    op.add_column('organization', sa.Column('storage_used', sa.Integer(), nullable=False, server_default='0'))
+    if 'storage_quota' not in cols:
+        op.add_column('organization', sa.Column('storage_quota', sa.Integer(), nullable=True))
+    if 'storage_used' not in cols:
+        op.add_column('organization', sa.Column('storage_used', sa.Integer(), nullable=False, server_default='0'))
 
     # Plan/subscription
-    op.add_column('organization', sa.Column('plan_type', sa.String(length=32), nullable=False, server_default='free'))
-    op.add_column('organization', sa.Column('plan_expires_at', sa.DateTime(timezone=True), nullable=True))
+    if 'plan_type' not in cols:
+        op.add_column('organization', sa.Column('plan_type', sa.String(length=32), nullable=False, server_default='free'))
+    if 'plan_expires_at' not in cols:
+        op.add_column('organization', sa.Column('plan_expires_at', sa.DateTime(timezone=True), nullable=True))
 
-    # Add indexes
-    op.create_index('ix_organization_slug', 'organization', ['slug'], unique=False)
-    op.create_index('ix_organization_custom_domain', 'organization', ['custom_domain'], unique=False)
+    # Add indexes if missing
+    idx = {i['name'] for i in inspector.get_indexes('organization')}
+    if 'ix_organization_slug' not in idx:
+        op.create_index('ix_organization_slug', 'organization', ['slug'], unique=False)
+    if 'ix_organization_custom_domain' not in idx:
+        op.create_index('ix_organization_custom_domain', 'organization', ['custom_domain'], unique=False)
 
 
 def downgrade():

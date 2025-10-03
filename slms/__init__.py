@@ -48,12 +48,13 @@ def create_app(config_class=Config):
     init_tenant(app)
 
     # Safety nets for development environments without migrations
-    try:
-        with app.app_context():
-            ensure_core_tables()
-            ensure_minimum_schema()
-    except Exception:
-        pass
+    if os.getenv('SLMS_SKIP_BOOTSTRAP', '0') != '1':
+        try:
+            with app.app_context():
+                ensure_core_tables()
+                ensure_minimum_schema()
+        except Exception:
+            pass
 
     # Configure security
     configure_security_headers(app)
@@ -99,13 +100,13 @@ def create_app(config_class=Config):
     def internal_error(error):
         return render_template('500.html'), 500
 
-    # Site settings context processor
-    from slms.services.site import inject_site_settings
-    app.context_processor(inject_site_settings)
+    # Site settings and branding processors (can be skipped for CLI/migrations)
+    if os.getenv('SLMS_SKIP_SITE', '0') != '1':
+        from slms.services.site import inject_site_settings
+        app.context_processor(inject_site_settings)
 
-    # Organization branding context processor
-    from slms.services.branding import inject_branding_context
-    app.context_processor(inject_branding_context)
+        from slms.services.branding import inject_branding_context
+        app.context_processor(inject_branding_context)
 
     # Register CLI commands
     from slms.commands import register_commands

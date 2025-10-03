@@ -1,0 +1,534 @@
+﻿{% extends "base.html" %}
+{% set footer_style_labels = {
+    'modern': 'Modern (default)',
+    'stacked': 'Stacked Columns',
+    'minimal': 'Minimal'
+} %}
+{% set cta_styles = [
+    ('primary', 'Primary (Brand)'),
+    ('secondary', 'Secondary'),
+    ('outline', 'Outline'),
+    ('ghost', 'Ghost'),
+    ('link', 'Link')
+] %}
+{% set footer_primary = cta_slots.get('footer_primary', {}) %}
+{% set footer_secondary = cta_slots.get('footer_secondary', {}) %}
+{% block title %}Footer Builder{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+        <div>
+            <h1 class="h3 mb-1">Footer Builder</h1>
+            <p class="text-muted mb-0">Design the footer layout, link columns, and call-to-action buttons displayed across the public site.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-outline-secondary"><i class="ph ph-arrow-left"></i> Back to Admin</a>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('admin.manage_footer') }}" id="footer-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="footer_payload" id="footer-payload">
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0 d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                <div>
+                    <h2 class="h6 mb-1">General Layout</h2>
+                    <p class="text-muted small mb-0">Control the footer style, tagline, and legal details.</p>
+                </div>
+            </div>
+            <div class="card-body border-top">
+                <div class="row g-4">
+                    <div class="col-lg-4">
+                        <label class="form-label" for="footer_style">Footer Style</label>
+                        <select class="form-select" id="footer_style" name="footer_style">
+                            {% for style in footer_styles %}
+                                <option value="{{ style }}" {% if footer_config.style == style %}selected{% endif %}>{{ footer_style_labels.get(style, style.replace('_', ' ').title()) }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-lg-8">
+                        <label class="form-label" for="footer_tagline">Footer Tagline</label>
+                        <input type="text" class="form-control" id="footer_tagline" name="footer_tagline" value="{{ footer_config.tagline }}" placeholder="Powered by the league family">
+                        <div class="form-text">Appears alongside the footer brand block.</div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="footer_legal">Legal / Copyright Text</label>
+                        <textarea class="form-control" id="footer_legal" name="footer_legal" rows="2">{{ footer_config.legal }}</textarea>
+                        <div class="form-text">Use <code>{year}</code> to automatically inject the current year.</div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="show_footer_social" name="show_footer_social" {% if show_footer_social %}checked{% endif %}>
+                            <label class="form-check-label" for="show_footer_social">Display social links row</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0">
+                <h2 class="h6 mb-1">Call-to-Action Buttons</h2>
+                <p class="text-muted small mb-0">Fine-tune the primary actions surfaced in the footer banner.</p>
+            </div>
+            <div class="card-body border-top">
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <div class="footer-cta-card h-100 border rounded-3 p-3">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <span class="badge text-bg-primary-subtle text-primary">Primary CTA</span>
+                                    <p class="text-muted small mb-0">Displayed most prominently on the footer banner.</p>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="footer_primary_enabled" name="footer_primary_enabled" {% if footer_primary.enabled %}checked{% endif %}>
+                                    <label class="form-check-label small" for="footer_primary_enabled">Enabled</label>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="footer_primary_label">Button label</label>
+                                <input type="text" class="form-control" id="footer_primary_label" name="footer_primary_label" value="{{ footer_primary.label }}" placeholder="Contact League Office">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="footer_primary_url">Destination</label>
+                                <input type="text" class="form-control" id="footer_primary_url" name="footer_primary_url" value="{{ footer_primary.url }}" placeholder="/contact">
+                                <div class="form-text">Supports relative paths, mailto:, tel:, or full URLs.</div>
+                            </div>
+                            <div class="row g-3 align-items-end">
+                                <div class="col-sm-7">
+                                    <label class="form-label" for="footer_primary_style">Button style</label>
+                                    <select class="form-select" id="footer_primary_style" name="footer_primary_style">
+                                        {% for value, label in cta_styles %}
+                                            <option value="{{ value }}" {% if footer_primary.style == value %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-sm-5">
+                                    <label class="form-label" for="footer_primary_icon">Icon (optional)</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control icon-input" id="footer_primary_icon" name="footer_primary_icon" value="{{ footer_primary.icon or '' }}" placeholder="ph ph-megaphone">
+                                        <button type="button" class="btn btn-outline-secondary icon-picker-btn" data-target-input="footer_primary_icon" title="Choose icon"><i class="ph ph-squares-four"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-check form-switch mt-3">
+                                <input class="form-check-input" type="checkbox" id="footer_primary_new_tab" name="footer_primary_new_tab" {% if footer_primary.new_tab %}checked{% endif %}>
+                                <label class="form-check-label" for="footer_primary_new_tab">Open in a new tab</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="footer-cta-card h-100 border rounded-3 p-3">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <span class="badge text-bg-secondary-subtle text-secondary">Secondary CTA</span>
+                                    <p class="text-muted small mb-0">Optional supporting action beside the primary button.</p>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="footer_secondary_enabled" name="footer_secondary_enabled" {% if footer_secondary.enabled %}checked{% endif %}>
+                                    <label class="form-check-label small" for="footer_secondary_enabled">Enabled</label>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="footer_secondary_label">Button label</label>
+                                <input type="text" class="form-control" id="footer_secondary_label" name="footer_secondary_label" value="{{ footer_secondary.label }}" placeholder="Download Schedule">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="footer_secondary_url">Destination</label>
+                                <input type="text" class="form-control" id="footer_secondary_url" name="footer_secondary_url" value="{{ footer_secondary.url }}" placeholder="/downloads/schedule.pdf">
+                            </div>
+                            <div class="row g-3 align-items-end">
+                                <div class="col-sm-7">
+                                    <label class="form-label" for="footer_secondary_style">Button style</label>
+                                    <select class="form-select" id="footer_secondary_style" name="footer_secondary_style">
+                                        {% for value, label in cta_styles %}
+                                            <option value="{{ value }}" {% if footer_secondary.style == value %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-sm-5">
+                                    <label class="form-label" for="footer_secondary_icon">Icon (optional)</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control icon-input" id="footer_secondary_icon" name="footer_secondary_icon" value="{{ footer_secondary.icon or '' }}" placeholder="ph ph-download">
+                                        <button type="button" class="btn btn-outline-secondary icon-picker-btn" data-target-input="footer_secondary_icon" title="Choose icon"><i class="ph ph-squares-four"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-check form-switch mt-3">
+                                <input class="form-check-input" type="checkbox" id="footer_secondary_new_tab" name="footer_secondary_new_tab" {% if footer_secondary.new_tab %}checked{% endif %}>
+                                <label class="form-check-label" for="footer_secondary_new_tab">Open in a new tab</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0 d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                <div>
+                    <h2 class="h6 mb-1">Footer Link Columns</h2>
+                    <p class="text-muted small mb-0">Arrange quick links into up to {{ max_columns }} columns. Each column can list up to {{ max_links }} links.</p>
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="add-column-btn"><i class="ph ph-plus"></i> Add Column</button>
+            </div>
+            <div class="card-body border-top">
+                <div id="footer-columns-wrapper" data-max-columns="{{ max_columns }}" data-max-links="{{ max_links }}">
+                    <div id="footer-empty-state" class="footer-empty-state text-center text-muted py-4 {% if footer_config.columns %}d-none{% endif %}">
+                        <i class="ph ph-columns fs-3 d-block mb-2"></i>
+                        <p class="mb-0">No link columns yet. Click <strong>Add Column</strong> to get started.</p>
+                    </div>
+                    <div id="footer-columns"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-3">
+            <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">Save Footer</button>
+        </div>
+    </form>
+</div>
+
+<script type="application/json" id="footer-config-data">{{ footer_config|tojson|safe }}</script>
+<script type="application/json" id="icon-choices-data">{{ icon_choices|tojson|safe }}</script>
+<script>
+(() => {
+    const form = document.getElementById('footer-form');
+    const payloadInput = document.getElementById('footer-payload');
+    const columnsWrapper = document.getElementById('footer-columns-wrapper');
+    const columnsContainer = document.getElementById('footer-columns');
+    const emptyState = document.getElementById('footer-empty-state');
+    const addColumnButton = document.getElementById('add-column-btn');
+    const footerConfigNode = document.getElementById('footer-config-data');
+    const iconChoicesNode = document.getElementById('icon-choices-data');
+
+    let footerState = {};
+    try {
+        footerState = JSON.parse(footerConfigNode?.textContent || '{}');
+    } catch (_) {
+        footerState = {};
+    }
+    const iconChoices = (() => {
+        try {
+            return JSON.parse(iconChoicesNode?.textContent || '[]');
+        } catch (_) {
+            return [];
+        }
+    })();
+
+    const maxColumns = parseInt(columnsWrapper?.dataset.maxColumns || '4', 10) || 4;
+    const maxLinks = parseInt(columnsWrapper?.dataset.maxLinks || '6', 10) || 6;
+
+    if (typeof footerState !== 'object' || footerState === null) {
+        footerState = {};
+    }
+    footerState.style = typeof footerState.style === 'string' && footerState.style ? footerState.style : 'modern';
+    footerState.tagline = typeof footerState.tagline === 'string' ? footerState.tagline : '';
+    footerState.legal = typeof footerState.legal === 'string' ? footerState.legal : '';
+    footerState.show_social = Boolean(footerState.show_social);
+    footerState.columns = Array.isArray(footerState.columns) ? footerState.columns : [];
+
+    const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+        };
+        return map[char] || char;
+    });
+
+    const createColumn = () => ({
+        id: `column-${Date.now()}`,
+        title: '',
+        links: [],
+    });
+
+    const createLink = () => ({
+        label: '',
+        url: '',
+        icon: '',
+        open_in_new: false,
+    });
+
+    const normalizeState = () => {
+        footerState.columns = footerState.columns.map((column, index) => {
+            const normalizedLinks = Array.isArray(column?.links)
+                ? column.links.map((link) => ({
+                    label: typeof link?.label === 'string' ? link.label : '',
+                    url: typeof link?.url === 'string' ? link.url : '',
+                    icon: typeof link?.icon === 'string' ? link.icon : '',
+                    open_in_new: Boolean(link?.open_in_new),
+                }))
+                : [];
+            return {
+                id: typeof column?.id === 'string' && column.id ? column.id : `column-${index + 1}`,
+                title: typeof column?.title === 'string' ? column.title : '',
+                links: normalizedLinks,
+            };
+        });
+    };
+
+    normalizeState();
+
+    let iconPopover = null;
+    let iconPopoverTarget = null;
+
+    const buildIconGrid = () => {
+        if (iconPopover) {
+            return iconPopover;
+        }
+        const wrapper = document.createElement('div');
+        wrapper.className = 'icon-picker-popover';
+        wrapper.innerHTML = `
+            <div class="icon-picker-header">Choose an Icon</div>
+            <div class="icon-picker-body">
+                <div class="icon-picker-grid"></div>
+            </div>
+        `;
+        const grid = wrapper.querySelector('.icon-picker-grid');
+        iconChoices.forEach(({ value, label }) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'icon-picker-option';
+            button.dataset.iconValue = value;
+            button.innerHTML = `<i class="${value}"></i><span>${escapeHtml(label)}</span>`;
+            grid.appendChild(button);
+        });
+        document.body.appendChild(wrapper);
+        iconPopover = wrapper;
+        return wrapper;
+    };
+
+    const openIconPopover = (button) => {
+        const popover = buildIconGrid();
+        iconPopoverTarget = button.getAttribute('data-target-input');
+        const rect = button.getBoundingClientRect();
+        popover.style.display = 'block';
+        popover.style.top = `${window.scrollY + rect.bottom + 6}px`;
+        popover.style.left = `${window.scrollX + rect.left}px`;
+    };
+
+    const closeIconPopover = () => {
+        if (iconPopover) {
+            iconPopover.style.display = 'none';
+        }
+        iconPopoverTarget = null;
+    };
+
+    const refreshAddColumnButton = () => {
+        if (!addColumnButton) {
+            return;
+        }
+        addColumnButton.disabled = footerState.columns.length >= maxColumns;
+    };
+
+    const renderColumns = () => {
+        if (!columnsContainer) {
+            return;
+        }
+        columnsContainer.innerHTML = '';
+        if (!footerState.columns.length) {
+            emptyState?.classList.remove('d-none');
+            refreshAddColumnButton();
+            return;
+        }
+        emptyState?.classList.add('d-none');
+        footerState.columns.forEach((column, columnIndex) => {
+            const card = document.createElement('div');
+            card.className = 'footer-column-card card border-0 shadow-sm mb-4';
+            card.dataset.columnIndex = columnIndex;
+            const linkCount = column.links.length;
+            const addDisabled = linkCount >= maxLinks ? 'disabled' : '';
+            const linksHtml = linkCount
+                ? column.links.map((link, linkIndex) => {
+                    const inputId = `footer-icon-${columnIndex}-${linkIndex}`;
+                    const iconValue = link.icon || '';
+                    const iconPreview = iconValue || 'ph ph-link';
+                    return `
+<div class="footer-link-row border rounded-3 p-3 mb-3" data-column-index="${columnIndex}" data-link-index="${linkIndex}">
+    <div class="row g-3 align-items-end">
+        <div class="col-lg-4">
+            <label class="form-label">Link label</label>
+            <input type="text" class="form-control" data-role="link-label" data-column-index="${columnIndex}" data-link-index="${linkIndex}" value="${escapeHtml(link.label)}" placeholder="e.g. About">
+        </div>
+        <div class="col-lg-4">
+            <label class="form-label">Destination</label>
+            <input type="text" class="form-control" data-role="link-url" data-column-index="${columnIndex}" data-link-index="${linkIndex}" value="${escapeHtml(link.url)}" placeholder="/about">
+        </div>
+        <div class="col-lg-3">
+            <label class="form-label">Icon</label>
+            <div class="input-group">
+                <input type="text" class="form-control icon-input" id="${inputId}" data-role="link-icon" data-column-index="${columnIndex}" data-link-index="${linkIndex}" value="${escapeHtml(iconValue)}" placeholder="ph ph-link">
+                <button type="button" class="btn btn-outline-secondary icon-picker-btn" data-target-input="${inputId}" data-column-index="${columnIndex}" data-link-index="${linkIndex}" title="Choose icon"><i class="${escapeHtml(iconPreview)}"></i></button>
+            </div>
+        </div>
+        <div class="col-lg-1">
+            <div class="d-flex flex-column align-items-lg-end gap-2">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" data-role="link-new-tab" data-column-index="${columnIndex}" data-link-index="${linkIndex}" ${link.open_in_new ? 'checked' : ''}>
+                    <label class="form-check-label small">New tab</label>
+                </div>
+                <button type="button" class="btn btn-link text-danger p-0 remove-link-btn" data-column-index="${columnIndex}" data-link-index="${linkIndex}" title="Remove link"><i class="ph ph-trash"></i></button>
+            </div>
+        </div>
+    </div>
+</div>`;
+                }).join('')
+                : '<div class="text-muted small mb-3">No links yet.</div>';
+            card.innerHTML = `
+<div class="card-header bg-white border-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div>
+        <span class="badge rounded-pill text-bg-primary-subtle text-primary me-2">Column ${columnIndex + 1}</span>
+        <span class="text-muted small">${linkCount} link${linkCount === 1 ? '' : 's'}</span>
+    </div>
+    <button type="button" class="btn btn-light btn-sm text-danger" data-action="remove-column" data-column-index="${columnIndex}">
+        <i class="ph ph-trash me-1"></i>Remove
+    </button>
+</div>
+<div class="card-body border-top">
+    <div class="mb-3">
+        <label class="form-label">Column title</label>
+        <input type="text" class="form-control" data-role="column-title" data-column-index="${columnIndex}" value="${escapeHtml(column.title)}" placeholder="e.g. Resources">
+    </div>
+    <div class="footer-links-group" data-column-index="${columnIndex}">
+        ${linksHtml}
+    </div>
+    <button type="button" class="btn btn-outline-secondary btn-sm" data-action="add-link" data-column-index="${columnIndex}" ${addDisabled}>
+        <i class="ph ph-plus me-1"></i>Add Link
+    </button>
+</div>`;
+            columnsContainer.appendChild(card);
+        });
+        refreshAddColumnButton();
+    };
+
+    renderColumns();
+
+    addColumnButton?.addEventListener('click', () => {
+        if (footerState.columns.length >= maxColumns) {
+            return;
+        }
+        footerState.columns.push(createColumn());
+        renderColumns();
+    });
+
+    columnsContainer?.addEventListener('click', (event) => {
+        const removeColumnBtn = event.target.closest('[data-action="remove-column"]');
+        if (removeColumnBtn) {
+            const index = parseInt(removeColumnBtn.dataset.columnIndex ?? '-1', 10);
+            if (!Number.isNaN(index) && index >= 0) {
+                footerState.columns.splice(index, 1);
+                renderColumns();
+            }
+            return;
+        }
+        const addLinkBtn = event.target.closest('[data-action="add-link"]');
+        if (addLinkBtn) {
+            const index = parseInt(addLinkBtn.dataset.columnIndex ?? '-1', 10);
+            if (!Number.isNaN(index) && index >= 0 && index < footerState.columns.length) {
+                if (footerState.columns[index].links.length < maxLinks) {
+                    footerState.columns[index].links.push(createLink());
+                    renderColumns();
+                }
+            }
+            return;
+        }
+        const removeLinkBtn = event.target.closest('.remove-link-btn');
+        if (removeLinkBtn) {
+            const columnIndex = parseInt(removeLinkBtn.dataset.columnIndex ?? '-1', 10);
+            const linkIndex = parseInt(removeLinkBtn.dataset.linkIndex ?? '-1', 10);
+            if (!Number.isNaN(columnIndex) && !Number.isNaN(linkIndex) && footerState.columns[columnIndex]) {
+                footerState.columns[columnIndex].links.splice(linkIndex, 1);
+                renderColumns();
+            }
+            return;
+        }
+        const iconBtn = event.target.closest('.icon-picker-btn');
+        if (iconBtn) {
+            if (iconPopoverTarget === iconBtn.getAttribute('data-target-input')) {
+                closeIconPopover();
+            } else {
+                openIconPopover(iconBtn);
+            }
+        }
+    });
+
+    columnsContainer?.addEventListener('input', (event) => {
+        const target = event.target;
+        const columnIndex = parseInt(target.dataset.columnIndex ?? '-1', 10);
+        if (Number.isNaN(columnIndex) || !footerState.columns[columnIndex]) {
+            return;
+        }
+        const role = target.dataset.role;
+        if (role === 'column-title') {
+            footerState.columns[columnIndex].title = target.value;
+        } else if (role === 'link-label' || role === 'link-url' || role === 'link-icon') {
+            const linkIndex = parseInt(target.dataset.linkIndex ?? '-1', 10);
+            if (!Number.isNaN(linkIndex) && footerState.columns[columnIndex].links[linkIndex]) {
+                if (role === 'link-label') {
+                    footerState.columns[columnIndex].links[linkIndex].label = target.value;
+                } else if (role === 'link-url') {
+                    footerState.columns[columnIndex].links[linkIndex].url = target.value;
+                } else {
+                    footerState.columns[columnIndex].links[linkIndex].icon = target.value;
+                }
+            }
+        }
+    });
+
+    columnsContainer?.addEventListener('change', (event) => {
+        const target = event.target;
+        const columnIndex = parseInt(target.dataset.columnIndex ?? '-1', 10);
+        if (Number.isNaN(columnIndex) || !footerState.columns[columnIndex]) {
+            return;
+        }
+        if (target.dataset.role === 'link-new-tab') {
+            const linkIndex = parseInt(target.dataset.linkIndex ?? '-1', 10);
+            if (!Number.isNaN(linkIndex) && footerState.columns[columnIndex].links[linkIndex]) {
+                footerState.columns[columnIndex].links[linkIndex].open_in_new = target.checked;
+            }
+        }
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!iconPopoverTarget) {
+            return;
+        }
+        if (event.target.closest('.icon-picker-btn')) {
+            return;
+        }
+        if (iconPopover && iconPopover.contains(event.target)) {
+            const option = event.target.closest('.icon-picker-option');
+            if (option && iconPopoverTarget) {
+                const input = document.getElementById(iconPopoverTarget);
+                if (input) {
+                    input.value = option.dataset.iconValue;
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            }
+            closeIconPopover();
+        } else {
+            closeIconPopover();
+        }
+    });
+
+    form?.addEventListener('submit', () => {
+        footerState.style = document.getElementById('footer_style')?.value || footerState.style;
+        footerState.tagline = document.getElementById('footer_tagline')?.value ?? '';
+        footerState.legal = document.getElementById('footer_legal')?.value ?? '';
+        footerState.show_social = document.getElementById('show_footer_social')?.checked ?? false;
+        payloadInput.value = JSON.stringify({
+            style: footerState.style,
+            tagline: footerState.tagline,
+            legal: footerState.legal,
+            show_social: footerState.show_social,
+            columns: footerState.columns,
+        });
+    });
+})();
+</script>
+{% endblock %}

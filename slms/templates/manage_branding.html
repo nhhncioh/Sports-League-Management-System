@@ -1,0 +1,413 @@
+{% extends "base.html" %}
+{% block title %}Branding & Landing Page - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Organization Branding</h1>
+            <p class="text-muted mb-0">Customize your organization's landing page, hero section, and brand identity</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('public.landing') }}" target="_blank" class="btn btn-outline-primary">
+                <i class="ph ph-eye"></i> Preview
+            </a>
+            <button type="button" class="btn btn-success" onclick="saveBranding()">
+                <i class="ph ph-floppy-disk"></i> Save Changes
+            </button>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-4" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#hero-tab">
+                <i class="ph ph-image me-2"></i>Hero Section
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#modules-tab">
+                <i class="ph ph-squares-four me-2"></i>Page Modules
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#branding-tab">
+                <i class="ph ph-palette me-2"></i>Brand Colors
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#domain-tab">
+                <i class="ph ph-globe me-2"></i>Custom Domain
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <!-- Hero Section Tab -->
+        <div class="tab-pane fade show active" id="hero-tab">
+            <div class="row g-4">
+                <div class="col-lg-8">
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="ph ph-image me-2"></i>Hero Configuration</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="heroForm">
+                                <div class="mb-3">
+                                    <label class="form-label">Hero Title</label>
+                                    <input type="text" class="form-control" id="hero_title"
+                                           placeholder="Welcome to {{ g.org.name if g.org else 'Your League' }}"
+                                           value="{{ hero.title if hero else '' }}">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Hero Subtitle</label>
+                                    <textarea class="form-control" id="hero_subtitle" rows="3"
+                                              placeholder="Experience world-class sports management...">{{ hero.subtitle if hero else '' }}</textarea>
+                                </div>
+
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Gradient Start Color</label>
+                                        <input type="color" class="form-control form-control-color" id="hero_gradient_start"
+                                               value="{{ hero.gradient_start if hero and hero.gradient_start else '#667eea' }}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Gradient End Color</label>
+                                        <input type="color" class="form-control form-control-color" id="hero_gradient_end"
+                                               value="{{ hero.gradient_end if hero and hero.gradient_end else '#764ba2' }}">
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Background Image URL</label>
+                                    <input type="url" class="form-control" id="hero_bg_image"
+                                           placeholder="https://example.com/hero-bg.jpg"
+                                           value="{{ hero.background_image if hero and hero.background_image else '' }}">
+                                    <small class="text-muted">Optional: Will blend with gradient</small>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Hero Image URL</label>
+                                    <input type="url" class="form-control" id="hero_image"
+                                           placeholder="https://example.com/hero-image.png"
+                                           value="{{ hero.hero_image if hero and hero.hero_image else '' }}">
+                                    <small class="text-muted">Optional: Displays on right side</small>
+                                </div>
+
+                                <hr class="my-4">
+
+                                <h6 class="mb-3">Call-to-Action Buttons</h6>
+
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Primary CTA Text</label>
+                                        <input type="text" class="form-control" id="hero_primary_cta_text"
+                                               placeholder="View Standings"
+                                               value="{{ hero.primary_cta_text if hero and hero.primary_cta_text else 'View Standings' }}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Primary CTA URL</label>
+                                        <input type="text" class="form-control" id="hero_primary_cta_url"
+                                               placeholder="/standings"
+                                               value="{{ hero.primary_cta_url if hero and hero.primary_cta_url else '/standings' }}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Primary CTA Icon</label>
+                                        <input type="text" class="form-control" id="hero_primary_cta_icon"
+                                               placeholder="trophy"
+                                               value="{{ hero.primary_cta_icon if hero and hero.primary_cta_icon else 'trophy' }}">
+                                    </div>
+                                </div>
+
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Secondary CTA Text</label>
+                                        <input type="text" class="form-control" id="hero_secondary_cta_text"
+                                               placeholder="Stat Leaders"
+                                               value="{{ hero.secondary_cta_text if hero and hero.secondary_cta_text else 'Stat Leaders' }}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Secondary CTA URL</label>
+                                        <input type="text" class="form-control" id="hero_secondary_cta_url"
+                                               placeholder="/leaderboards"
+                                               value="{{ hero.secondary_cta_url if hero and hero.secondary_cta_url else '/leaderboards' }}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Secondary CTA Icon</label>
+                                        <input type="text" class="form-control" id="hero_secondary_cta_icon"
+                                               placeholder="chart-line"
+                                               value="{{ hero.secondary_cta_icon if hero and hero.secondary_cta_icon else 'chart-line' }}">
+                                    </div>
+                                </div>
+
+                                <hr class="my-4">
+
+                                <h6 class="mb-3">Hero Features (Max 3)</h6>
+                                <div id="heroFeatures">
+                                    {% set features = hero.features if hero and hero.features else ['Real-time Updates', 'Complete Statistics', 'Fan Engagement'] %}
+                                    {% for feature in features[:3] %}
+                                        <div class="input-group mb-2">
+                                            <span class="input-group-text"><i class="ph ph-check-circle"></i></span>
+                                            <input type="text" class="form-control hero-feature" value="{{ feature }}">
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="ph ph-lightbulb me-2"></i>Tips</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info mb-3">
+                                <strong>Hero Section:</strong> This is the first thing visitors see. Make it compelling!
+                            </div>
+                            <ul class="small">
+                                <li class="mb-2">Keep title concise and impactful (under 50 characters)</li>
+                                <li class="mb-2">Subtitle should explain your value proposition</li>
+                                <li class="mb-2">Use high-contrast gradient colors for readability</li>
+                                <li class="mb-2">CTAs should be action-oriented ("View", "Explore", "Join")</li>
+                                <li class="mb-2">Hero image should be 800x600px or larger</li>
+                                <li class="mb-2">Icons use Phosphor icon names (see <a href="https://phosphoricons.com" target="_blank">phosphoricons.com</a>)</li>
+                            </ul>
+
+                            <hr>
+
+                            <h6 class="mb-3">Preview</h6>
+                            <div class="hero-preview p-3 rounded" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; font-size: 0.85rem;">
+                                <strong class="d-block mb-2" id="preview_title">Your Title Here</strong>
+                                <p class="mb-2 opacity-75" id="preview_subtitle">Your subtitle...</p>
+                                <div class="d-flex gap-2">
+                                    <span class="badge bg-white text-dark" id="preview_cta1">Primary CTA</span>
+                                    <span class="badge bg-light text-dark" id="preview_cta2">Secondary CTA</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page Modules Tab -->
+        <div class="tab-pane fade" id="modules-tab">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="ph ph-squares-four me-2"></i>Landing Page Modules</h5>
+                    <button class="btn btn-sm btn-primary" onclick="addModule()">
+                        <i class="ph ph-plus"></i> Add Module
+                    </button>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Drag to reorder modules. They will appear in this order on your landing page.</p>
+
+                    <div id="modulesList" class="vstack gap-3">
+                        <!-- Modules will be dynamically added here -->
+                        <div class="alert alert-info">
+                            <i class="ph ph-info me-2"></i>
+                            Click "Add Module" to start building your landing page sections.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Branding Tab -->
+        <div class="tab-pane fade" id="branding-tab">
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="ph ph-palette me-2"></i>Brand Colors</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Primary Color</label>
+                                    <input type="color" class="form-control form-control-color w-100" id="brand_primary" value="#667eea">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Secondary Color</label>
+                                    <input type="color" class="form-control form-control-color w-100" id="brand_secondary" value="#6c757d">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Accent Color</label>
+                                    <input type="color" class="form-control form-control-color w-100" id="brand_accent" value="#f97316">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Background Color</label>
+                                    <input type="color" class="form-control form-control-color w-100" id="brand_background" value="#f5f6fa">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="ph ph-image me-2"></i>Brand Assets</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Organization Logo</label>
+                                <input type="url" class="form-control" id="brand_logo"
+                                       placeholder="https://example.com/logo.png"
+                                       value="{{ g.org.logo_url if g.org and g.org.logo_url else '' }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Favicon</label>
+                                <input type="url" class="form-control" id="brand_favicon"
+                                       placeholder="https://example.com/favicon.ico"
+                                       value="{{ g.org.favicon_url if g.org and g.org.favicon_url else '' }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Banner Image</label>
+                                <input type="url" class="form-control" id="brand_banner"
+                                       placeholder="https://example.com/banner.jpg"
+                                       value="{{ g.org.banner_image_url if g.org and g.org.banner_image_url else '' }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Domain Tab -->
+        <div class="tab-pane fade" id="domain-tab">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="ph ph-globe me-2"></i>Custom Domain Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="ph ph-info me-2"></i>
+                        <strong>Custom Domain:</strong> Point your domain to our servers to use your own branded URL.
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Current Subdomain</label>
+                        <input type="text" class="form-control" value="{{ g.org.slug if g.org else '' }}.sportslms.com" disabled>
+                        <small class="text-muted">This is your default subdomain</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Custom Domain</label>
+                        <input type="text" class="form-control" id="custom_domain"
+                               placeholder="sports.yourorg.com"
+                               value="{{ g.org.custom_domain if g.org and g.org.custom_domain else '' }}">
+                        <small class="text-muted">Enter your custom domain (e.g., sports.yourorg.com)</small>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <strong>DNS Configuration Required:</strong>
+                        <p class="mb-2">Point your domain's CNAME record to:</p>
+                        <code>{{ request.host }}</code>
+                        <p class="mt-2 mb-0">Contact support if you need help setting this up.</p>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="verifyDomain()">
+                        <i class="ph ph-check-circle"></i> Verify Domain
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Preview updates
+function updatePreview() {
+    document.getElementById('preview_title').textContent =
+        document.getElementById('hero_title').value || 'Your Title Here';
+    document.getElementById('preview_subtitle').textContent =
+        document.getElementById('hero_subtitle').value || 'Your subtitle...';
+    document.getElementById('preview_cta1').textContent =
+        document.getElementById('hero_primary_cta_text').value || 'Primary CTA';
+    document.getElementById('preview_cta2').textContent =
+        document.getElementById('hero_secondary_cta_text').value || 'Secondary CTA';
+
+    const gradStart = document.getElementById('hero_gradient_start').value;
+    const gradEnd = document.getElementById('hero_gradient_end').value;
+    document.querySelector('.hero-preview').style.background =
+        `linear-gradient(135deg, ${gradStart}, ${gradEnd})`;
+}
+
+// Add event listeners for preview
+['hero_title', 'hero_subtitle', 'hero_primary_cta_text', 'hero_secondary_cta_text',
+ 'hero_gradient_start', 'hero_gradient_end'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', updatePreview);
+});
+
+function saveBranding() {
+    const features = Array.from(document.querySelectorAll('.hero-feature')).map(input => input.value);
+
+    const data = {
+        hero: {
+            title: document.getElementById('hero_title').value,
+            subtitle: document.getElementById('hero_subtitle').value,
+            gradient_start: document.getElementById('hero_gradient_start').value,
+            gradient_end: document.getElementById('hero_gradient_end').value,
+            background_image: document.getElementById('hero_bg_image').value,
+            hero_image: document.getElementById('hero_image').value,
+            primary_cta_text: document.getElementById('hero_primary_cta_text').value,
+            primary_cta_url: document.getElementById('hero_primary_cta_url').value,
+            primary_cta_icon: document.getElementById('hero_primary_cta_icon').value,
+            secondary_cta_text: document.getElementById('hero_secondary_cta_text').value,
+            secondary_cta_url: document.getElementById('hero_secondary_cta_url').value,
+            secondary_cta_icon: document.getElementById('hero_secondary_cta_icon').value,
+            features: features
+        },
+        branding: {
+            primary: document.getElementById('brand_primary').value,
+            secondary: document.getElementById('brand_secondary').value,
+            accent: document.getElementById('brand_accent').value,
+            background: document.getElementById('brand_background').value,
+            logo: document.getElementById('brand_logo').value,
+            favicon: document.getElementById('brand_favicon').value,
+            banner: document.getElementById('brand_banner').value
+        },
+        custom_domain: document.getElementById('custom_domain').value
+    };
+
+    // Save to backend
+    fetch('/admin/api/branding/save', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrf_token]')?.value || ''
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert('Branding saved successfully!');
+        } else {
+            alert('Error saving branding: ' + result.message);
+        }
+    })
+    .catch(error => {
+        alert('Error saving branding');
+        console.error(error);
+    });
+}
+
+function verifyDomain() {
+    const domain = document.getElementById('custom_domain').value;
+    alert('Domain verification feature coming soon! Domain: ' + domain);
+}
+
+function addModule() {
+    alert('Module builder coming soon! You can add features, testimonials, CTA banners, and more.');
+}
+
+// Initialize
+updatePreview();
+</script>
+{% endblock %}

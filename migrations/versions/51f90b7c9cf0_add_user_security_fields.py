@@ -17,18 +17,29 @@ depends_on = None
 
 
 def upgrade():
-    # Add MFA and security fields to user table
-    op.add_column('user', sa.Column('mfa_secret', sa.String(length=32), nullable=True))
-    op.add_column('user', sa.Column('mfa_recovery_codes', sa.Text(), nullable=True))
-    op.add_column('user', sa.Column('password_reset_token', sa.String(length=64), nullable=True))
-    op.add_column('user', sa.Column('password_reset_expires', sa.DateTime(timezone=True), nullable=True))
-    op.add_column('user', sa.Column('failed_login_attempts', sa.Integer(), nullable=False, server_default='0'))
-    op.add_column('user', sa.Column('locked_until', sa.DateTime(timezone=True), nullable=True))
-    op.add_column('user', sa.Column('last_login_at', sa.DateTime(timezone=True), nullable=True))
-    op.add_column('user', sa.Column('last_login_ip', sa.String(length=45), nullable=True))
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    cols = {c['name'] for c in inspector.get_columns('user')}
+    if 'mfa_secret' not in cols:
+        op.add_column('user', sa.Column('mfa_secret', sa.String(length=32), nullable=True))
+    if 'mfa_recovery_codes' not in cols:
+        op.add_column('user', sa.Column('mfa_recovery_codes', sa.Text(), nullable=True))
+    if 'password_reset_token' not in cols:
+        op.add_column('user', sa.Column('password_reset_token', sa.String(length=64), nullable=True))
+    if 'password_reset_expires' not in cols:
+        op.add_column('user', sa.Column('password_reset_expires', sa.DateTime(timezone=True), nullable=True))
+    if 'failed_login_attempts' not in cols:
+        op.add_column('user', sa.Column('failed_login_attempts', sa.Integer(), nullable=False, server_default='0'))
+    if 'locked_until' not in cols:
+        op.add_column('user', sa.Column('locked_until', sa.DateTime(timezone=True), nullable=True))
+    if 'last_login_at' not in cols:
+        op.add_column('user', sa.Column('last_login_at', sa.DateTime(timezone=True), nullable=True))
+    if 'last_login_ip' not in cols:
+        op.add_column('user', sa.Column('last_login_ip', sa.String(length=45), nullable=True))
 
-    # Add index for password reset token lookups
-    op.create_index('ix_user_password_reset_token', 'user', ['password_reset_token'], unique=False)
+    idxs = {i['name'] for i in inspector.get_indexes('user')}
+    if 'ix_user_password_reset_token' not in idxs and 'password_reset_token' in cols | {'password_reset_token'}:
+        op.create_index('ix_user_password_reset_token', 'user', ['password_reset_token'], unique=False)
 
 
 def downgrade():

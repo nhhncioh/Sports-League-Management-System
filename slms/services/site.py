@@ -175,6 +175,23 @@ DEFAULT_FEATURE_FLAGS: Dict[str, bool] = {
     "enable_card_glow": False,
 }
 
+# Bootstrap footer defaults early to satisfy references in DEFAULT_THEME_CONFIG
+FOOTER_ALLOWED_STYLES: Set[str] = {"modern", "stacked", "minimal"}
+FOOTER_MAX_COLUMNS = 4
+FOOTER_MAX_LINKS_PER_COLUMN = 6
+FOOTER_TITLE_MAX_LENGTH = 80
+FOOTER_TEXT_MAX_LENGTH = 240
+FOOTER_LINK_LABEL_MAX_LENGTH = 80
+FOOTER_LINK_URL_MAX_LENGTH = 500
+
+DEFAULT_FOOTER_CONFIG: Dict[str, Any] = {
+    "style": "modern",
+    "tagline": "Powered by Sports League Management System",
+    "legal": "\u00a9 {year} Sports League Management System. All rights reserved.",
+    "show_social": True,
+    "columns": [],
+}
+
 DEFAULT_THEME_CONFIG: Dict[str, Any] = {
     "palette": {
         "primary": DEFAULT_PRIMARY_COLOR,
@@ -244,6 +261,7 @@ DEFAULT_THEME_CONFIG: Dict[str, Any] = {
         "custom_1": "Custom Link 1",
         "custom_2": "Custom Link 2",
     },
+    "footer": copy.deepcopy(DEFAULT_FOOTER_CONFIG),
 }
 
 CTA_SLOT_KEYS: tuple[str, ...] = (
@@ -258,6 +276,59 @@ CTA_ALLOWED_URL_SCHEMES: Set[str] = {"http", "https", "mailto", "tel"}
 CTA_LABEL_MAX_LENGTH = 80
 CTA_ICON_MAX_LENGTH = 80
 CTA_URL_MAX_LENGTH = 500
+
+FOOTER_ALLOWED_STYLES: Set[str] = {"modern", "stacked", "minimal"}
+FOOTER_MAX_COLUMNS = 4
+FOOTER_MAX_LINKS_PER_COLUMN = 6
+FOOTER_TITLE_MAX_LENGTH = 80
+FOOTER_TEXT_MAX_LENGTH = 240
+FOOTER_LINK_LABEL_MAX_LENGTH = 80
+FOOTER_LINK_URL_MAX_LENGTH = 500
+
+DEFAULT_FOOTER_CONFIG: Dict[str, Any] = {
+    "style": "modern",
+    "tagline": "Powered by Sports League Management System",
+    "legal": "\u00a9 {year} Sports League Management System. All rights reserved.",
+    "show_social": True,
+    "columns": [
+        {
+            "id": "league",
+            "title": "League",
+            "links": [
+                {
+                    "label": "About",
+                    "url": "/about",
+                    "icon": "ph ph-info",
+                    "open_in_new": False,
+                },
+                {
+                    "label": "Standings",
+                    "url": "/portal/standings",
+                    "icon": "ph ph-ranking",
+                    "open_in_new": False,
+                },
+            ],
+        },
+        {
+            "id": "resources",
+            "title": "Resources",
+            "links": [
+                {
+                    "label": "Portal",
+                    "url": "/portal",
+                    "icon": "ph ph-browser",
+                    "open_in_new": False,
+                },
+                {
+                    "label": "Contact",
+                    "url": "mailto:info@league.test",
+                    "icon": "ph ph-envelope",
+                    "open_in_new": False,
+                },
+            ],
+        },
+    ],
+}
 
 DEFAULT_THEME_CTA_SLOTS: Dict[str, Dict[str, Any]] = {
     "hero_primary": {
@@ -366,6 +437,113 @@ def normalize_cta_slots(slots: Any, *, include_defaults: bool = True) -> Dict[st
         defaults = DEFAULT_THEME_CTA_SLOTS.get(key, fallback_defaults)
         normalized[key] = _normalize_cta_slot(value, defaults)
     return normalized
+
+
+def default_footer_config() -> Dict[str, Any]:
+    return copy.deepcopy(DEFAULT_FOOTER_CONFIG)
+
+
+def _clean_footer_text(value: Any, fallback: str, *, limit: int, allow_empty: bool) -> str:
+    candidate = str(value or "").strip()
+    if not candidate:
+        if allow_empty:
+            return ""
+        return (fallback or "")[:limit]
+    return candidate[:limit]
+
+
+def _normalize_footer_link(data: Any, defaults: Dict[str, Any], *, index: int) -> Optional[Dict[str, Any]]:
+    if not isinstance(data, dict):
+        data = {}
+    label = _clean_footer_text(data.get('label'), defaults.get('label', f'Link {index + 1}'), limit=FOOTER_LINK_LABEL_MAX_LENGTH, allow_empty=False)
+    url = _clean_cta_url(data.get('url'), defaults.get('url', '#'))
+    if not label or not url:
+        return None
+    icon_raw = str(data.get('icon') or defaults.get('icon') or '').strip()
+    icon = icon_raw or None
+    open_in_new = _as_bool(data.get('open_in_new'), bool(defaults.get('open_in_new', False)))
+    return {
+        'label': label,
+        'url': url[:FOOTER_LINK_URL_MAX_LENGTH],
+        'icon': icon,
+        'open_in_new': open_in_new,
+    }
+
+
+def _normalize_footer_column(data: Any, index: int) -> Dict[str, Any]:
+    default_columns = default_footer_config().get('columns', [])
+    default_column = default_columns[index] if index < len(default_columns) else {
+        'id': f'column-{index + 1}',
+        'title': f'Column {index + 1}',
+        'links': [],
+    }
+    column_data = data if isinstance(data, dict) else {}
+    column_id = str(column_data.get('id') or default_column.get('id') or f'column-{index + 1}').strip() or f'column-{index + 1}'
+    title = _clean_footer_text(column_data.get('title'), default_column.get('title', f'Column {index + 1}'), limit=FOOTER_TITLE_MAX_LENGTH, allow_empty=False)
+    raw_links = column_data.get('links')
+    if not isinstance(raw_links, list):
+        raw_links = default_column.get('links', [])
+    normalized_links: List[Dict[str, Any]] = []
+    default_links = default_column.get('links', [])
+    for link_index, link_data in enumerate(raw_links):
+        if len(normalized_links) >= FOOTER_MAX_LINKS_PER_COLUMN:
+            break
+        defaults_for_link = default_links[link_index] if link_index < len(default_links) else {
+            'label': f'Link {link_index + 1}',
+            'url': '#',
+            'icon': None,
+            'open_in_new': False,
+        }
+        normalized = _normalize_footer_link(link_data, defaults_for_link, index=link_index)
+        if normalized:
+            normalized_links.append(normalized)
+    return {
+        'id': column_id,
+        'title': title,
+        'links': normalized_links,
+    }
+
+
+def normalize_footer_config(config: Any) -> Dict[str, Any]:
+    defaults = default_footer_config()
+    data = config if isinstance(config, dict) else {}
+    style = str(data.get('style') or defaults['style']).strip().lower()
+    if style not in FOOTER_ALLOWED_STYLES:
+        style = defaults['style']
+    tagline = _clean_footer_text(data.get('tagline'), defaults['tagline'], limit=FOOTER_TEXT_MAX_LENGTH, allow_empty=True)
+    tagline = tagline[:FOOTER_TEXT_MAX_LENGTH]
+    legal = _clean_footer_text(data.get('legal'), defaults['legal'], limit=FOOTER_TEXT_MAX_LENGTH, allow_empty=False)
+    legal = legal[:FOOTER_TEXT_MAX_LENGTH]
+    if '{year}' in legal:
+        try:
+            legal = legal.replace('{year}', str(datetime.now().year))
+        except Exception:
+            pass
+    show_social = _as_bool(data.get('show_social'), defaults['show_social'])
+    raw_columns = data.get('columns') if isinstance(data.get('columns'), list) else defaults['columns']
+    normalized_columns: List[Dict[str, Any]] = []
+    for idx, column in enumerate(raw_columns):
+        if len(normalized_columns) >= FOOTER_MAX_COLUMNS:
+            break
+        normalized_columns.append(_normalize_footer_column(column, idx))
+    if not normalized_columns:
+        for idx, column in enumerate(defaults['columns']):
+            if len(normalized_columns) >= FOOTER_MAX_COLUMNS:
+                break
+            normalized_columns.append(_normalize_footer_column(column, idx))
+    return {
+        'style': style,
+        'tagline': tagline,
+        'legal': legal,
+        'show_social': show_social,
+        'columns': normalized_columns,
+    }
+
+
+def ensure_theme_footer(theme_config: Dict[str, Any]) -> Dict[str, Any]:
+    footer = normalize_footer_config(theme_config.get('footer'))
+    theme_config['footer'] = footer
+    return footer
 
 
 def ensure_theme_cta_slots(theme_config: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
@@ -747,6 +925,7 @@ def _load_site_settings() -> Dict[str, Any]:
             iconography.setdefault(key, default_value)
         for key, default_value in DEFAULT_THEME_CONFIG["components"].items():
             components.setdefault(key, default_value)
+        footer_config = ensure_theme_footer(theme_config)
         cta_slots = ensure_theme_cta_slots(theme_config)
         if "custom_css" not in theme_config:
             theme_config["custom_css"] = ""
@@ -768,6 +947,7 @@ def _load_site_settings() -> Dict[str, Any]:
             "feature_flags": feature_flags,
             "theme": theme_config,
             "cta_slots": cta_slots,
+            "footer": footer_config,
         }
 
         for palette_key, palette_value in palette.items():
@@ -784,6 +964,7 @@ def _load_site_settings() -> Dict[str, Any]:
         fallback_links = _default_nav_links()
         fallback_theme = copy.deepcopy(DEFAULT_THEME_CONFIG)
         fallback_cta_slots = ensure_theme_cta_slots(fallback_theme)
+        fallback_footer = ensure_theme_footer(fallback_theme)
         settings = {
             "site_title": "Sports League Management System",
             "brand_image_url": None,
@@ -799,6 +980,7 @@ def _load_site_settings() -> Dict[str, Any]:
             "theme": fallback_theme,
             "custom_css": fallback_theme.get("custom_css", ""),
             "cta_slots": fallback_cta_slots,
+            "footer": fallback_footer,
         }
         for key, value in settings["social_links"].items():
             settings[f"{key}_url"] = value
@@ -826,6 +1008,7 @@ def inject_site_settings():
     theme = settings.get("theme", DEFAULT_THEME_CONFIG)
     if not isinstance(theme, dict):
         theme = copy.deepcopy(DEFAULT_THEME_CONFIG)
+    footer_config = ensure_theme_footer(theme)
     cta_slots = ensure_theme_cta_slots(theme)
     palette = theme.get("palette", {})
     iconography = theme.get("iconography", {})
@@ -854,6 +1037,7 @@ def inject_site_settings():
         site_feature_flags=settings.get("feature_flags", {}),
         site_theme=theme,
         site_cta_slots=cta_slots,
+        site_footer=footer_config,
         site_icon_class=icon_class,
         theme_preview_active=preview_active,
     )
@@ -1052,6 +1236,7 @@ def _apply_payload_to_settings(settings: Dict[str, Any], payload: Dict[str, Any]
         merged['theme'] = _merge_nested(DEFAULT_THEME_CONFIG, payload['theme'])
     theme_ref = merged.get('theme')
     if isinstance(theme_ref, dict):
+        merged['footer'] = ensure_theme_footer(theme_ref)
         merged['cta_slots'] = ensure_theme_cta_slots(theme_ref)
     if 'navigation_links_raw' in payload:
         merged['navigation_links_raw'] = payload['navigation_links_raw']
@@ -1177,6 +1362,7 @@ def apply_site_payload(payload: Dict[str, Any]) -> None:
         social_links = payload.get('social_links') or {}
         feature_flags = payload.get('feature_flags') or {}
         theme_payload = _merge_nested(DEFAULT_THEME_CONFIG, payload.get('theme', {}))
+        ensure_theme_footer(theme_payload)
         ensure_theme_cta_slots(theme_payload)
         base_payload = (
             payload.get('site_title', 'Sports League Management System'),

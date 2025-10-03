@@ -60,244 +60,382 @@
 
     <div class="tab-content pt-4" id="admin-dashboard-tab-content">
         <div class="tab-pane fade show active" id="overview-pane" role="tabpanel" aria-labelledby="overview-tab">
-            <div class="row g-3">
-                <div class="col-sm-6 col-lg-3">
-                    <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_users') }}">
-                        <div class="card-body d-flex align-items-center">
-                            <i class="ph ph-users-three fs-3 text-primary me-3"></i>
-                            <div>
-                                <div class="fw-semibold">Users</div>
-                                <small class="text-muted">Manage users & roles</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-sm-6 col-lg-3">
-                    <a class="card h-100 text-decoration-none" href="{{ url_for('league_mgmt.index') }}">
-                        <div class="card-body d-flex align-items-center">
-                            <i class="ph ph-trophy fs-3 text-primary me-3"></i>
-                            <div>
-                                <div class="fw-semibold">League Lifecycle</div>
-                                <small class="text-muted">Create, edit & archive</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-sm-6 col-lg-3">
-                    <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_teams') }}">
-                        <div class="card-body d-flex align-items-center">
-                            <i class="ph ph-shield fs-3 text-primary me-3"></i>
-                            <div>
-                                <div class="fw-semibold">Teams</div>
-                                <small class="text-muted">Teams & coaches</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-sm-6 col-lg-3">
-                    <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_players') }}">
-                        <div class="card-body d-flex align-items-center">
-                            <i class="ph ph-identification-badge fs-3 text-primary me-3"></i>
-                            <div>
-                                <div class="fw-semibold">Players</div>
-                                <small class="text-muted">Rosters & profiles</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
 
-                <div class="col-sm-6 col-lg-3">
-                    <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_news') }}">
-                        <div class="card-body d-flex align-items-center">
-                            <i class="ph ph-newspaper fs-3 text-primary me-3"></i>
-                            <div>
-                                <div class="fw-semibold">News</div>
-                                <small class="text-muted">Articles & updates</small>
-                            </div>
+            <!-- League Operations -->
+            <div class="admin-section mb-5">
+                <div class="section-header mb-3">
+                    <div class="d-flex align-items-center">
+                        <div class="section-icon">
+                            <i class="ph-fill ph-bounding-box"></i>
                         </div>
-                    </a>
+                        <div>
+                            <h5 class="section-title mb-0">League Operations</h5>
+                            <p class="text-muted small mb-0">Core league management, games, and competitions</p>
+                        </div>
+                    </div>
                 </div>
-
-                <div class="col-sm-6 col-lg-3">
-                    <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_sponsors') }}">
-                        <div class="card-body d-flex align-items-center">
-                            <i class="ph ph-handshake fs-3 text-primary me-3"></i>
-                            <div>
-                                <div class="fw-semibold">Sponsors</div>
-                                <small class="text-muted">CRM & partnerships</small>
+                <div class="row g-3">
+                    <div class="col-sm-6 col-lg-3">
+                        <a class="card h-100 text-decoration-none admin-card" href="{{ url_for('league_mgmt.index') }}">
+                            <div class="card-body d-flex align-items-center">
+                                <i class="ph ph-trophy fs-3 text-primary me-3"></i>
+                                <div>
+                                    <div class="fw-semibold">League Lifecycle</div>
+                                    <small class="text-muted">Create, edit & archive</small>
+                                </div>
                             </div>
-                        </div>
-                    </a>
-                </div>
-
-                <div class="col-sm-6 col-lg-3">
-                    <a class="card h-100 text-decoration-none" href="{{ url_for('schedule_mgmt.index') }}">
-                        <div class="card-body d-flex align-items-center">
-                            <i class="ph ph-calendar-check fs-3 text-primary me-3"></i>
-                            <div>
-                                <div class="fw-semibold">Season Planning</div>
-                                <small class="text-muted">Build, review, publish plans</small>
+                        </a>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <a class="card h-100 text-decoration-none admin-card" href="{{ url_for('admin.manage_seasons') }}">
+                            <div class="card-body d-flex align-items-center">
+                                <i class="ph ph-calendar fs-3 text-primary me-3"></i>
+                                <div>
+                                    <div class="fw-semibold">Seasons</div>
+                                    <small class="text-muted">Season lifecycle</small>
+                                </div>
                             </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-sm-6 col-lg-3">
-                    <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_matches') }}">
-                        <div class="card-body d-flex align-items-center">
-                            <i class="ph ph-calendar-dots fs-3 text-primary me-3"></i>
-                            <div>
-                                <div class="fw-semibold">Match Ops Console</div>
-                                <small class="text-muted">Live match updates</small>
+                        </a>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <a class="card h-100 text-decoration-none admin-card" href="{{ url_for('admin.manage_league_rules') }}">
+                            <div class="card-body d-flex align-items-center">
+                                <i class="ph ph-sliders fs-3 text-primary me-3"></i>
+                                <div>
+                                    <div class="fw-semibold">League Rules</div>
+                                    <small class="text-muted">Points & tie-breakers</small>
+                                </div>
                             </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-sm-6 col-lg-3">
-                    <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_scores') }}">
-                        <div class="card-body d-flex align-items-center">
-                            <i class="ph ph-clipboard fs-3 text-primary me-3"></i>
-                            <div>
-                                <div class="fw-semibold">Score Reporting</div>
-                                <small class="text-muted">Live console & stats</small>
+                        </a>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <a class="card h-100 text-decoration-none admin-card" href="{{ url_for('admin.manage_standings') }}">
+                            <div class="card-body d-flex align-items-center">
+                                <i class="ph ph-list-numbers fs-3 text-primary me-3"></i>
+                                <div>
+                                    <div class="fw-semibold">Standings</div>
+                                    <small class="text-muted">League table</small>
+                                </div>
                             </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-sm-6 col-lg-3">
-                    <a class="card h-100 text-decoration-none" href="{{ url_for('registration_admin.list_registrations') }}">
-                        <div class="card-body d-flex align-items-center">
-                            <i class="ph ph-user-circle-plus fs-3 text-primary me-3"></i>
-                            <div>
-                                <div class="fw-semibold">Registrations</div>
-                                <small class="text-muted">Player & team sign-ups</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-
-                <div class="col-sm-6 col-lg-3">
-                    <a class="card h-100 text-decoration-none" href="{{ url_for('admin.league_finance_hub') }}">
-                        <div class="card-body d-flex align-items-center">
-                            <i class="ph ph-chart-line-up fs-3 text-primary me-3"></i>
-                            <div>
-                                <div class="fw-semibold">Finance Hub</div>
-                                <small class="text-muted">Revenue & financial management</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-sm-6 col-lg-3">
-                    <a class="card h-100 text-decoration-none" href="{{ url_for('admin.homepage_builder') }}">
-                        <div class="card-body d-flex align-items-center">
-                            <i class="ph ph-browser fs-3 text-primary me-3"></i>
-                            <div>
-                                <div class="fw-semibold">Homepage Builder</div>
-                                <small class="text-muted">Drag & drop editor</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-sm-6 col-lg-3">
-                    <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_navigation') }}">
-                        <div class="card-body d-flex align-items-center">
-                            <i class="ph ph-compass fs-3 text-primary me-3"></i>
-                            <div>
-                                <div class="fw-semibold">Navigation</div>
-                                <small class="text-muted">Menus & layout</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-sm-6 col-lg-3">
-                    <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_league_rules') }}">
-                        <div class="card-body d-flex align-items-center">
-                            <i class="ph ph-sliders fs-3 text-primary me-3"></i>
-                            <div>
-                                <div class="fw-semibold">League Rules</div>
-                                <small class="text-muted">Points & tie-breakers</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-sm-6 col-lg-3">
-                    <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_seasons') }}">
-                        <div class="card-body d-flex align-items-center">
-                            <i class="ph ph-calendar fs-3 text-primary me-3"></i>
-                            <div>
-                                <div class="fw-semibold">Seasons</div>
-                                <small class="text-muted">Lifecycle</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-sm-6 col-lg-3">
-                    <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_stadiums') }}">
-                        <div class="card-body d-flex align-items-center">
-                            <i class="ph ph-map-pin fs-3 text-primary me-3"></i>
-                            <div>
-                                <div class="fw-semibold">Venues</div>
-                                <small class="text-muted">Stadiums</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-sm-6 col-lg-3">
-                    <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_standings') }}">
-                        <div class="card-body d-flex align-items-center">
-                            <i class="ph ph-list-numbers fs-3 text-primary me-3"></i>
-                            <div>
-                                <div class="fw-semibold">Standings</div>
-                                <small class="text-muted">Table</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-sm-6 col-lg-3">
-                    <a class="card h-100 text-decoration-none" href="{{ url_for('admin.player_stats') }}">
-                        <div class="card-body d-flex align-items-center">
-                            <i class="ph ph-star fs-3 text-primary me-3"></i>
-                            <div>
-                                <div class="fw-semibold">Player Stats</div>
-                                <small class="text-muted">Performance analytics</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-sm-6 col-lg-3">
-                    <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_countries') }}">
-                        <div class="card-body d-flex align-items-center">
-                            <i class="ph ph-flag fs-3 text-primary me-3"></i>
-                            <div>
-                                <div class="fw-semibold">Countries</div>
-                                <small class="text-muted">Metadata</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-sm-6 col-lg-3">
-                    <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_referees') }}">
-                        <div class="card-body d-flex align-items-center">
-                            <i class="ph ph-gavel fs-3 text-primary me-3"></i>
-                            <div>
-                                <div class="fw-semibold">Referees</div>
-                                <small class="text-muted">Officials</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-sm-6 col-lg-3">
-                    <a class="card h-100 text-decoration-none" href="{{ url_for('admin.manage_media') }}">
-                        <div class="card-body d-flex align-items-center">
-                            <i class="ph ph-images fs-3 text-primary me-3"></i>
-                            <div>
-                                <div class="fw-semibold">Media Gallery</div>
-                                <small class="text-muted">Photos & videos</small>
-                            </div>
-                        </div>
-                    </a>
+                        </a>
+                    </div>
                 </div>
             </div>
+
+            <!-- Teams & Players -->
+            <div class="admin-section mb-5">
+                <div class="section-header mb-3">
+                    <div class="d-flex align-items-center">
+                        <div class="section-icon">
+                            <i class="ph-fill ph-users-three"></i>
+                        </div>
+                        <div>
+                            <h5 class="section-title mb-0">Teams & Players</h5>
+                            <p class="text-muted small mb-0">Team management, rosters, and player profiles</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-3">
+                    <div class="col-sm-6 col-lg-3">
+                        <a class="card h-100 text-decoration-none admin-card" href="{{ url_for('admin.manage_teams') }}">
+                            <div class="card-body d-flex align-items-center">
+                                <i class="ph ph-shield fs-3 text-primary me-3"></i>
+                                <div>
+                                    <div class="fw-semibold">Teams</div>
+                                    <small class="text-muted">Teams & coaches</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <a class="card h-100 text-decoration-none admin-card" href="{{ url_for('admin.manage_players') }}">
+                            <div class="card-body d-flex align-items-center">
+                                <i class="ph ph-identification-badge fs-3 text-primary me-3"></i>
+                                <div>
+                                    <div class="fw-semibold">Players</div>
+                                    <small class="text-muted">Rosters & profiles</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <a class="card h-100 text-decoration-none admin-card" href="{{ url_for('admin.player_stats') }}">
+                            <div class="card-body d-flex align-items-center">
+                                <i class="ph ph-star fs-3 text-primary me-3"></i>
+                                <div>
+                                    <div class="fw-semibold">Player Stats</div>
+                                    <small class="text-muted">Performance analytics</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <a class="card h-100 text-decoration-none admin-card" href="{{ url_for('registration_admin.list_registrations') }}">
+                            <div class="card-body d-flex align-items-center">
+                                <i class="ph ph-user-circle-plus fs-3 text-primary me-3"></i>
+                                <div>
+                                    <div class="fw-semibold">Registrations</div>
+                                    <small class="text-muted">Player & team sign-ups</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Match Management -->
+            <div class="admin-section mb-5">
+                <div class="section-header mb-3">
+                    <div class="d-flex align-items-center">
+                        <div class="section-icon">
+                            <i class="ph-fill ph-calendar-check"></i>
+                        </div>
+                        <div>
+                            <h5 class="section-title mb-0">Match Management</h5>
+                            <p class="text-muted small mb-0">Scheduling, scoring, and live match operations</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-3">
+                    <div class="col-sm-6 col-lg-3">
+                        <a class="card h-100 text-decoration-none admin-card" href="{{ url_for('schedule_mgmt.index') }}">
+                            <div class="card-body d-flex align-items-center">
+                                <i class="ph ph-calendar-check fs-3 text-primary me-3"></i>
+                                <div>
+                                    <div class="fw-semibold">Season Planning</div>
+                                    <small class="text-muted">Build, review, publish</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <a class="card h-100 text-decoration-none admin-card" href="{{ url_for('admin.manage_matches') }}">
+                            <div class="card-body d-flex align-items-center">
+                                <i class="ph ph-calendar-dots fs-3 text-primary me-3"></i>
+                                <div>
+                                    <div class="fw-semibold">Match Ops Console</div>
+                                    <small class="text-muted">Live match updates</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <a class="card h-100 text-decoration-none admin-card" href="{{ url_for('admin.manage_scores') }}">
+                            <div class="card-body d-flex align-items-center">
+                                <i class="ph ph-clipboard fs-3 text-primary me-3"></i>
+                                <div>
+                                    <div class="fw-semibold">Score Reporting</div>
+                                    <small class="text-muted">Live console & stats</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <a class="card h-100 text-decoration-none admin-card" href="{{ url_for('admin.manage_stadiums') }}">
+                            <div class="card-body d-flex align-items-center">
+                                <i class="ph ph-map-pin fs-3 text-primary me-3"></i>
+                                <div>
+                                    <div class="fw-semibold">Venues</div>
+                                    <small class="text-muted">Stadiums & facilities</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <a class="card h-100 text-decoration-none admin-card" href="{{ url_for('admin.manage_referees') }}">
+                            <div class="card-body d-flex align-items-center">
+                                <i class="ph ph-gavel fs-3 text-primary me-3"></i>
+                                <div>
+                                    <div class="fw-semibold">Referees</div>
+                                    <small class="text-muted">Match officials</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Branding & Design -->
+            <div class="admin-section mb-5">
+                <div class="section-header mb-3">
+                    <div class="d-flex align-items-center">
+                        <div class="section-icon">
+                            <i class="ph-fill ph-palette"></i>
+                        </div>
+                        <div>
+                            <h5 class="section-title mb-0">Branding & Design</h5>
+                            <p class="text-muted small mb-0">Customize your league's appearance and public pages</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-3">
+                    <div class="col-sm-6 col-lg-3">
+                        <a class="card h-100 text-decoration-none admin-card" href="{{ url_for('admin.manage_branding') }}">
+                            <div class="card-body d-flex align-items-center">
+                                <i class="ph ph-palette fs-3 text-primary me-3"></i>
+                                <div>
+                                    <div class="fw-semibold">Branding & Landing</div>
+                                    <small class="text-muted">Hero, colors & domain</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <a class="card h-100 text-decoration-none admin-card" href="{{ url_for('admin.homepage_builder') }}">
+                            <div class="card-body d-flex align-items-center">
+                                <i class="ph ph-browser fs-3 text-primary me-3"></i>
+                                <div>
+                                    <div class="fw-semibold">Homepage Builder</div>
+                                    <small class="text-muted">Drag & drop editor</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <a class="card h-100 text-decoration-none admin-card" href="{{ url_for('admin.manage_navigation') }}">
+                            <div class="card-body d-flex align-items-center">
+                                <i class="ph ph-compass fs-3 text-primary me-3"></i>
+                                <div>
+                                    <div class="fw-semibold">Navigation</div>
+                                    <small class="text-muted">Menus & layout</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <a class="card h-100 text-decoration-none admin-card" href="{{ url_for('admin.manage_footer') }}">
+                            <div class="card-body d-flex align-items-center">
+                                <i class="ph ph-rows fs-3 text-primary me-3"></i>
+                                <div>
+                                    <div class="fw-semibold">Footer</div>
+                                    <small class="text-muted">Links & CTA</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <a class="card h-100 text-decoration-none admin-card" href="{{ url_for('admin.manage_media') }}">
+                            <div class="card-body d-flex align-items-center">
+                                <i class="ph ph-images fs-3 text-primary me-3"></i>
+                                <div>
+                                    <div class="fw-semibold">Media Gallery</div>
+                                    <small class="text-muted">Photos & videos</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content & Communication -->
+            <div class="admin-section mb-5">
+                <div class="section-header mb-3">
+                    <div class="d-flex align-items-center">
+                        <div class="section-icon">
+                            <i class="ph-fill ph-newspaper"></i>
+                        </div>
+                        <div>
+                            <h5 class="section-title mb-0">Content & Communication</h5>
+                            <p class="text-muted small mb-0">News and public announcements</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-3">
+                    <div class="col-sm-6 col-lg-3">
+                        <a class="card h-100 text-decoration-none admin-card" href="{{ url_for('admin.manage_news') }}">
+                            <div class="card-body d-flex align-items-center">
+                                <i class="ph ph-newspaper fs-3 text-primary me-3"></i>
+                                <div>
+                                    <div class="fw-semibold">News</div>
+                                    <small class="text-muted">Articles & updates</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Finance & Business -->
+            <div class="admin-section mb-5">
+                <div class="section-header mb-3">
+                    <div class="d-flex align-items-center">
+                        <div class="section-icon">
+                            <i class="ph-fill ph-currency-dollar"></i>
+                        </div>
+                        <div>
+                            <h5 class="section-title mb-0">Finance & Business</h5>
+                            <p class="text-muted small mb-0">Revenue management, sponsorships, and financial reporting</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-3">
+                    <div class="col-sm-6 col-lg-3">
+                        <a class="card h-100 text-decoration-none admin-card" href="{{ url_for('admin.league_finance_hub') }}">
+                            <div class="card-body d-flex align-items-center">
+                                <i class="ph ph-chart-line-up fs-3 text-primary me-3"></i>
+                                <div>
+                                    <div class="fw-semibold">Finance Hub</div>
+                                    <small class="text-muted">Revenue & reports</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <a class="card h-100 text-decoration-none admin-card" href="{{ url_for('admin.manage_sponsors') }}">
+                            <div class="card-body d-flex align-items-center">
+                                <i class="ph ph-handshake fs-3 text-primary me-3"></i>
+                                <div>
+                                    <div class="fw-semibold">Sponsors</div>
+                                    <small class="text-muted">CRM & partnerships</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System & Settings -->
+            <div class="admin-section mb-5">
+                <div class="section-header mb-3">
+                    <div class="d-flex align-items-center">
+                        <div class="section-icon">
+                            <i class="ph-fill ph-gear-six"></i>
+                        </div>
+                        <div>
+                            <h5 class="section-title mb-0">System & Settings</h5>
+                            <p class="text-muted small mb-0">User management and system configuration</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-3">
+                    <div class="col-sm-6 col-lg-3">
+                        <a class="card h-100 text-decoration-none admin-card" href="{{ url_for('admin.manage_users') }}">
+                            <div class="card-body d-flex align-items-center">
+                                <i class="ph ph-users-three fs-3 text-primary me-3"></i>
+                                <div>
+                                    <div class="fw-semibold">Users</div>
+                                    <small class="text-muted">Manage users & roles</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <a class="card h-100 text-decoration-none admin-card" href="{{ url_for('admin.manage_countries') }}">
+                            <div class="card-body d-flex align-items-center">
+                                <i class="ph ph-flag fs-3 text-primary me-3"></i>
+                                <div>
+                                    <div class="fw-semibold">Countries</div>
+                                    <small class="text-muted">Metadata</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
         </div>
+
+        <!-- League Insights Tab (unchanged) -->
         <div class="tab-pane fade" id="insights-pane" role="tabpanel" aria-labelledby="insights-tab">
             {% if insights and insights.error %}
                 <div class="alert alert-warning mb-0">{{ insights.error }}</div>
@@ -438,11 +576,52 @@
         </div>
     </div>
 </div>
+
+<style>
+.admin-section {
+    position: relative;
+}
+
+.section-header {
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 0.75rem;
+}
+
+.section-icon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+}
+
+.section-icon i {
+    font-size: 1.5rem;
+    color: white;
+}
+
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.admin-card {
+    transition: all 0.3s ease;
+    border: 1px solid #e5e7eb;
+}
+
+.admin-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+    border-color: #667eea;
+}
+
+.admin-card .card-body {
+    padding: 1.25rem;
+}
+</style>
 {% endblock %}
-
-
-
-
-
-
-

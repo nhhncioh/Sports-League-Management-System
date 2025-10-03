@@ -1,7 +1,9 @@
 import logging
 from logging.config import fileConfig
 
+import os
 from flask import current_app
+from sqlalchemy import create_engine
 
 from alembic import context
 
@@ -36,8 +38,14 @@ def get_engine_url():
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-config.set_main_option('sqlalchemy.url', get_engine_url())
-target_db = current_app.extensions['migrate'].db
+if os.getenv('STANDALONE_MIGRATE', '0') == '1':
+    # Fallback standalone mode: no Flask app context required
+    database_url = os.getenv('DATABASE_URL') or 'sqlite:///slms.db'
+    config.set_main_option('sqlalchemy.url', database_url)
+    target_db = None
+else:
+    config.set_main_option('sqlalchemy.url', get_engine_url())
+    target_db = current_app.extensions['migrate'].db
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -46,6 +54,8 @@ target_db = current_app.extensions['migrate'].db
 
 
 def get_metadata():
+    if target_db is None:
+        return None
     if hasattr(target_db, 'metadatas'):
         return target_db.metadatas[None]
     return target_db.metadata
@@ -94,7 +104,10 @@ def run_migrations_online():
     if conf_args.get("process_revision_directives") is None:
         conf_args["process_revision_directives"] = process_revision_directives
 
-    connectable = get_engine()
+    if os.getenv('STANDALONE_MIGRATE', '0') == '1':
+        connectable = create_engine(config.get_main_option('sqlalchemy.url'))
+    else:
+        connectable = get_engine()
 
     with connectable.connect() as connection:
         context.configure(

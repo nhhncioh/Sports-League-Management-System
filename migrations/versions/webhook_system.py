@@ -17,6 +17,9 @@ depends_on = None
 
 
 def upgrade():
+    bind = op.get_bind()
+    dialect = bind.dialect.name
+    json_type = postgresql.JSONB(astext_type=sa.Text()) if dialect == 'postgresql' else sa.JSON()
     # Create webhook table
     op.create_table(
         'webhook',
@@ -27,11 +30,11 @@ def upgrade():
         sa.Column('name', sa.String(length=255), nullable=False),
         sa.Column('url', sa.String(length=1000), nullable=False),
         sa.Column('secret', sa.String(length=255), nullable=False),
-        sa.Column('events', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column('events', json_type, nullable=False),
         sa.Column('is_active', sa.Boolean(), nullable=False, server_default='true'),
         sa.Column('retry_count', sa.Integer(), nullable=False, server_default='3'),
         sa.Column('timeout', sa.Integer(), nullable=False, server_default='30'),
-        sa.Column('custom_headers', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column('custom_headers', json_type, nullable=True),
         sa.Column('success_count', sa.Integer(), nullable=False, server_default='0'),
         sa.Column('failure_count', sa.Integer(), nullable=False, server_default='0'),
         sa.Column('last_triggered_at', sa.DateTime(timezone=True), nullable=True),
@@ -50,7 +53,7 @@ def upgrade():
         sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
         sa.Column('webhook_id', sa.String(length=36), nullable=False),
         sa.Column('event_type', sa.String(length=100), nullable=False),
-        sa.Column('payload', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column('payload', json_type, nullable=False),
         sa.Column('status', sa.String(length=50), nullable=False, server_default='pending'),
         sa.Column('attempts', sa.Integer(), nullable=False, server_default='0'),
         sa.Column('response_status', sa.Integer(), nullable=True),

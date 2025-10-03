@@ -17,20 +17,49 @@ depends_on = None
 
 
 def upgrade():
-    # Add new columns to game table
-    op.add_column('game', sa.Column('went_to_overtime', sa.Boolean(), nullable=False, server_default='false'))
-    op.add_column('game', sa.Column('overtime_periods', sa.Integer(), nullable=False, server_default='0'))
-    op.add_column('game', sa.Column('home_score_regulation', sa.Integer(), nullable=True))
-    op.add_column('game', sa.Column('away_score_regulation', sa.Integer(), nullable=True))
-    op.add_column('game', sa.Column('period_scores', postgresql.JSONB(astext_type=sa.Text()), nullable=True))
-    op.add_column('game', sa.Column('is_reconciled', sa.Boolean(), nullable=False, server_default='false'))
-    op.add_column('game', sa.Column('reconciled_at', sa.DateTime(timezone=True), nullable=True))
-    op.add_column('game', sa.Column('reconciled_by_user_id', sa.String(length=36), nullable=True))
-    op.add_column('game', sa.Column('current_period', sa.Integer(), nullable=True))
-    op.add_column('game', sa.Column('game_clock', sa.String(length=10), nullable=True))
-    op.add_column('game', sa.Column('last_score_update', sa.DateTime(timezone=True), nullable=True))
+    bind = op.get_bind()
+    dialect = bind.dialect.name
+    json_type = postgresql.JSONB(astext_type=sa.Text()) if dialect == 'postgresql' else sa.JSON()
+    # Helper to list existing columns
+    def _columns(table: str) -> set[str]:
+        if dialect == 'sqlite':
+            rows = bind.exec_driver_sql(f"PRAGMA table_info('{table}')").fetchall()
+            return {row[1] for row in rows}
+        else:
+            # Safe: table is internal, not user-provided
+            res = bind.exec_driver_sql(
+                f"SELECT column_name FROM information_schema.columns WHERE table_name = '{table}'"
+            )
+            return {row[0] for row in res}
 
-    op.create_foreign_key('fk_game_reconciled_by_user', 'game', 'user', ['reconciled_by_user_id'], ['id'], ondelete='SET NULL')
+    game_cols = _columns('game')
+    # Add new columns to game table (guarded for partial runs)
+    if 'went_to_overtime' not in game_cols:
+        op.add_column('game', sa.Column('went_to_overtime', sa.Boolean(), nullable=False, server_default='false'))
+    if 'overtime_periods' not in game_cols:
+        op.add_column('game', sa.Column('overtime_periods', sa.Integer(), nullable=False, server_default='0'))
+    if 'home_score_regulation' not in game_cols:
+        op.add_column('game', sa.Column('home_score_regulation', sa.Integer(), nullable=True))
+    if 'away_score_regulation' not in game_cols:
+        op.add_column('game', sa.Column('away_score_regulation', sa.Integer(), nullable=True))
+    if 'period_scores' not in game_cols:
+        op.add_column('game', sa.Column('period_scores', json_type, nullable=True))
+    if 'is_reconciled' not in game_cols:
+        op.add_column('game', sa.Column('is_reconciled', sa.Boolean(), nullable=False, server_default='false'))
+    if 'reconciled_at' not in game_cols:
+        op.add_column('game', sa.Column('reconciled_at', sa.DateTime(timezone=True), nullable=True))
+    if 'reconciled_by_user_id' not in game_cols:
+        op.add_column('game', sa.Column('reconciled_by_user_id', sa.String(length=36), nullable=True))
+    if 'current_period' not in game_cols:
+        op.add_column('game', sa.Column('current_period', sa.Integer(), nullable=True))
+    if 'game_clock' not in game_cols:
+        op.add_column('game', sa.Column('game_clock', sa.String(length=10), nullable=True))
+    if 'last_score_update' not in game_cols:
+        op.add_column('game', sa.Column('last_score_update', sa.DateTime(timezone=True), nullable=True))
+
+    # SQLite cannot ALTER TABLE to add foreign keys; skip FK on SQLite
+    if dialect != 'sqlite':
+        op.create_foreign_key('fk_game_reconciled_by_user', 'game', 'user', ['reconciled_by_user_id'], ['id'], ondelete='SET NULL')
     op.create_index('ix_game_reconciled', 'game', ['is_reconciled'])
 
     # Create game_event table
@@ -48,7 +77,7 @@ def upgrade():
         sa.Column('period_type', sa.String(length=20), nullable=True),
         sa.Column('game_clock', sa.String(length=10), nullable=True),
         sa.Column('event_time', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-        sa.Column('details', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column('details', json_type, nullable=True),
         sa.Column('description', sa.Text(), nullable=True),
         sa.PrimaryKeyConstraint('id'),
         sa.ForeignKeyConstraint(['org_id'], ['organization.id'], ondelete='CASCADE'),

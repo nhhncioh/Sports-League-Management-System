@@ -16,17 +16,32 @@ depends_on = None
 
 
 def upgrade():
-    # Add color scheme fields to team table
-    with op.batch_alter_table('team', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('primary_color', sa.String(length=7), nullable=True))
-        batch_op.add_column(sa.Column('secondary_color', sa.String(length=7), nullable=True))
-        batch_op.add_column(sa.Column('accent_color', sa.String(length=7), nullable=True))
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
 
-    # Add color scheme fields to registration table (for team preferences)
-    with op.batch_alter_table('registration', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('primary_color', sa.String(length=7), nullable=True))
-        batch_op.add_column(sa.Column('secondary_color', sa.String(length=7), nullable=True))
-        batch_op.add_column(sa.Column('accent_color', sa.String(length=7), nullable=True))
+    # Add color scheme fields to team table if missing
+    team_cols = {c['name'] for c in inspector.get_columns('team')}
+    if 'primary_color' not in team_cols:
+        with op.batch_alter_table('team', schema=None) as batch_op:
+            batch_op.add_column(sa.Column('primary_color', sa.String(length=7), nullable=True))
+    if 'secondary_color' not in team_cols:
+        with op.batch_alter_table('team', schema=None) as batch_op:
+            batch_op.add_column(sa.Column('secondary_color', sa.String(length=7), nullable=True))
+    if 'accent_color' not in team_cols:
+        with op.batch_alter_table('team', schema=None) as batch_op:
+            batch_op.add_column(sa.Column('accent_color', sa.String(length=7), nullable=True))
+
+    # Add color scheme fields to registration table (for team preferences) if missing
+    reg_cols = {c['name'] for c in inspector.get_columns('registration')}
+    if 'primary_color' not in reg_cols:
+        with op.batch_alter_table('registration', schema=None) as batch_op:
+            batch_op.add_column(sa.Column('primary_color', sa.String(length=7), nullable=True))
+    if 'secondary_color' not in reg_cols:
+        with op.batch_alter_table('registration', schema=None) as batch_op:
+            batch_op.add_column(sa.Column('secondary_color', sa.String(length=7), nullable=True))
+    if 'accent_color' not in reg_cols:
+        with op.batch_alter_table('registration', schema=None) as batch_op:
+            batch_op.add_column(sa.Column('accent_color', sa.String(length=7), nullable=True))
 
 
 def downgrade():

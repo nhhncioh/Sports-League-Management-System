@@ -17,7 +17,11 @@ depends_on = None
 
 
 def upgrade():
-    op.create_table(
+    # Create table only if it doesn't already exist (supports pre-seeded schema)
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    if 'media_asset' not in inspector.get_table_names():
+        op.create_table(
         'media_asset',
         sa.Column('id', sa.String(length=36), nullable=False),
         sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.text('CURRENT_TIMESTAMP')),
@@ -38,10 +42,10 @@ def upgrade():
         sa.ForeignKeyConstraint(['org_id'], ['organization.id'], ondelete='CASCADE'),
         sa.ForeignKeyConstraint(['uploaded_by_user_id'], ['user.id'], ondelete='SET NULL'),
         sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('ix_media_asset_org_created', 'media_asset', ['org_id', 'created_at'], unique=False)
-    op.create_index('ix_media_asset_org_type', 'media_asset', ['org_id', 'media_type'], unique=False)
-    op.create_index('ix_media_asset_org_category', 'media_asset', ['org_id', 'category'], unique=False)
+        )
+        op.create_index('ix_media_asset_org_created', 'media_asset', ['org_id', 'created_at'], unique=False)
+        op.create_index('ix_media_asset_org_type', 'media_asset', ['org_id', 'media_type'], unique=False)
+        op.create_index('ix_media_asset_org_category', 'media_asset', ['org_id', 'category'], unique=False)
 
 
 def downgrade():

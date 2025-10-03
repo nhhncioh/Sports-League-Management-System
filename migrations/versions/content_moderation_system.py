@@ -17,6 +17,9 @@ depends_on = None
 
 
 def upgrade():
+    bind = op.get_bind()
+    dialect = bind.dialect.name
+    json_type = postgresql.JSONB(astext_type=sa.Text()) if dialect == 'postgresql' else sa.JSON()
     # Create article table
     op.create_table(
         'article',
@@ -44,8 +47,8 @@ def upgrade():
         sa.Column('view_count', sa.Integer(), nullable=False, server_default='0'),
         sa.Column('is_featured', sa.Boolean(), nullable=False, server_default='false'),
         sa.Column('is_pinned', sa.Boolean(), nullable=False, server_default='false'),
-        sa.Column('categories', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-        sa.Column('tags', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column('categories', json_type, nullable=True),
+        sa.Column('tags', json_type, nullable=True),
         sa.PrimaryKeyConstraint('id'),
         sa.ForeignKeyConstraint(['org_id'], ['organization.id'], ondelete='CASCADE'),
         sa.ForeignKeyConstraint(['author_id'], ['user.id'], ondelete='CASCADE'),
@@ -73,7 +76,7 @@ def upgrade():
         sa.Column('excerpt', sa.Text(), nullable=True),
         sa.Column('edited_by_id', sa.String(length=36), nullable=False),
         sa.Column('change_summary', sa.String(length=500), nullable=True),
-        sa.Column('metadata_snapshot', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column('metadata_snapshot', json_type, nullable=True),
         sa.PrimaryKeyConstraint('id'),
         sa.ForeignKeyConstraint(['org_id'], ['organization.id'], ondelete='CASCADE'),
         sa.ForeignKeyConstraint(['article_id'], ['article.id'], ondelete='CASCADE'),

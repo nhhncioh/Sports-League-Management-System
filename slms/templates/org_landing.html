@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+
+{% block title %}{{ g.org.name if g.org else 'Welcome' }}{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="org-hero" style="
+    background: linear-gradient(135deg, {{ hero.gradient_start or '#667eea' }}, {{ hero.gradient_end or '#764ba2' }});
+    {% if hero.background_image %}
+        background-image: url('{{ hero.background_image }}');
+        background-size: cover;
+        background-position: center;
+        background-blend-mode: overlay;
+    {% endif %}
+    color: {{ hero.text_color or 'white' }};
+    padding: 8rem 0;
+    position: relative;
+    overflow: hidden;
+">
+    <!-- Animated Background Elements -->
+    <div class="hero-particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
+    <div class="container position-relative" style="z-index: 2;">
+        <div class="row align-items-center">
+            <div class="col-lg-7">
+                <!-- Org Logo -->
+                {% if g.org and g.org.logo_url %}
+                    <div class="org-logo mb-4 animate-fade-in-up">
+                        <img src="{{ g.org.logo_url }}" alt="{{ g.org.name }}" style="max-height: 120px; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));">
+                    </div>
+                {% endif %}
+
+                <!-- Hero Title -->
+                <h1 class="display-3 fw-bold mb-4 animate-fade-in-up" style="animation-delay: 0.1s;">
+                    {{ hero.title or g.org.name if g.org else 'Welcome to Your League' }}
+                </h1>
+
+                <!-- Hero Subtitle -->
+                <p class="lead mb-4 animate-fade-in-up" style="animation-delay: 0.2s; opacity: 0.95; font-size: 1.25rem;">
+                    {{ hero.subtitle or 'Experience world-class sports management with real-time updates, comprehensive statistics, and fan engagement.' }}
+                </p>
+
+                <!-- Hero CTA Buttons -->
+                <div class="d-flex flex-wrap gap-3 mb-4 animate-fade-in-up" style="animation-delay: 0.3s;">
+                    {% if hero.primary_cta_text %}
+                        <a href="{{ hero.primary_cta_url or '#' }}" class="btn btn-lg btn-light px-4 shadow">
+                            <i class="ph ph-{{ hero.primary_cta_icon or 'arrow-right' }} me-2"></i>
+                            {{ hero.primary_cta_text }}
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('public.standings') }}" class="btn btn-lg btn-light px-4 shadow">
+                            <i class="ph ph-trophy me-2"></i> View Standings
+                        </a>
+                    {% endif %}
+
+                    {% if hero.secondary_cta_text %}
+                        <a href="{{ hero.secondary_cta_url or '#' }}" class="btn btn-lg btn-outline-light px-4">
+                            <i class="ph ph-{{ hero.secondary_cta_icon or 'info' }} me-2"></i>
+                            {{ hero.secondary_cta_text }}
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('public.leaderboards') }}" class="btn btn-lg btn-outline-light px-4">
+                            <i class="ph ph-chart-line me-2"></i> Stat Leaders
+                        </a>
+                    {% endif %}
+                </div>
+
+                <!-- Hero Features -->
+                {% if hero.features %}
+                    <div class="hero-features mt-5 animate-fade-in-up" style="animation-delay: 0.4s;">
+                        <div class="row g-3">
+                            {% for feature in hero.features[:3] %}
+                                <div class="col-md-4">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="ph ph-check-circle fs-5"></i>
+                                        <span>{{ feature }}</span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Hero Image/Illustration -->
+            <div class="col-lg-5 d-none d-lg-block animate-fade-in" style="animation-delay: 0.5s;">
+                {% if hero.hero_image %}
+                    <img src="{{ hero.hero_image }}" alt="Hero" class="img-fluid rounded-4 shadow-lg" style="transform: perspective(1000px) rotateY(-5deg);">
+                {% else %}
+                    <div class="hero-placeholder">
+                        <i class="ph-fill ph-trophy" style="font-size: 15rem; opacity: 0.3;"></i>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Live Ticker -->
+{% include 'components/live_ticker.html' %}
+
+<!-- Quick Stats Section -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-md-3">
+                <div class="stat-card text-center p-4 bg-white rounded-4 shadow-sm h-100">
+                    <i class="ph-fill ph-users-three text-primary mb-3" style="font-size: 3rem;"></i>
+                    <h3 class="h2 fw-bold mb-1">{{ stats.teams or 0 }}</h3>
+                    <p class="text-muted mb-0">Active Teams</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card text-center p-4 bg-white rounded-4 shadow-sm h-100">
+                    <i class="ph-fill ph-soccer-ball text-success mb-3" style="font-size: 3rem;"></i>
+                    <h3 class="h2 fw-bold mb-1">{{ stats.games or 0 }}</h3>
+                    <p class="text-muted mb-0">Games Played</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card text-center p-4 bg-white rounded-4 shadow-sm h-100">
+                    <i class="ph-fill ph-user text-info mb-3" style="font-size: 3rem;"></i>
+                    <h3 class="h2 fw-bold mb-1">{{ stats.players or 0 }}</h3>
+                    <p class="text-muted mb-0">Registered Players</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card text-center p-4 bg-white rounded-4 shadow-sm h-100">
+                    <i class="ph-fill ph-trophy text-warning mb-3" style="font-size: 3rem;"></i>
+                    <h3 class="h2 fw-bold mb-1">{{ stats.seasons or 0 }}</h3>
+                    <p class="text-muted mb-0">Active Seasons</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Grid -->
+{% if modules and modules|length > 0 %}
+    {% for module in modules %}
+        {% if module.type == 'features' %}
+            <section class="py-5" style="background: {{ module.background or 'white' }};">
+                <div class="container">
+                    <div class="text-center mb-5">
+                        <h2 class="display-5 fw-bold mb-3">{{ module.title }}</h2>
+                        <p class="lead text-muted">{{ module.subtitle }}</p>
+                    </div>
+                    <div class="row g-4">
+                        {% for feature in module.features %}
+                            <div class="col-md-4">
+                                <div class="feature-card p-4 h-100">
+                                    <div class="feature-icon mb-3">
+                                        <i class="ph ph-{{ feature.icon or 'star' }}" style="font-size: 3rem; color: {{ feature.color or '#667eea' }};"></i>
+                                    </div>
+                                    <h5 class="fw-semibold mb-2">{{ feature.title }}</h5>
+                                    <p class="text-muted mb-0">{{ feature.description }}</p>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+        {% elif module.type == 'cta_banner' %}
+            <section class="py-5" style="background: linear-gradient(135deg, {{ module.gradient_start or '#667eea' }}, {{ module.gradient_end or '#764ba2' }}); color: white;">
+                <div class="container text-center">
+                    <h2 class="display-5 fw-bold mb-3">{{ module.title }}</h2>
+                    <p class="lead mb-4">{{ module.description }}</p>
+                    <a href="{{ module.cta_url or '#' }}" class="btn btn-light btn-lg px-5">
+                        {{ module.cta_text or 'Get Started' }}
+                    </a>
+                </div>
+            </section>
+        {% elif module.type == 'testimonials' %}
+            <section class="py-5 bg-light">
+                <div class="container">
+                    <div class="text-center mb-5">
+                        <h2 class="display-5 fw-bold mb-3">{{ module.title or 'What People Say' }}</h2>
+                    </div>
+                    <div class="row g-4">
+                        {% for testimonial in module.testimonials %}
+                            <div class="col-md-4">
+                                <div class="testimonial-card p-4 bg-white rounded-4 shadow-sm h-100">
+                                    <div class="mb-3">
+                                        <i class="ph-fill ph-quotes text-primary" style="font-size: 2rem;"></i>
+                                    </div>
+                                    <p class="mb-3">"{{ testimonial.quote }}"</p>
+                                    <div class="d-flex align-items-center">
+                                        {% if testimonial.avatar %}
+                                            <img src="{{ testimonial.avatar }}" alt="{{ testimonial.name }}" class="rounded-circle me-3" style="width: 50px; height: 50px; object-fit: cover;">
+                                        {% endif %}
+                                        <div>
+                                            <strong>{{ testimonial.name }}</strong>
+                                            <div class="text-muted small">{{ testimonial.role }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+        {% endif %}
+    {% endfor %}
+{% endif %}
+
+<!-- Contact/Footer CTA -->
+<section class="py-5" style="background: linear-gradient(135deg, #1e293b, #334155); color: white;">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h3 class="h2 fw-bold mb-2">{{ footer_cta.title or 'Ready to Join?' }}</h3>
+                <p class="lead mb-lg-0">{{ footer_cta.description or 'Be part of our growing sports community.' }}</p>
+            </div>
+            <div class="col-lg-4 text-lg-end">
+                <a href="{{ footer_cta.cta_url or url_for('auth.login') }}" class="btn btn-light btn-lg px-5">
+                    {{ footer_cta.cta_text or 'Get Started' }}
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+}
+
+.animate-fade-in-up {
+    animation: fadeInUp 0.8s ease-out forwards;
+}
+
+.animate-fade-in {
+    animation: fadeIn 1s ease-out forwards;
+}
+
+.org-hero {
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-particles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.particle {
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 50%;
+    animation: float 6s ease-in-out infinite;
+}
+
+.particle:nth-child(1) {
+    top: 20%;
+    left: 10%;
+    animation-delay: 0s;
+}
+
+.particle:nth-child(2) {
+    top: 60%;
+    right: 10%;
+    animation-delay: 2s;
+    width: 200px;
+    height: 200px;
+}
+
+.particle:nth-child(3) {
+    bottom: 10%;
+    left: 50%;
+    animation-delay: 4s;
+    width: 250px;
+    height: 250px;
+}
+
+.stat-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+}
+
+.feature-card {
+    background: white;
+    border-radius: 1rem;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+}
+
+.testimonial-card {
+    transition: transform 0.3s ease;
+}
+
+.testimonial-card:hover {
+    transform: translateY(-5px);
+}
+</style>
+{% endblock %}
