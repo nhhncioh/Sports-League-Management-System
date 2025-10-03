@@ -1,0 +1,777 @@
+{% extends "layout.html" %}
+
+{% block title %}League Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>League & Season Management</h2>
+            <p class="text-muted">Create and manage your leagues and seasons</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <button class="btn btn-primary" onclick="showCreateLeagueModal()">
+                <i class="bi bi-plus-lg"></i> Create League
+            </button>
+        </div>
+    </div>
+
+    <!-- Filter Controls -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">League Status</label>
+                    <select class="form-select" id="leagueStatusFilter" onchange="loadLeagues()">
+                        <option value="">All Active</option>
+                        <option value="draft">Draft</option>
+                        <option value="active">Active</option>
+                        <option value="archived">Archived</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Include Archived</label>
+                    <div class="form-check form-switch mt-2">
+                        <input class="form-check-input" type="checkbox" id="includeArchivedFilter" onchange="loadLeagues()">
+                        <label class="form-check-label" for="includeArchivedFilter">Show archived</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leagues List -->
+    <div id="leaguesContainer">
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create League Modal -->
+<div class="modal fade" id="createLeagueModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New League</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createLeagueForm">
+                    <div class="mb-3">
+                        <label class="form-label">League Name *</label>
+                        <input type="text" class="form-control" id="leagueName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Sport *</label>
+                        <select class="form-select" id="leagueSport" required>
+                            <option value="">Select sport...</option>
+                            <option value="basketball">Basketball</option>
+                            <option value="soccer">Soccer</option>
+                            <option value="hockey">Hockey</option>
+                            <option value="volleyball">Volleyball</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="leagueDescription" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Timezone</label>
+                        <select class="form-select" id="leagueTimezone">
+                            <option value="UTC">UTC</option>
+                            <option value="America/New_York">Eastern Time</option>
+                            <option value="America/Chicago">Central Time</option>
+                            <option value="America/Denver">Mountain Time</option>
+                            <option value="America/Los_Angeles">Pacific Time</option>
+                            <option value="America/Toronto">Toronto</option>
+                            <option value="America/Vancouver">Vancouver</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createLeague()">Create League</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit League Modal -->
+<div class="modal fade" id="editLeagueModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit League</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editLeagueForm">
+                    <input type="hidden" id="editLeagueId">
+                    <div class="mb-3">
+                        <label class="form-label">League Name *</label>
+                        <input type="text" class="form-control" id="editLeagueName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Sport *</label>
+                        <select class="form-select" id="editLeagueSport" required>
+                            <option value="basketball">Basketball</option>
+                            <option value="soccer">Soccer</option>
+                            <option value="hockey">Hockey</option>
+                            <option value="volleyball">Volleyball</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="editLeagueDescription" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Timezone</label>
+                        <select class="form-select" id="editLeagueTimezone">
+                            <option value="UTC">UTC</option>
+                            <option value="America/New_York">Eastern Time</option>
+                            <option value="America/Chicago">Central Time</option>
+                            <option value="America/Denver">Mountain Time</option>
+                            <option value="America/Los_Angeles">Pacific Time</option>
+                            <option value="America/Toronto">Toronto</option>
+                            <option value="America/Vancouver">Vancouver</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="updateLeague()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Season Modal -->
+<div class="modal fade" id="createSeasonModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Season</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createSeasonForm">
+                    <input type="hidden" id="seasonLeagueId">
+
+                    <!-- Basic Info Tab -->
+                    <ul class="nav nav-tabs mb-3" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#basicTab">Basic Info</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#rulesTab">Rules & Settings</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#registrationTab">Registration</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#offSeasonTab">Off-Season</a>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <!-- Basic Info -->
+                        <div class="tab-pane fade show active" id="basicTab">
+                            <div class="mb-3">
+                                <label class="form-label">Season Name *</label>
+                                <input type="text" class="form-control" id="seasonName" required>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Start Date</label>
+                                    <input type="date" class="form-control" id="seasonStartDate">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">End Date</label>
+                                    <input type="date" class="form-control" id="seasonEndDate">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Timezone (leave empty to use league timezone)</label>
+                                <select class="form-select" id="seasonTimezone">
+                                    <option value="">Use League Timezone</option>
+                                    <option value="UTC">UTC</option>
+                                    <option value="America/New_York">Eastern Time</option>
+                                    <option value="America/Chicago">Central Time</option>
+                                    <option value="America/Denver">Mountain Time</option>
+                                    <option value="America/Los_Angeles">Pacific Time</option>
+                                    <option value="America/Toronto">Toronto</option>
+                                    <option value="America/Vancouver">Vancouver</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Default Game Length (minutes)</label>
+                                <input type="number" class="form-control" id="seasonGameLength" min="1">
+                            </div>
+                        </div>
+
+                        <!-- Rules & Settings -->
+                        <div class="tab-pane fade" id="rulesTab">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Overtime Enabled</label>
+                                    <select class="form-select" id="rulesOvertimeEnabled">
+                                        <option value="false">No</option>
+                                        <option value="true">Yes</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Overtime Length (minutes)</label>
+                                    <input type="number" class="form-control" id="rulesOvertimeLength" min="1">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Ties Allowed</label>
+                                    <select class="form-select" id="rulesTiesAllowed">
+                                        <option value="true">Yes</option>
+                                        <option value="false">No</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Max Players Per Team</label>
+                                    <input type="number" class="form-control" id="rulesMaxPlayers" min="1">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Point System (JSON)</label>
+                                <textarea class="form-control font-monospace" id="rulesPointSystem" rows="3" placeholder='{"win": 3, "tie": 1, "loss": 0}'></textarea>
+                                <small class="text-muted">Example: {"win": 3, "tie": 1, "loss": 0}</small>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Custom Rules Description</label>
+                                <textarea class="form-control" id="rulesCustom" rows="3"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Registration -->
+                        <div class="tab-pane fade" id="registrationTab">
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="seasonRegistrationOpen">
+                                    <label class="form-check-label" for="seasonRegistrationOpen">Registration Open</label>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Registration Mode</label>
+                                <select class="form-select" id="seasonRegistrationMode">
+                                    <option value="">Not Set</option>
+                                    <option value="team_based">Team Based</option>
+                                    <option value="player_based">Player Based</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Registration Deadline</label>
+                                <input type="datetime-local" class="form-control" id="seasonRegistrationDeadline">
+                            </div>
+                            <div class="row">
+                                <div class="col-md-8 mb-3">
+                                    <label class="form-label">Registration Fee (in cents)</label>
+                                    <input type="number" class="form-control" id="seasonFeeCents" min="0">
+                                    <small class="text-muted">Example: 5000 = $50.00</small>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Currency</label>
+                                    <select class="form-select" id="seasonCurrency">
+                                        <option value="CAD">CAD</option>
+                                        <option value="USD">USD</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Off-Season -->
+                        <div class="tab-pane fade" id="offSeasonTab">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Off-Season Start Date</label>
+                                    <input type="date" class="form-control" id="seasonOffSeasonStart">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Off-Season End Date</label>
+                                    <input type="date" class="form-control" id="seasonOffSeasonEnd">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Off-Season Message</label>
+                                <textarea class="form-control" id="seasonOffSeasonMessage" rows="3" placeholder="This season is currently in off-season..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createSeason()">Create Season</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.league-card {
+    transition: all 0.2s;
+}
+.league-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.status-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
+.season-item {
+    border-left: 3px solid transparent;
+    padding-left: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+.season-item.active {
+    border-left-color: #0d6efd;
+    background-color: #f8f9fa;
+}
+</style>
+
+<script>
+let currentLeagues = [];
+
+// Load leagues on page load
+document.addEventListener('DOMContentLoaded', () => {
+    loadLeagues();
+});
+
+async function loadLeagues() {
+    const statusFilter = document.getElementById('leagueStatusFilter').value;
+    const includeArchived = document.getElementById('includeArchivedFilter').checked;
+
+    let url = '/league-management/api/leagues?';
+    if (statusFilter) url += `status=${statusFilter}&`;
+    if (includeArchived) url += 'include_archived=true';
+
+    try {
+        const response = await fetch(url);
+        const leagues = await response.json();
+        currentLeagues = leagues;
+        renderLeagues(leagues);
+    } catch (error) {
+        console.error('Error loading leagues:', error);
+        document.getElementById('leaguesContainer').innerHTML = `
+            <div class="alert alert-danger">Error loading leagues. Please try again.</div>
+        `;
+    }
+}
+
+function renderLeagues(leagues) {
+    const container = document.getElementById('leaguesContainer');
+
+    if (leagues.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-5">
+                <i class="bi bi-trophy" style="font-size: 4rem; color: #ccc;"></i>
+                <p class="mt-3 text-muted">No leagues found. Create your first league to get started!</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = leagues.map(league => `
+        <div class="card league-card mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h4 class="card-title mb-2">
+                            ${league.name}
+                            <span class="badge ${getStatusBadgeClass(league.status)} status-badge ms-2">${league.status}</span>
+                            <span class="badge bg-secondary status-badge">${league.sport}</span>
+                        </h4>
+                        ${league.description ? `<p class="text-muted mb-2">${league.description}</p>` : ''}
+                        <small class="text-muted">
+                            <i class="bi bi-clock"></i> ${league.timezone}
+                            | Created ${new Date(league.created_at).toLocaleDateString()}
+                        </small>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-primary" onclick="showCreateSeasonModal('${league.id}')">
+                            <i class="bi bi-plus-lg"></i> Add Season
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="editLeague('${league.id}')">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        ${getLeagueActions(league)}
+                    </div>
+                </div>
+                <div id="seasons-${league.id}" class="mt-3">
+                    <div class="text-center py-2">
+                        <small class="text-muted">Loading seasons...</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    // Load seasons for each league
+    leagues.forEach(league => loadSeasons(league.id));
+}
+
+function getStatusBadgeClass(status) {
+    const classes = {
+        'draft': 'bg-secondary',
+        'active': 'bg-success',
+        'archived': 'bg-dark',
+        'off_season': 'bg-warning',
+        'completed': 'bg-info'
+    };
+    return classes[status] || 'bg-secondary';
+}
+
+function getLeagueActions(league) {
+    if (league.status === 'draft') {
+        return `
+            <button class="btn btn-sm btn-success" onclick="activateLeague('${league.id}')">
+                <i class="bi bi-check-lg"></i> Activate
+            </button>
+            <button class="btn btn-sm btn-danger" onclick="deleteLeague('${league.id}')">
+                <i class="bi bi-trash"></i>
+            </button>
+        `;
+    } else if (league.status === 'active') {
+        return `
+            <button class="btn btn-sm btn-warning" onclick="archiveLeague('${league.id}')">
+                <i class="bi bi-archive"></i> Archive
+            </button>
+        `;
+    } else if (league.status === 'archived') {
+        return `
+            <button class="btn btn-sm btn-info" onclick="restoreLeague('${league.id}')">
+                <i class="bi bi-arrow-counterclockwise"></i> Restore
+            </button>
+        `;
+    }
+    return '';
+}
+
+async function loadSeasons(leagueId) {
+    try {
+        const response = await fetch(`/league-management/api/leagues/${leagueId}/seasons`);
+        const seasons = await response.json();
+        renderSeasons(leagueId, seasons);
+    } catch (error) {
+        console.error('Error loading seasons:', error);
+    }
+}
+
+function renderSeasons(leagueId, seasons) {
+    const container = document.getElementById(`seasons-${leagueId}`);
+
+    if (seasons.length === 0) {
+        container.innerHTML = '<p class="text-muted mb-0"><small>No seasons yet</small></p>';
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="row">
+            ${seasons.map(season => `
+                <div class="col-md-6 mb-2">
+                    <div class="season-item ${season.is_active ? 'active' : ''}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>${season.name}</strong>
+                                <span class="badge ${getStatusBadgeClass(season.status)} status-badge ms-2">${season.status}</span>
+                                ${season.is_active ? '<span class="badge bg-primary status-badge">Current</span>' : ''}
+                                <br>
+                                <small class="text-muted">
+                                    ${season.start_date ? new Date(season.start_date).toLocaleDateString() : 'TBD'}
+                                    - ${season.end_date ? new Date(season.end_date).toLocaleDateString() : 'TBD'}
+                                </small>
+                            </div>
+                            <div class="btn-group btn-group-sm">
+                                ${getSeasonActions(season)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function getSeasonActions(season) {
+    let actions = '';
+    if (season.status === 'draft') {
+        actions += `<button class="btn btn-sm btn-success" onclick="activateSeason('${season.id}')"><i class="bi bi-play"></i></button>`;
+        actions += `<button class="btn btn-sm btn-danger" onclick="deleteSeason('${season.id}')"><i class="bi bi-trash"></i></button>`;
+    } else if (season.status === 'active') {
+        actions += `<button class="btn btn-sm btn-warning" onclick="setOffSeason('${season.id}')">Off-Season</button>`;
+        actions += `<button class="btn btn-sm btn-info" onclick="completeSeason('${season.id}')">Complete</button>`;
+    } else if (season.status === 'off_season') {
+        actions += `<button class="btn btn-sm btn-success" onclick="activateSeason('${season.id}')">Resume</button>`;
+    } else if (season.status === 'completed') {
+        actions += `<button class="btn btn-sm btn-secondary" onclick="archiveSeason('${season.id}')">Archive</button>`;
+    } else if (season.status === 'archived') {
+        actions += `<button class="btn btn-sm btn-info" onclick="restoreSeason('${season.id}')">Restore</button>`;
+    }
+    return actions;
+}
+
+// League CRUD operations
+function showCreateLeagueModal() {
+    document.getElementById('createLeagueForm').reset();
+    new bootstrap.Modal(document.getElementById('createLeagueModal')).show();
+}
+
+async function createLeague() {
+    const data = {
+        name: document.getElementById('leagueName').value,
+        sport: document.getElementById('leagueSport').value,
+        description: document.getElementById('leagueDescription').value,
+        timezone: document.getElementById('leagueTimezone').value,
+    };
+
+    try {
+        const response = await fetch('/league-management/api/leagues', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('createLeagueModal')).hide();
+            loadLeagues();
+        } else {
+            const error = await response.json();
+            alert(error.error || 'Error creating league');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error creating league');
+    }
+}
+
+async function editLeague(leagueId) {
+    try {
+        const response = await fetch(`/league-management/api/leagues/${leagueId}`);
+        const league = await response.json();
+
+        document.getElementById('editLeagueId').value = league.id;
+        document.getElementById('editLeagueName').value = league.name;
+        document.getElementById('editLeagueSport').value = league.sport;
+        document.getElementById('editLeagueDescription').value = league.description || '';
+        document.getElementById('editLeagueTimezone').value = league.timezone;
+
+        new bootstrap.Modal(document.getElementById('editLeagueModal')).show();
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+async function updateLeague() {
+    const leagueId = document.getElementById('editLeagueId').value;
+    const data = {
+        name: document.getElementById('editLeagueName').value,
+        sport: document.getElementById('editLeagueSport').value,
+        description: document.getElementById('editLeagueDescription').value,
+        timezone: document.getElementById('editLeagueTimezone').value,
+    };
+
+    try {
+        const response = await fetch(`/league-management/api/leagues/${leagueId}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('editLeagueModal')).hide();
+            loadLeagues();
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+async function activateLeague(leagueId) {
+    try {
+        await fetch(`/league-management/api/leagues/${leagueId}/activate`, {method: 'POST'});
+        loadLeagues();
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+async function archiveLeague(leagueId) {
+    if (!confirm('Archive this league and all its seasons?')) return;
+    try {
+        await fetch(`/league-management/api/leagues/${leagueId}/archive`, {method: 'POST'});
+        loadLeagues();
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+async function restoreLeague(leagueId) {
+    try {
+        await fetch(`/league-management/api/leagues/${leagueId}/restore`, {method: 'POST'});
+        loadLeagues();
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+async function deleteLeague(leagueId) {
+    if (!confirm('Permanently delete this league? This cannot be undone.')) return;
+    try {
+        await fetch(`/league-management/api/leagues/${leagueId}`, {method: 'DELETE'});
+        loadLeagues();
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+// Season CRUD operations
+function showCreateSeasonModal(leagueId) {
+    document.getElementById('createSeasonForm').reset();
+    document.getElementById('seasonLeagueId').value = leagueId;
+    new bootstrap.Modal(document.getElementById('createSeasonModal')).show();
+}
+
+async function createSeason() {
+    const leagueId = document.getElementById('seasonLeagueId').value;
+
+    // Build rules object
+    const rules = {};
+    if (document.getElementById('rulesOvertimeEnabled').value) {
+        rules.overtime_enabled = document.getElementById('rulesOvertimeEnabled').value === 'true';
+    }
+    if (document.getElementById('rulesOvertimeLength').value) {
+        rules.overtime_length_minutes = parseInt(document.getElementById('rulesOvertimeLength').value);
+    }
+    if (document.getElementById('rulesTiesAllowed').value) {
+        rules.ties_allowed = document.getElementById('rulesTiesAllowed').value === 'true';
+    }
+    if (document.getElementById('rulesMaxPlayers').value) {
+        rules.max_players_per_team = parseInt(document.getElementById('rulesMaxPlayers').value);
+    }
+    if (document.getElementById('rulesPointSystem').value) {
+        try {
+            rules.point_system = JSON.parse(document.getElementById('rulesPointSystem').value);
+        } catch (e) {
+            alert('Invalid point system JSON');
+            return;
+        }
+    }
+    if (document.getElementById('rulesCustom').value) {
+        rules.custom_rules = document.getElementById('rulesCustom').value;
+    }
+
+    const data = {
+        name: document.getElementById('seasonName').value,
+        start_date: document.getElementById('seasonStartDate').value || null,
+        end_date: document.getElementById('seasonEndDate').value || null,
+        timezone: document.getElementById('seasonTimezone').value || null,
+        default_game_length_minutes: parseInt(document.getElementById('seasonGameLength').value) || null,
+        rules: rules,
+        registration_open: document.getElementById('seasonRegistrationOpen').checked,
+        registration_mode: document.getElementById('seasonRegistrationMode').value || null,
+        registration_deadline: document.getElementById('seasonRegistrationDeadline').value || null,
+        fee_cents: parseInt(document.getElementById('seasonFeeCents').value) || null,
+        currency: document.getElementById('seasonCurrency').value,
+        off_season_start: document.getElementById('seasonOffSeasonStart').value || null,
+        off_season_end: document.getElementById('seasonOffSeasonEnd').value || null,
+        off_season_message: document.getElementById('seasonOffSeasonMessage').value || null,
+    };
+
+    try {
+        const response = await fetch(`/league-management/api/leagues/${leagueId}/seasons`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('createSeasonModal')).hide();
+            loadSeasons(leagueId);
+        } else {
+            const error = await response.json();
+            alert(error.error || 'Error creating season');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error creating season');
+    }
+}
+
+async function activateSeason(seasonId) {
+    try {
+        await fetch(`/league-management/api/seasons/${seasonId}/activate`, {method: 'POST'});
+        loadLeagues();
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+async function setOffSeason(seasonId) {
+    const message = prompt('Enter off-season message (optional):');
+    try {
+        await fetch(`/league-management/api/seasons/${seasonId}/off-season`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({message})
+        });
+        loadLeagues();
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+async function completeSeason(seasonId) {
+    if (!confirm('Mark this season as completed?')) return;
+    try {
+        await fetch(`/league-management/api/seasons/${seasonId}/complete`, {method: 'POST'});
+        loadLeagues();
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+async function archiveSeason(seasonId) {
+    if (!confirm('Archive this season?')) return;
+    try {
+        await fetch(`/league-management/api/seasons/${seasonId}/archive`, {method: 'POST'});
+        loadLeagues();
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+async function restoreSeason(seasonId) {
+    try {
+        await fetch(`/league-management/api/seasons/${seasonId}/restore`, {method: 'POST'});
+        loadLeagues();
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+async function deleteSeason(seasonId) {
+    if (!confirm('Permanently delete this season? This cannot be undone.')) return;
+    try {
+        const response = await fetch(`/league-management/api/seasons/${seasonId}`, {method: 'DELETE'});
+        if (response.ok) {
+            loadLeagues();
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+</script>
+{% endblock %}

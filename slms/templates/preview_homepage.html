@@ -161,6 +161,17 @@
 {% endmacro %}
 
 {% block content %}
+{% set config = site_feature_flags or {} %}
+{% set cta_slots = site_cta_slots if site_cta_slots is defined else (site_theme.get('cta_slots') if site_theme else {}) %}
+{% set footer_primary = cta_slots.get('footer_primary', {}) %}
+{% set footer_secondary = cta_slots.get('footer_secondary', {}) %}
+{% set cta_class_map = {
+    'primary': 'btn btn-lg btn-primary px-4',
+    'secondary': 'btn btn-lg btn-secondary px-4',
+    'outline': 'btn btn-lg btn-outline-primary px-4',
+    'ghost': 'btn btn-lg btn-link px-4 text-decoration-none',
+    'link': 'btn btn-lg btn-link px-4 text-decoration-none'
+} %}
 <div class="preview-notice bg-warning text-dark p-3 text-center sticky-top" style="z-index: 1000;">
     <strong><i class="ph ph-eye me-2"></i>Preview Mode</strong> - This is how your homepage will look. Close this tab to return to editing.
 </div>
@@ -580,6 +591,40 @@
     <p class="text-muted">Add blocks in the builder to see your homepage preview</p>
 </div>
 {% endif %}
+{% if config.show_cta_panel != false %}
+<section class="section pt-0">
+    <div class="container">
+        <div class="cta-panel d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div>
+                <h2 class="h4 mb-2">Enhance your league operations</h2>
+                <p class="mb-0 text-muted">Centralize communication, automate scoring workflows, and keep every stakeholder aligned.</p>
+            </div>
+            <div class="d-flex flex-wrap gap-3">
+                {% if footer_primary.enabled %}
+                    {% set footer_primary_label = footer_primary.label or 'Contact League Office' %}
+                    {% set footer_primary_url = footer_primary.url or url_for('portal.index') %}
+                    <a class="{{ cta_class_map.get(footer_primary.style, cta_class_map['primary']) }}" href="{{ footer_primary_url }}" {% if footer_primary.new_tab %}target="_blank" rel="noopener"{% endif %}>
+                        {% if footer_primary.icon %}<i class="{{ footer_primary.icon }} me-2"></i>{% endif %}
+                        {{ footer_primary_label }}
+                    </a>
+                {% endif %}
+                {% if footer_secondary.enabled %}
+                    {% set footer_secondary_label = footer_secondary.label or 'Download Schedule' %}
+                    {% set footer_secondary_url = footer_secondary.url or url_for('portal.index') %}
+                    <a class="{{ cta_class_map.get(footer_secondary.style, cta_class_map['outline']) }}" href="{{ footer_secondary_url }}" {% if footer_secondary.new_tab %}target="_blank" rel="noopener"{% endif %}>
+                        {% if footer_secondary.icon %}<i class="{{ footer_secondary.icon }} me-2"></i>{% endif %}
+                        {{ footer_secondary_label }}
+                    </a>
+                {% endif %}
+                {% if not footer_primary.enabled and not footer_secondary.enabled %}
+                    <a class="btn btn-lg btn-primary px-4" href="{{ url_for('portal.index') }}">Go to Portal</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
 
 <style>
 /* Animation styles */

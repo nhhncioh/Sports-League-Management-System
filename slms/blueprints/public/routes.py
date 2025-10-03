@@ -1,9 +1,9 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, abort
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, abort, g
 from flask_login import current_user
 
 from slms.security import roles_required
 from slms.services.db import get_db
-from slms.models import UserRole
+from slms.models import MediaAsset, UserRole
 import json
 from slms.extensions import bcrypt
 
@@ -802,58 +802,103 @@ def profile():
 @public_bp.route('/gallery')
 def media_gallery():
     """Public media gallery - photos and videos"""
-    db = get_db()
-    cur = db.cursor()
+    category = (request.args.get('category') or '').strip()
+    media_type = (request.args.get('type') or '').strip()
 
-    # Get filter parameters
-    category = request.args.get('category', '')
-    media_type = request.args.get('type', '')
-
-    # Build query
-    query = """
-        SELECT media_id, title, description, url, media_type, category, created_at
-        FROM media
-        WHERE 1=1
-    """
-    params = []
+    query = MediaAsset.query.order_by(MediaAsset.created_at.desc())
+    org = getattr(g, 'org', None)
+    if org is not None:
+        query = query.filter(MediaAsset.org_id == org.id)
 
     if category:
-        query += " AND category = %s"
-        params.append(category)
+        query = query.filter(MediaAsset.category == category)
 
     if media_type:
-        query += " AND media_type = %s"
-        params.append(media_type)
+        query = query.filter(MediaAsset.media_type == media_type)
 
-    query += " ORDER BY created_at DESC"
+    assets = query.all()
+    media_items = [
+        {
+            'id': asset.id,
+            'media_id': asset.id,
+            'title': asset.title,
+            'description': asset.description,
+            'url': asset.url,
+            'media_type': asset.media_type,
+            'category': asset.category,
+            'created_at': asset.created_at.isoformat() if asset.created_at else None,
+        }
+        for asset in assets
+    ]
 
-    cur.execute(query, params)
-    media_raw = cur.fetchall()
-
-    # Convert to list of dicts
-    media_items = []
-    for item in media_raw:
-        media_items.append({
-            'media_id': item[0],
-            'title': item[1],
-            'description': item[2],
-            'url': item[3],
-            'media_type': item[4],
-            'category': item[5],
-            'created_at': item[6]
-        })
-
-    # Get available categories for filter
-    cur.execute("SELECT DISTINCT category FROM media WHERE category IS NOT NULL AND category != ''")
-    categories = [row[0] for row in cur.fetchall()]
-
-    cur.close()
+    category_query = MediaAsset.query
+    if org is not None:
+        category_query = category_query.filter(MediaAsset.org_id == org.id)
+    raw_categories = category_query.with_entities(MediaAsset.category).distinct().all()
+    category_values = sorted({value for (value,) in raw_categories if value})
 
     return render_template('public_gallery.html',
                          media_items=media_items,
-                         categories=categories,
+                         categories=category_values,
                          selected_category=category,
                          selected_type=media_type)
+
+
+@public_bp.route('/search')
+def search():
+    """Universal search page."""
+    return render_template('universal_search.html')
+
+
+@public_bp.route('/teams/<team_id>')
+def team_profile(team_id):
+    """Team profile page."""
+    from slms.models.models import Team
+    from slms.services.search import search_players_by_team, search_games_by_team
+    from slms.extensions import db
+
+    team = db.session.get(Team, team_id)
+    if not team:
+        abort(404)
+
+    # Get related data
+    players = search_players_by_team(team_id, team.org_id)
+    games = search_games_by_team(team_id, team.org_id, limit=10)
+
+    return render_template('team_profile.html', team=team, players=players, games=games)
+
+
+@public_bp.route('/players/<player_id>')
+def player_profile(player_id):
+    """Player profile page."""
+    from slms.models.models import Player, Team
+    from slms.extensions import db
+
+    player = db.session.get(Player, player_id)
+    if not player:
+        abort(404)
+
+    # Get team if assigned
+    team = db.session.get(Team, player.team_id) if player.team_id else None
+
+    return render_template('player_profile.html', player=player, team=team)
+
+
+@public_bp.route('/venues/<venue_id>')
+def venue_profile(venue_id):
+    """Venue profile page."""
+    from slms.models.models import Venue
+    from slms.services.search import search_games_by_venue
+    from slms.extensions import db
+
+    venue = db.session.get(Venue, venue_id)
+    if not venue:
+        abort(404)
+
+    # Get upcoming games
+    games = search_games_by_venue(venue_id, venue.org_id, limit=10)
+
+    return render_template('venue_profile.html', venue=venue, games=games)
 
 
 

@@ -9,6 +9,11 @@ from slms.blueprints.admin import admin_bp, registration_admin_bp
 from slms.blueprints.public import public_bp, portal_bp, registration_bp
 from slms.blueprints.api import api_bp
 from slms.blueprints.auth import auth_bp
+from slms.blueprints.schedule_mgmt import schedule_mgmt_bp
+from slms.blueprints.org_admin import org_admin_bp
+from slms.blueprints.league_mgmt import league_mgmt_bp
+from slms.blueprints.live_scoring import live_scoring_bp
+from slms.blueprints.content_mgmt import content_mgmt_bp
 from slms.config import Config
 from slms.extensions import (
     db,
@@ -74,7 +79,12 @@ def create_app(config_class=Config):
 
     # Register blueprints
     app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(org_admin_bp, url_prefix='/org')
     app.register_blueprint(admin_bp, url_prefix='/admin')
+    app.register_blueprint(schedule_mgmt_bp)  # Schedule management routes
+    app.register_blueprint(league_mgmt_bp)  # League lifecycle management routes
+    app.register_blueprint(live_scoring_bp)  # Live scoring console routes
+    app.register_blueprint(content_mgmt_bp)  # Content management routes
     app.register_blueprint(registration_admin_bp)  # Registration admin routes
     app.register_blueprint(portal_bp)  # Portal routes at root
     app.register_blueprint(registration_bp)  # Registration routes at root
@@ -92,6 +102,10 @@ def create_app(config_class=Config):
     # Site settings context processor
     from slms.services.site import inject_site_settings
     app.context_processor(inject_site_settings)
+
+    # Organization branding context processor
+    from slms.services.branding import inject_branding_context
+    app.context_processor(inject_branding_context)
 
     # Register CLI commands
     from slms.commands import register_commands

@@ -4,6 +4,19 @@
 
 {% block content %}
 {% set ns = namespace(first_season=None) %}
+{% set config = config if config is defined else site_feature_flags or {} %}
+{% set cta_slots = site_cta_slots if site_cta_slots is defined else (site_theme.get('cta_slots') if site_theme else {}) %}
+{% set hero_primary = cta_slots.get('hero_primary', {}) %}
+{% set hero_secondary = cta_slots.get('hero_secondary', {}) %}
+{% set footer_primary = cta_slots.get('footer_primary', {}) %}
+{% set footer_secondary = cta_slots.get('footer_secondary', {}) %}
+{% set cta_class_map = {
+    'primary': 'btn btn-lg btn-primary px-4',
+    'secondary': 'btn btn-lg btn-secondary px-4',
+    'outline': 'btn btn-lg btn-outline-primary px-4',
+    'ghost': 'btn btn-lg btn-link px-4 text-decoration-none',
+    'link': 'btn btn-lg btn-link px-4 text-decoration-none'
+} %}
 {% if leagues %}
     {% for league in leagues %}
         {% if league.seasons and league.seasons|length > 0 and not ns.first_season %}
@@ -27,9 +40,32 @@
                 Explore leagues, monitor live scores, and manage registrations all in one polished dashboard built to support teams, officials, and fans alike.
             </p>
             <div class="d-flex flex-wrap gap-3 mb-4">
-                <a class="btn btn-primary px-4" href="{{ url_for('portal.index') }}">Open Management Portal</a>
-                {% if ns.first_season %}
-                    <a class="btn btn-outline-primary px-4" href="{{ url_for('portal.season_schedule', season_id=ns.first_season.id) }}">Upcoming Schedule</a>
+                {% if hero_primary.enabled %}
+                    {% set hero_primary_label = hero_primary.label or 'Open Management Portal' %}
+                    {% set hero_primary_url = hero_primary.url or url_for('portal.index') %}
+                    <a class="{{ cta_class_map.get(hero_primary.style, cta_class_map['primary']) }}" href="{{ hero_primary_url }}" {% if hero_primary.new_tab %}target="_blank" rel="noopener"{% endif %}>
+                        {% if hero_primary.icon %}<i class="{{ hero_primary.icon }} me-2"></i>{% endif %}
+                        {{ hero_primary_label }}
+                    </a>
+                {% else %}
+                    <a class="btn btn-lg btn-primary px-4" href="{{ url_for('portal.index') }}">Open Management Portal</a>
+                {% endif %}
+                {% if hero_secondary.enabled %}
+                    {% set hero_secondary_label = hero_secondary.label or 'Upcoming Schedule' %}
+                    {% set hero_secondary_url = hero_secondary.url %}
+                    {% if not hero_secondary_url %}
+                        {% if ns.first_season %}
+                            {% set hero_secondary_url = url_for('portal.season_schedule', season_id=ns.first_season.id) %}
+                        {% else %}
+                            {% set hero_secondary_url = '#' %}
+                        {% endif %}
+                    {% endif %}
+                    <a class="{{ cta_class_map.get(hero_secondary.style, cta_class_map['outline']) }}" href="{{ hero_secondary_url }}" {% if hero_secondary.new_tab %}target="_blank" rel="noopener"{% endif %}>
+                        {% if hero_secondary.icon %}<i class="{{ hero_secondary.icon }} me-2"></i>{% endif %}
+                        {{ hero_secondary_label }}
+                    </a>
+                {% elif ns.first_season %}
+                    <a class="btn btn-lg btn-outline-primary px-4" href="{{ url_for('portal.season_schedule', season_id=ns.first_season.id) }}">Upcoming Schedule</a>
                 {% endif %}
             </div>
             <ul class="hero-list">
@@ -407,8 +443,29 @@ function showNewsModal(newsId, title, content, category, date) {
             <h2 class="h4 mb-2">Enhance your league operations</h2>
             <p class="mb-0 text-muted">Centralize communication, automate scoring workflows, and keep every stakeholder aligned.</p>
         </div>
-        <a class="btn btn-primary btn-lg px-4" href="{{ url_for('portal.index') }}">Go to Portal</a>
+        <div class="d-flex flex-wrap gap-3">
+            {% if footer_primary.enabled %}
+                {% set footer_primary_label = footer_primary.label or 'Contact League Office' %}
+                {% set footer_primary_url = footer_primary.url or url_for('portal.index') %}
+                <a class="{{ cta_class_map.get(footer_primary.style, cta_class_map['primary']) }}" href="{{ footer_primary_url }}" {% if footer_primary.new_tab %}target="_blank" rel="noopener"{% endif %}>
+                    {% if footer_primary.icon %}<i class="{{ footer_primary.icon }} me-2"></i>{% endif %}
+                    {{ footer_primary_label }}
+                </a>
+            {% endif %}
+            {% if footer_secondary.enabled %}
+                {% set footer_secondary_label = footer_secondary.label or 'Download Schedule' %}
+                {% set footer_secondary_url = footer_secondary.url or url_for('portal.index') %}
+                <a class="{{ cta_class_map.get(footer_secondary.style, cta_class_map['outline']) }}" href="{{ footer_secondary_url }}" {% if footer_secondary.new_tab %}target="_blank" rel="noopener"{% endif %}>
+                    {% if footer_secondary.icon %}<i class="{{ footer_secondary.icon }} me-2"></i>{% endif %}
+                    {{ footer_secondary_label }}
+                </a>
+            {% endif %}
+            {% if not footer_primary.enabled and not footer_secondary.enabled %}
+                <a class="btn btn-lg btn-primary px-4" href="{{ url_for('portal.index') }}">Go to Portal</a>
+            {% endif %}
+        </div>
     </div>
 </section>
+{% endif %}
 {% endif %}
 {% endblock %}

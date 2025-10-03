@@ -92,6 +92,13 @@
 {% endblock %}
 
 {% block content %}
+{% set cta_style_choices = [
+    ('primary', 'Primary (Brand)'),
+    ('secondary', 'Secondary'),
+    ('outline', 'Outline'),
+    ('ghost', 'Ghost'),
+    ('link', 'Link')
+] %}
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
@@ -221,6 +228,81 @@
                     </div>
                 </div>
             </div>
+            <div class="card mt-4">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <h5 class="mb-0"><i class="ph ph-megaphone-simple me-2"></i>Call To Action Slots</h5>
+                    <span class="badge bg-light text-dark text-uppercase">Theme</span>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">Configure reusable CTAs surfaced across the homepage theme.</p>
+                    <div class="accordion" id="ctaSlotsAccordion">
+                        {% for slot in cta_slot_meta %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="heading_{{ slot.key }}">
+                                <button class="accordion-button {% if not loop.first %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse_{{ slot.key }}" aria-expanded="{{ 'true' if loop.first else 'false' }}" aria-controls="collapse_{{ slot.key }}">
+                                    {{ slot.label }}
+                                    <span class="ms-auto badge bg-light text-dark text-uppercase">{{ slot.key|replace('_', ' ') }}</span>
+                                </button>
+                            </h2>
+                            <div id="collapse_{{ slot.key }}" class="accordion-collapse collapse {% if loop.first %}show{% endif %}" aria-labelledby="heading_{{ slot.key }}" data-bs-parent="#ctaSlotsAccordion">
+                                <div class="accordion-body">
+                                    <p class="text-muted small">{{ slot.description }}</p>
+                                    <div class="mb-3">
+                                        <label class="form-label" for="cta_label_{{ slot.key }}">Button label</label>
+                                        <input type="text" class="form-control" id="cta_label_{{ slot.key }}" data-cta-input data-slot="{{ slot.key }}" data-field="label" maxlength="80" placeholder="Enter button copy">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label" for="cta_url_{{ slot.key }}">Target URL</label>
+                                        <input type="url" class="form-control" id="cta_url_{{ slot.key }}" data-cta-input data-slot="{{ slot.key }}" data-field="url" placeholder="https://example.com or /path">
+                                        <div class="form-text">Relative paths (e.g. /register) and full URLs are supported.</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label" for="cta_style_{{ slot.key }}">Button style</label>
+                                        <select class="form-select" id="cta_style_{{ slot.key }}" data-cta-input data-slot="{{ slot.key }}" data-field="style">
+                                            {% for style_key, style_label in cta_style_choices %}
+                                            <option value="{{ style_key }}">{{ style_label }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label" for="cta_icon_{{ slot.key }}">Icon classes <span class="text-muted fw-normal">(optional)</span></label>
+                                        <input type="text" class="form-control" id="cta_icon_{{ slot.key }}" data-cta-input data-slot="{{ slot.key }}" data-field="icon" placeholder="ph ph-arrow-right">
+                                        <div class="form-text">Use Phosphor icon classes such as <code>ph ph-arrow-right</code>.</div>
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="cta_enabled_{{ slot.key }}" data-cta-input data-slot="{{ slot.key }}" data-field="enabled">
+                                            <label class="form-check-label" for="cta_enabled_{{ slot.key }}">Enabled</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="cta_new_tab_{{ slot.key }}" data-cta-input data-slot="{{ slot.key }}" data-field="new_tab">
+                                            <label class="form-check-label" for="cta_new_tab_{{ slot.key }}">Open in new tab</label>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="resetCtaSlot('{{ slot.key }}')">
+                                            <i class="ph ph-arrow-counter-clockwise me-1"></i>Reset {{ slot.label }}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                        <button type="button" class="btn btn-sm btn-primary" onclick="saveCtaSlots('preview')">
+                            <i class="ph ph-floppy-disk me-1"></i>Save CTA Preview
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="saveCtaSlots('publish')">
+                            <i class="ph ph-rocket me-1"></i>Publish CTA Slots
+                        </button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="resetAllCtaSlots()">
+                            <i class="ph ph-arrow-counter-clockwise me-1"></i>Reset All
+                        </button>
+                    </div>
+                    <p class="small mt-2 text-muted" id="ctaStatus"></p>
+                </div>
+            </div>
         </div>
 
         <!-- Builder Area -->
@@ -272,10 +354,159 @@ if (!Array.isArray(blocks)) {
 let currentBlockIndex = null;
 let settingsModal = null;
 
+let ctaSlots = {{ cta_slots|tojson|safe }};
+const ctaSlotDefaults = {{ cta_slot_defaults|tojson|safe }};
+const ctaSlotMeta = {{ cta_slot_meta|tojson|safe }};
+let ctaSaveBusy = false;
+
+
+function cloneSlotDefaults(slotKey) {
+    const fallback = ctaSlotDefaults[slotKey] || ctaSlotDefaults.hero_primary || {};
+    return JSON.parse(JSON.stringify(fallback));
+}
+
+function ensureCtaSlotsStructure() {
+    if (!ctaSlots || typeof ctaSlots !== 'object') {
+        ctaSlots = {};
+    }
+    ctaSlotMeta.forEach(meta => {
+        if (!ctaSlots[meta.key]) {
+            ctaSlots[meta.key] = cloneSlotDefaults(meta.key);
+        }
+    });
+}
+
+function renderCtaSlot(slotKey) {
+    ensureCtaSlotsStructure();
+    const slot = ctaSlots[slotKey] || cloneSlotDefaults(slotKey);
+    document.querySelectorAll(`[data-slot="${slotKey}"][data-field]`).forEach(input => {
+        const field = input.dataset.field;
+        if (!field) {
+            return;
+        }
+        const value = slot[field];
+        if (input.type === 'checkbox') {
+            input.checked = Boolean(value);
+        } else {
+            input.value = value ?? '';
+        }
+    });
+}
+
+function updateCtaStatus(message, tone = 'muted') {
+    const statusEl = document.getElementById('ctaStatus');
+    if (!statusEl) {
+        return;
+    }
+    statusEl.textContent = message || '';
+    statusEl.className = 'small mt-2';
+    if (!message) {
+        statusEl.classList.add('text-muted');
+        return;
+    }
+    if (tone === 'success') {
+        statusEl.classList.add('text-success');
+    } else if (tone === 'error') {
+        statusEl.classList.add('text-danger');
+    } else {
+        statusEl.classList.add('text-muted');
+    }
+}
+
+function handleCtaInput(event) {
+    const target = event.target;
+    const slotKey = target?.dataset?.slot;
+    const field = target?.dataset?.field;
+    if (!slotKey || !field) {
+        return;
+    }
+    ensureCtaSlotsStructure();
+    const slot = ctaSlots[slotKey] || cloneSlotDefaults(slotKey);
+    if (target.type === 'checkbox') {
+        slot[field] = target.checked;
+    } else {
+        slot[field] = target.value;
+    }
+    ctaSlots[slotKey] = slot;
+}
+
+function initializeCtaForm() {
+    ensureCtaSlotsStructure();
+    ctaSlotMeta.forEach(meta => {
+        renderCtaSlot(meta.key);
+    });
+    document.querySelectorAll('[data-cta-input]').forEach(input => {
+        input.removeEventListener('input', handleCtaInput);
+        input.removeEventListener('change', handleCtaInput);
+        input.addEventListener('input', handleCtaInput);
+        input.addEventListener('change', handleCtaInput);
+    });
+    updateCtaStatus('');
+}
+
+function resetCtaSlot(slotKey) {
+    ensureCtaSlotsStructure();
+    ctaSlots[slotKey] = cloneSlotDefaults(slotKey);
+    renderCtaSlot(slotKey);
+    const meta = ctaSlotMeta.find(item => item.key === slotKey);
+    const label = meta ? meta.label : slotKey.replace(/_/g, ' ');
+    updateCtaStatus(`${label} reset. Save to apply changes.`, 'muted');
+}
+
+function resetAllCtaSlots() {
+    ensureCtaSlotsStructure();
+    ctaSlotMeta.forEach(meta => {
+        ctaSlots[meta.key] = cloneSlotDefaults(meta.key);
+        renderCtaSlot(meta.key);
+    });
+    updateCtaStatus('CTA slots reset to defaults. Remember to save.', 'muted');
+}
+
+async function saveCtaSlots(mode = 'preview') {
+    if (ctaSaveBusy) {
+        return;
+    }
+    ctaSaveBusy = true;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ||
+        document.querySelector('input[name="csrf_token"]')?.value;
+    const payloadSlots = JSON.parse(JSON.stringify(ctaSlots || {}));
+    updateCtaStatus(mode === 'publish' ? 'Publishing CTA slots…' : 'Saving CTA slots…', 'muted');
+
+    try {
+        const response = await fetch('{{ url_for("admin.save_cta_slots") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(csrfToken ? {'X-CSRFToken': csrfToken} : {})
+            },
+            body: JSON.stringify({
+                slots: payloadSlots,
+                mode,
+                activate_preview: mode !== 'publish'
+            })
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Failed to update CTA slots.');
+        }
+        ctaSlots = data.slots || ctaSlots;
+        ensureCtaSlotsStructure();
+        ctaSlotMeta.forEach(meta => renderCtaSlot(meta.key));
+        updateCtaStatus(data.message || 'CTA slots updated.', 'success');
+    } catch (error) {
+        console.error('CTA save error:', error);
+        updateCtaStatus(error.message || 'Failed to save CTA slots.', 'error');
+    } finally {
+        ctaSaveBusy = false;
+    }
+}
+
+
 document.addEventListener('DOMContentLoaded', function() {
     settingsModal = new bootstrap.Modal(document.getElementById('blockSettingsModal'));
     console.log('Initial blocks:', blocks);
     renderBlocks();
+    initializeCtaForm();
 });
 
 function addBlock(type) {
@@ -943,17 +1174,18 @@ function getSettingsForm(block) {
                 <div class="mb-3">
                     <label class="form-label">Category Filter (optional)</label>
                     <select class="form-select" id="setting_category">
-                        <option value="">All Categories</option>
-                        <option value="match_highlights" ${block.settings.category === 'match_highlights' ? 'selected' : ''}>Match Highlights</option>
-                        <option value="training" ${block.settings.category === 'training' ? 'selected' : ''}>Training</option>
-                        <option value="team_photos" ${block.settings.category === 'team_photos' ? 'selected' : ''}>Team Photos</option>
-                        <option value="events" ${block.settings.category === 'events' ? 'selected' : ''}>Events</option>
+                        ${getGalleryCategoryOptions(block.settings.category || '')}
                     </select>
                 </div>
             </div>
             <div id="galleryManualSettings" style="display: ${block.settings.displayMode === 'manual' ? 'block' : 'none'}">
                 <div class="mb-3">
-                    <label class="form-label">Select Media Items (Hold Ctrl/Cmd to select multiple)</label>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <label class="form-label mb-0">Select Media Items (Ctrl/Cmd for multiple)</label>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="refreshMediaLibrary()">
+                            <i class="ph ph-arrow-clockwise me-1"></i>Refresh library
+                        </button>
+                    </div>
                     <select class="form-select" id="setting_selectedMedia" multiple size="8" style="height: auto;">
                         ${getMediaOptions(block.settings.selectedMedia || [], 'image')}
                     </select>
@@ -1326,7 +1558,9 @@ function saveBlockSettings() {
 }
 
 // Helper functions for generating options
-const mediaItems = {{ media_items|tojson|safe }};
+let mediaItems = {{ media_items|tojson|safe }};
+const defaultGalleryCategories = ['match_highlights', 'training', 'team_photos', 'events', 'celebrations', 'facilities'];
+let mediaCategories = Array.from(new Set(defaultGalleryCategories.concat({{ media_categories|tojson|safe }})));
 const seasons = {{ seasons|tojson|safe }};
 const matches = {{ matches|tojson|safe }};
 
@@ -1345,6 +1579,38 @@ function getSeasonOptions(selectedId) {
     }).join('');
 }
 
+
+function getGalleryCategoryOptions(selected) {
+    let options = '<option value="">All Categories</option>';
+    mediaCategories.forEach(cat => {
+        if (!cat) {
+            return;
+        }
+        const label = cat.replace(/_/g, ' ').replace(/\w/g, ch => ch.toUpperCase());
+        options += `<option value="${cat}" ${selected === cat ? 'selected' : ''}>${label}</option>`;
+    });
+    return options;
+}
+
+async function refreshMediaLibrary() {
+    try {
+        const response = await fetch('/api/v1/media-assets');
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        const payload = await response.json();
+        mediaItems = (payload.items || []).map(item => ({
+            ...item,
+            type: item.media_type,
+            thumbnail: item.url,
+        }));
+        mediaCategories = Array.from(new Set(defaultGalleryCategories.concat(mediaItems.map(item => item.category).filter(Boolean))));
+        renderSettingsSidebar();
+    } catch (error) {
+        console.error('Failed to refresh media library', error);
+        alert(`Failed to refresh media library: ${error.message}`);
+    }
+}
 function getMatchOptions(selectedIds) {
     return matches.map(match => {
         const isSelected = Array.isArray(selectedIds) ? selectedIds.includes(String(match.id)) : false;

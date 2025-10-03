@@ -1,0 +1,457 @@
+{% extends "base.html" %}
+{% block title %}Content Dashboard - Content Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        border-left: 4px solid;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .stat-card.draft { border-left-color: #6c757d; }
+    .stat-card.pending { border-left-color: #ffc107; }
+    .stat-card.published { border-left-color: #28a745; }
+    .stat-card.views { border-left-color: #17a2b8; }
+
+    .quick-action-btn {
+        height: 100px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+    .quick-action-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+    }
+    .quick-action-btn i {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .recent-article {
+        padding: 1rem;
+        border-bottom: 1px solid #dee2e6;
+        transition: background-color 0.2s;
+    }
+    .recent-article:hover {
+        background-color: #f8f9fa;
+    }
+    .recent-article:last-child {
+        border-bottom: none;
+    }
+
+    .activity-item {
+        padding: 0.75rem;
+        border-left: 3px solid #dee2e6;
+        margin-bottom: 0.5rem;
+    }
+    .activity-item.create { border-left-color: #28a745; }
+    .activity-item.update { border-left-color: #17a2b8; }
+    .activity-item.publish { border-left-color: #007bff; }
+    .activity-item.trash { border-left-color: #dc3545; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Content Dashboard</h1>
+            <p class="text-muted mb-0">Overview of your content management system</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('content_mgmt.articles_list') }}" class="btn btn-outline-primary">
+                <i class="ph ph-article"></i> All Articles
+            </a>
+            <a href="{{ url_for('content_mgmt.article_new') }}" class="btn btn-primary">
+                <i class="ph ph-plus"></i> New Article
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card draft shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1 small">DRAFTS</p>
+                            <h2 class="mb-0" id="stat-drafts">-</h2>
+                        </div>
+                        <div>
+                            <i class="ph ph-file-dashed" style="font-size: 2.5rem; color: #6c757d;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card pending shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1 small">PENDING REVIEW</p>
+                            <h2 class="mb-0" id="stat-pending">-</h2>
+                        </div>
+                        <div>
+                            <i class="ph ph-clock" style="font-size: 2.5rem; color: #ffc107;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card published shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1 small">PUBLISHED</p>
+                            <h2 class="mb-0" id="stat-published">-</h2>
+                        </div>
+                        <div>
+                            <i class="ph ph-globe" style="font-size: 2.5rem; color: #28a745;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card views shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1 small">TOTAL VIEWS</p>
+                            <h2 class="mb-0" id="stat-views">-</h2>
+                        </div>
+                        <div>
+                            <i class="ph ph-eye" style="font-size: 2.5rem; color: #17a2b8;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white">
+            <h5 class="mb-0"><i class="ph ph-lightning"></i> Quick Actions</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <a href="{{ url_for('content_mgmt.article_new') }}" class="btn btn-outline-primary w-100 quick-action-btn">
+                        <i class="ph ph-plus-circle"></i>
+                        <span>New Article</span>
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{{ url_for('content_mgmt.articles_list') }}?status=pending_review" class="btn btn-outline-warning w-100 quick-action-btn">
+                        <i class="ph ph-eye"></i>
+                        <span>Review Articles</span>
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{{ url_for('content_mgmt.assets_manager') }}" class="btn btn-outline-info w-100 quick-action-btn">
+                        <i class="ph ph-images"></i>
+                        <span>Manage Assets</span>
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{{ url_for('content_mgmt.articles_list') }}?status=trashed" class="btn btn-outline-danger w-100 quick-action-btn">
+                        <i class="ph ph-trash"></i>
+                        <span>View Trash</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Recent Articles -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="ph ph-clock-counter-clockwise"></i> Recent Articles</h5>
+                    <a href="{{ url_for('content_mgmt.articles_list') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    <div id="recent-articles">
+                        <div class="text-center py-5">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                            <span class="ms-2">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Performing Articles -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="ph ph-trending-up"></i> Top Performing Articles</h5>
+                </div>
+                <div class="card-body">
+                    <div id="top-articles">
+                        <div class="text-center py-3">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                            <span class="ms-2">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Pending Review -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="ph ph-bell"></i> Needs Attention</h5>
+                </div>
+                <div class="card-body">
+                    <div id="pending-review">
+                        <div class="text-center py-3">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                            <span class="ms-2">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="ph ph-activity"></i> Recent Activity</h5>
+                </div>
+                <div class="card-body">
+                    <div id="recent-activity">
+                        <div class="text-center py-3">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                            <span class="ms-2">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let articles = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadDashboardData();
+});
+
+async function loadDashboardData() {
+    try {
+        const response = await fetch('/content/api/articles?include_trashed=true');
+        articles = await response.json();
+
+        updateStatistics();
+        renderRecentArticles();
+        renderTopArticles();
+        renderPendingReview();
+        renderActivity();
+    } catch (err) {
+        console.error('Failed to load dashboard data:', err);
+    }
+}
+
+function updateStatistics() {
+    const drafts = articles.filter(a => a.status === 'draft').length;
+    const pending = articles.filter(a => a.status === 'pending_review').length;
+    const published = articles.filter(a => a.status === 'published').length;
+    const totalViews = articles.reduce((sum, a) => sum + (a.view_count || 0), 0);
+
+    document.getElementById('stat-drafts').textContent = drafts;
+    document.getElementById('stat-pending').textContent = pending;
+    document.getElementById('stat-published').textContent = published;
+    document.getElementById('stat-views').textContent = totalViews.toLocaleString();
+}
+
+function renderRecentArticles() {
+    const recent = articles
+        .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+        .slice(0, 10);
+
+    const container = document.getElementById('recent-articles');
+
+    if (recent.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center py-4">No articles yet</p>';
+        return;
+    }
+
+    container.innerHTML = recent.map(article => `
+        <div class="recent-article">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <a href="/content/articles/${article.id}/edit" class="fw-bold text-decoration-none text-dark">
+                        ${article.title}
+                    </a>
+                    ${article.is_featured ? '<i class="ph ph-star-four text-warning ms-1" title="Featured"></i>' : ''}
+                    <br>
+                    <small class="text-muted">
+                        ${article.author ? article.author.email : 'Unknown'} •
+                        ${formatDate(article.updated_at)}
+                    </small>
+                </div>
+                <div>
+                    <span class="badge bg-${getStatusColor(article.status)}">
+                        ${article.status.replace('_', ' ')}
+                    </span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderTopArticles() {
+    const top = articles
+        .filter(a => a.status === 'published')
+        .sort((a, b) => (b.view_count || 0) - (a.view_count || 0))
+        .slice(0, 5);
+
+    const container = document.getElementById('top-articles');
+
+    if (top.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center">No published articles yet</p>';
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="list-group list-group-flush">
+            ${top.map((article, index) => `
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="badge bg-secondary me-2">${index + 1}</span>
+                        <a href="/content/articles/${article.id}/edit" class="text-decoration-none">
+                            ${truncate(article.title, 50)}
+                        </a>
+                    </div>
+                    <span class="badge bg-info">${article.view_count || 0} views</span>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function renderPendingReview() {
+    const pending = articles.filter(a => a.status === 'pending_review');
+
+    const container = document.getElementById('pending-review');
+
+    if (pending.length === 0) {
+        container.innerHTML = '<p class="text-muted small text-center">No articles pending review</p>';
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="list-group list-group-flush">
+            ${pending.map(article => `
+                <a href="/content/articles/${article.id}/edit" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between align-items-start">
+                        <div>
+                            <p class="mb-1 fw-bold small">${truncate(article.title, 40)}</p>
+                            <small class="text-muted">${article.author ? article.author.email : 'Unknown'}</small>
+                        </div>
+                        <small class="text-muted">${formatDate(article.updated_at)}</small>
+                    </div>
+                </a>
+            `).join('')}
+        </div>
+    `;
+}
+
+function renderActivity() {
+    // Sort by updated date to show recent activity
+    const recentActivity = articles
+        .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+        .slice(0, 8);
+
+    const container = document.getElementById('recent-activity');
+
+    if (recentActivity.length === 0) {
+        container.innerHTML = '<p class="text-muted small text-center">No recent activity</p>';
+        return;
+    }
+
+    container.innerHTML = recentActivity.map(article => {
+        let action = 'update';
+        let actionText = 'Updated';
+        let icon = 'ph-pencil';
+
+        if (article.status === 'published' && article.published_at) {
+            action = 'publish';
+            actionText = 'Published';
+            icon = 'ph-globe';
+        } else if (article.status === 'trashed') {
+            action = 'trash';
+            actionText = 'Trashed';
+            icon = 'ph-trash';
+        } else if (new Date(article.created_at).getTime() === new Date(article.updated_at).getTime()) {
+            action = 'create';
+            actionText = 'Created';
+            icon = 'ph-plus-circle';
+        }
+
+        return `
+            <div class="activity-item ${action}">
+                <div class="d-flex align-items-start">
+                    <i class="ph ${icon} me-2 mt-1"></i>
+                    <div class="flex-grow-1">
+                        <p class="mb-0 small">
+                            <strong>${actionText}</strong>
+                            <a href="/content/articles/${article.id}/edit" class="text-decoration-none">
+                                ${truncate(article.title, 35)}
+                            </a>
+                        </p>
+                        <small class="text-muted">${formatDate(article.updated_at)}</small>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function getStatusColor(status) {
+    const colors = {
+        'draft': 'secondary',
+        'pending_review': 'warning',
+        'approved': 'info',
+        'published': 'success',
+        'trashed': 'danger'
+    };
+    return colors[status] || 'secondary';
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+
+    return date.toLocaleDateString();
+}
+
+function truncate(text, length) {
+    return text.length > length ? text.substring(0, length) + '...' : text;
+}
+</script>
+{% endblock %}

@@ -1,5 +1,4 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, g, jsonify
-from functools import wraps
 from datetime import datetime, date, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 import copy
@@ -19,8 +18,26 @@ from slms.services.site import (
     DEFAULT_FEATURE_FLAGS,
     DEFAULT_SOCIAL_LINKS,
     DEFAULT_THEME_CONFIG,
+    get_site_theme_preview,
+    save_site_theme_preview,
+    publish_site_theme,
+    discard_site_theme_preview,
+    list_site_theme_versions,
+    get_site_theme_version,
+    apply_site_payload,
+    _apply_payload_to_settings,
+    default_cta_slots,
+    merge_theme_cta_slots,
+    normalize_cta_slots,
 )
-from slms.models import UserRole, User
+from slms.services.media_library import (
+    create_media_asset,
+    update_media_asset,
+    delete_media_asset,
+    serialize_media_collection,
+)
+
+from slms.models import MediaAsset, UserRole, User
 
 
 def _default_homepage_config():
@@ -38,18 +55,7 @@ AVERAGE_MATCH_REVENUE_USD = 7500  # fallback estimate when transaction data is u
 
 admin_bp = Blueprint('admin', __name__)
 
-def admin_required(f):
-    @wraps(f)
-    def wrap(*args, **kwargs):
-        if current_user.is_authenticated:
-            has_role = getattr(current_user, 'has_role', None)
-            if callable(has_role) and current_user.has_role(UserRole.OWNER, UserRole.ADMIN):
-                return f(*args, **kwargs)
-        if session.get('is_admin'):
-            return f(*args, **kwargs)
-        flash('You need to be an admin to access this page', 'error')
-        return redirect(url_for('auth.login', next=request.url))
-    return wrap
+from slms.auth import admin_required
 
 def get_existing_data(table_name):
     db = get_db()
@@ -919,6 +925,91 @@ def manage_stadiums():
     cur = db.cursor()
 
     if request.method == 'POST':
+        action = (request.form.get('action') or 'publish').strip().lower()
+        version_label = (request.form.get('version_label') or '').strip() or None
+        author_id = getattr(current_user, 'id', None) if current_user.is_authenticated else None
+
+        if action == 'discard_preview':
+            discard_site_theme_preview()
+            session.pop('theme_preview_active', None)
+            flash('Preview discarded.', 'info')
+            payload_theme = copy.deepcopy(theme)
+        payload = {
+            'site_title': site_title,
+            'brand_image_url': brand_image_url,
+            'primary_color': primary_color,
+            'favicon_url': favicon_url,
+            'league_tagline': league_tagline,
+            'contact_email': contact_email,
+            'social_links': social_links,
+            'feature_flags': feature_flags,
+            'theme': payload_theme,
+            'nav_layout': settings.get('nav_layout'),
+            'navigation_links_raw': settings.get('navigation_links_raw'),
+        }
+
+        if action == 'save_preview':
+            try:
+                save_site_theme_preview(payload, author_id, version_label)
+                session['theme_preview_active'] = True
+                flash('Preview saved. Activate preview to review, then publish when ready.', 'success')
+            except Exception as exc:
+                flash('Failed to save preview: ' + str(exc), 'error')
+            return redirect(url_for('admin.site_settings'))
+
+        if action in {'publish', 'save'}:
+            try:
+                apply_site_payload(payload)
+            except Exception as exc:
+                flash('Failed to publish theme: ' + str(exc), 'error')
+                return redirect(url_for('admin.site_settings'))
+
+            publish_site_theme(payload, author_id, version_label)
+            session.pop('theme_preview_active', None)
+            flash('Site theme published live.', 'success')
+            return redirect(url_for('admin.site_settings'))
+
+        flash('Unknown action requested.', 'error')
+        return redirect(url_for('admin.site_settings'))
+
+        if action == 'activate_preview':
+            preview = theme_preview_record or get_site_theme_preview()
+            if preview:
+                session['theme_preview_active'] = True
+                flash('Preview mode enabled for this session.', 'success')
+            else:
+                flash('There is no saved preview to activate.', 'warning')
+            return redirect(url_for('admin.site_settings'))
+
+        if action == 'deactivate_preview':
+            session.pop('theme_preview_active', None)
+            flash('Preview mode disabled. Showing published theme.', 'info')
+            return redirect(url_for('admin.site_settings'))
+
+        if action == 'restore_version':
+            version_id_raw = request.form.get('version_id')
+            try:
+                version_id = int(version_id_raw) if version_id_raw else None
+            except (TypeError, ValueError):
+                version_id = None
+            if not version_id:
+                flash('Invalid version identifier.', 'error')
+                return redirect(url_for('admin.site_settings'))
+            version = get_site_theme_version(version_id)
+            if not version:
+                flash('Version not found.', 'error')
+                return redirect(url_for('admin.site_settings'))
+            payload = version.get('payload') or {}
+            try:
+                apply_site_payload(payload)
+                publish_site_theme(payload, author_id, version_label or (version.get('label') or f'Restore #{version_id}'))
+                session.pop('theme_preview_active', None)
+                flash('Theme restored from history and published live.', 'success')
+            except Exception as exc:
+                flash('Failed to restore theme: ' + str(exc), 'error')
+            return redirect(url_for('admin.site_settings'))
+
+        # For preview save/publish actions we continue to collect form data
         try:
             stadium_id = request.form.get('stadium_id')
             name = request.form['name']
@@ -1061,13 +1152,17 @@ def homepage_builder():
             blocks = result[0]
 
     # Get available media for selection
-    cur.execute('''
-        SELECT media_id, title, media_type, category, url
-        FROM media
-        ORDER BY created_at DESC
-    ''')
-    media_items = [{'id': row[0], 'title': row[1], 'type': row[2], 'category': row[3], 'url': row[4]}
-                   for row in cur.fetchall()]
+    org = getattr(g, 'org', None)
+    media_items = []
+    query = MediaAsset.query.order_by(MediaAsset.created_at.desc())
+    if org is not None:
+        query = query.filter(MediaAsset.org_id == org.id)
+    assets = query.all()
+    for item in serialize_media_collection(assets):
+        entry = dict(item)
+        entry['type'] = entry.get('media_type')
+        entry['thumbnail'] = entry.get('url')
+        media_items.append(entry)
 
     # Get available seasons
     cur.execute('SELECT season_id, year FROM seasons ORDER BY year DESC')
@@ -1091,13 +1186,31 @@ def homepage_builder():
 
     cur.close()
 
+    default_media_categories = {'match_highlights', 'training', 'team_photos', 'events', 'celebrations', 'facilities'}
+    site_settings = _load_site_settings()
+    theme_payload = copy.deepcopy(site_settings.get('theme', DEFAULT_THEME_CONFIG))
+    cta_slots = normalize_cta_slots(site_settings.get('cta_slots') or theme_payload.get('cta_slots'))
+    cta_slot_defaults = default_cta_slots()
+    cta_slot_meta = [
+        {"key": "hero_primary", "label": "Hero Primary", "description": "Main hero action shown in prominent hero sections."},
+        {"key": "hero_secondary", "label": "Hero Secondary", "description": "Secondary hero button for alternate action."},
+        {"key": "footer_primary", "label": "Footer Primary", "description": "Primary footer CTA displayed near the page footer."},
+        {"key": "footer_secondary", "label": "Footer Secondary", "description": "Optional supplemental footer CTA."},
+    ]
+
+    media_categories = sorted(default_media_categories.union({item['category'] for item in media_items if item.get('category')}))
+
     return render_template('manage_homepage_builder.html',
                          leagues=leagues,
                          selected_league_id=selected_league_id,
                          blocks=blocks,
                          media_items=media_items,
+                         media_categories=media_categories,
                          seasons=seasons,
-                         matches=matches)
+                         matches=matches,
+                         cta_slots=cta_slots,
+                         cta_slot_defaults=cta_slot_defaults,
+                         cta_slot_meta=cta_slot_meta)
 
 
 @admin_bp.route('/save_homepage_blocks', methods=['POST'])
@@ -1128,6 +1241,54 @@ def save_homepage_blocks():
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+
+@admin_bp.route('/homepage_builder/cta_slots', methods=['POST'])
+@admin_required
+def save_cta_slots():
+    """Persist CTA slot updates to the theme preview or publish live."""
+    from flask import jsonify
+
+    data = request.get_json(silent=True) or {}
+    slots = data.get('slots') or {}
+    mode = (data.get('mode') or 'preview').strip().lower()
+    if mode not in {'preview', 'publish'}:
+        mode = 'preview'
+    label = (data.get('label') or '').strip() or None
+    activate_preview = data.get('activate_preview', True)
+    if isinstance(activate_preview, str):
+        activate_preview = activate_preview.strip().lower() in {'1', 'true', 'yes', 'on'}
+
+    try:
+        site_settings = _load_site_settings()
+        theme_payload = copy.deepcopy(site_settings.get('theme', DEFAULT_THEME_CONFIG))
+        merged_slots = merge_theme_cta_slots(theme_payload, slots)
+        payload = {'theme': theme_payload}
+        author_id = getattr(current_user, 'id', None) if current_user.is_authenticated else None
+
+        if mode == 'publish':
+            apply_site_payload(payload)
+            publish_site_theme(payload, author_id, label)
+            session.pop('theme_preview_active', None)
+            message = 'CTA slots published live.'
+            result_mode = 'published'
+        else:
+            save_site_theme_preview(payload, author_id, label)
+            if activate_preview:
+                session['theme_preview_active'] = True
+            message = 'CTA slots saved to preview.'
+            result_mode = 'preview'
+
+        response_slots = normalize_cta_slots(merged_slots, include_defaults=True)
+        return jsonify({
+            'success': True,
+            'slots': response_slots,
+            'mode': result_mode,
+            'message': message,
+        })
+    except Exception as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 500
 
 
 @admin_bp.route('/preview_homepage', methods=['POST'])
@@ -1197,43 +1358,57 @@ def preview_homepage_view():
 
         elif block['type'] == 'gallery':
             settings = block.get('settings', {})
+            org = getattr(g, 'org', None)
             if settings.get('displayMode') == 'manual' and settings.get('selectedMedia'):
-                # Get specific media items
-                media_ids = settings['selectedMedia']
+                media_ids = [str(mid) for mid in settings['selectedMedia'] if mid]
                 if media_ids:
-                    placeholders = ','.join(['%s'] * len(media_ids))
-                    cur.execute(f'''
-                        SELECT media_id, title, url, media_type, category
-                        FROM media
-                        WHERE media_id IN ({placeholders})
-                        ORDER BY created_at DESC
-                    ''', media_ids)
-                    block_data['data'] = [{'id': r[0], 'title': r[1], 'url': r[2], 'type': r[3], 'category': r[4]}
-                                         for r in cur.fetchall()]
+                    query = MediaAsset.query
+                    if org is not None:
+                        query = query.filter(MediaAsset.org_id == org.id)
+                    assets = query.filter(MediaAsset.id.in_(media_ids)).all()
+                    asset_map = {str(asset.id): asset for asset in assets}
+                    block_data['data'] = [
+                        {
+                            'id': mid,
+                            'title': asset_map[mid].title if mid in asset_map else '',
+                            'url': asset_map[mid].url if mid in asset_map else '',
+                            'type': asset_map[mid].media_type if mid in asset_map else 'image',
+                            'category': asset_map[mid].category if mid in asset_map else None,
+                        }
+                        for mid in media_ids
+                        if mid in asset_map
+                    ]
                 else:
                     block_data['data'] = []
             else:
-                # Auto mode - get latest
                 limit = settings.get('limit', 6)
                 category = settings.get('category', '')
-                query = 'SELECT media_id, title, url, media_type, category FROM media WHERE media_type = %s'
-                params = ['image']
+                query = MediaAsset.query.filter(MediaAsset.media_type == 'image')
+                if org is not None:
+                    query = query.filter(MediaAsset.org_id == org.id)
                 if category:
-                    query += ' AND category = %s'
-                    params.append(category)
-                query += ' ORDER BY created_at DESC LIMIT %s'
-                params.append(limit)
-                cur.execute(query, params)
-                block_data['data'] = [{'id': r[0], 'title': r[1], 'url': r[2], 'type': r[3], 'category': r[4]}
-                                     for r in cur.fetchall()]
+                    query = query.filter(MediaAsset.category == category)
+                assets = query.order_by(MediaAsset.created_at.desc()).limit(limit).all()
+                block_data['data'] = [
+                    {
+                        'id': asset.id,
+                        'title': asset.title,
+                        'url': asset.url,
+                        'type': asset.media_type,
+                        'category': asset.category,
+                    }
+                    for asset in assets
+                ]
 
         elif block['type'] == 'video':
             settings = block.get('settings', {})
             if settings.get('videoSource') == 'library' and settings.get('selectedVideo'):
-                cur.execute('SELECT url FROM media WHERE media_id = %s', (settings['selectedVideo'],))
-                result = cur.fetchone()
-                if result:
-                    block_data['data'] = {'url': result[0]}
+                query = MediaAsset.query.filter(MediaAsset.media_type == 'video')
+                if org is not None:
+                    query = query.filter(MediaAsset.org_id == org.id)
+                asset = query.filter(MediaAsset.id == settings['selectedVideo']).first()
+                if asset:
+                    block_data['data'] = {'url': asset.url}
 
         elif block['type'] == 'matches':
             settings = block.get('settings', {})
@@ -3849,100 +4024,72 @@ def manage_matches():
 @admin_bp.route('/manage_media', methods=['GET', 'POST'])
 @admin_required
 def manage_media():
-    """Media gallery management - images and videos"""
-    db = get_db()
-    cur = db.cursor()
-
-    # Create media table if it doesn't exist
-    try:
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS media (
-                media_id SERIAL PRIMARY KEY,
-                title VARCHAR(255) NOT NULL,
-                description TEXT,
-                url TEXT NOT NULL,
-                media_type VARCHAR(20) NOT NULL,
-                category VARCHAR(50),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        db.commit()
-    except Exception as e:
-        db.rollback()
+    """Media gallery management - images and videos."""
+    org = getattr(g, 'org', None)
+    if org is None:
+        flash('No organization selected for media library', 'error')
+        return redirect(url_for('admin.admin_dashboard'))
 
     if request.method == 'POST':
         action = request.form.get('action')
-
         try:
             if action == 'add':
-                title = request.form['title']
-                description = request.form.get('description', '')
-                url = request.form['url']
-                media_type = request.form['media_type']
-                category = request.form.get('category', '')
-
-                cur.execute("""
-                    INSERT INTO media (title, description, url, media_type, category)
-                    VALUES (%s, %s, %s, %s, %s)
-                """, (title, description, url, media_type, category))
-
+                file = request.files.get('file')
+                media_type = request.form.get('media_type') or None
+                create_media_asset(
+                    title=request.form.get('title', ''),
+                    description=request.form.get('description'),
+                    category=request.form.get('category'),
+                    media_type=media_type,
+                    file=file if file and file.filename else None,
+                    source_url=request.form.get('source_url'),
+                    alt_text=request.form.get('alt_text'),
+                    uploaded_by_user_id=getattr(current_user, 'id', None),
+                )
                 flash('Media added successfully', 'success')
-
             elif action == 'edit':
-                media_id = request.form['media_id']
-                title = request.form['title']
-                description = request.form.get('description', '')
-                url = request.form['url']
-
-                cur.execute("""
-                    UPDATE media
-                    SET title = %s, description = %s, url = %s, updated_at = CURRENT_TIMESTAMP
-                    WHERE media_id = %s
-                """, (title, description, url, media_id))
-
+                asset_id = request.form.get('media_id')
+                asset = MediaAsset.query.filter_by(org_id=org.id, id=asset_id).first_or_404()
+                file = request.files.get('file')
+                media_type = request.form.get('media_type') or None
+                update_media_asset(
+                    asset,
+                    title=request.form.get('title'),
+                    description=request.form.get('description'),
+                    category=request.form.get('category'),
+                    media_type=media_type,
+                    file=file if file and file.filename else None,
+                    source_url=request.form.get('source_url') if 'source_url' in request.form else None,
+                    alt_text=request.form.get('alt_text'),
+                )
                 flash('Media updated successfully', 'success')
-
             elif action == 'delete':
-                media_id = request.form['media_id']
-                cur.execute('DELETE FROM media WHERE media_id = %s', (media_id,))
+                asset_id = request.form.get('media_id')
+                asset = MediaAsset.query.filter_by(org_id=org.id, id=asset_id).first_or_404()
+                delete_media_asset(asset)
                 flash('Media deleted successfully', 'success')
-
-            db.commit()
-
-        except Exception as e:
-            db.rollback()
-            flash(f'An error occurred: {str(e)}', 'error')
-        finally:
-            cur.close()
-
+        except ValueError as exc:
+            flash(str(exc), 'error')
+        except Exception as exc:
+            flash(f'An error occurred: {exc}', 'error')
         return redirect(url_for('admin.manage_media'))
 
-    # Get all media items
-    cur.execute("""
-        SELECT media_id, title, description, url, media_type, category, created_at, updated_at
-        FROM media
-        ORDER BY created_at DESC
-    """)
-    media_raw = cur.fetchall()
+    assets = (MediaAsset.query
+              .filter_by(org_id=org.id)
+              .order_by(MediaAsset.created_at.desc())
+              .all())
+    media_items = serialize_media_collection(assets)
+    default_categories = {'match_highlights', 'training', 'team_photos', 'events', 'celebrations', 'facilities'}
+    categories = sorted(default_categories.union({item['category'] for item in media_items if item.get('category')}))
 
-    # Convert to list of dicts
-    media_items = []
-    for item in media_raw:
-        media_items.append({
-            'media_id': item[0],
-            'title': item[1],
-            'description': item[2],
-            'url': item[3],
-            'media_type': item[4],
-            'category': item[5],
-            'created_at': item[6],
-            'updated_at': item[7]
-        })
+    return render_template(
+        'manage_media.html',
+        media_items=media_items,
+        categories=categories,
+    )
 
-    cur.close()
 
-    return render_template('manage_media.html', media_items=media_items)
+
 
 
 @admin_bp.route('/manage_countries', methods=['GET', 'POST'])
@@ -4900,6 +5047,14 @@ def manage_users():
 def site_settings():
     db = get_db()
     settings = _load_site_settings()
+    theme_preview_record = get_site_theme_preview()
+    theme_versions = list_site_theme_versions(15)
+    preview_active = False
+    if session.get('theme_preview_active') and theme_preview_record:
+        preview_active = True
+        settings = _apply_payload_to_settings(settings, theme_preview_record['payload'])
+    elif session.get('theme_preview_active'):
+        session.pop('theme_preview_active', None)
     theme_template = copy.deepcopy(DEFAULT_THEME_CONFIG)
     theme = copy.deepcopy(settings.get('theme', DEFAULT_THEME_CONFIG))
     palette_defaults = theme_template.get('palette', {})
@@ -5498,69 +5653,7 @@ def site_settings():
         for key in feature_flag_fields:
             feature_flags[key] = bool(form.get(key))
 
-        try:
-            cur = db.cursor()
-            cur.execute('SELECT id FROM site_settings ORDER BY id ASC LIMIT 1')
-            row = cur.fetchone()
-            timestamp = datetime.now(timezone.utc)
-            social_links_json = json.dumps(social_links)
-            feature_flags_json = json.dumps(feature_flags)
-            theme_json = json.dumps(theme)
-            base_payload = (
-                site_title,
-                brand_image_url,
-                primary_color,
-                favicon_url,
-                league_tagline,
-                contact_email,
-                social_links_json,
-                feature_flags_json,
-                theme_json,
-            )
-            if row:
-                cur.execute(
-                    """
-                    UPDATE site_settings
-                    SET site_title = %s,
-                        brand_image_url = %s,
-                        primary_color = %s,
-                        favicon_url = %s,
-                        league_tagline = %s,
-                        contact_email = %s,
-                        social_links_json = %s,
-                        feature_flags_json = %s,
-                        theme_config_json = %s,
-                        updated_at = %s
-                    WHERE id = %s
-                    """,
-                    base_payload + (timestamp, row[0]),
-                )
-            else:
-                cur.execute(
-                    """
-                    INSERT INTO site_settings (
-                        site_title,
-                        brand_image_url,
-                        primary_color,
-                        favicon_url,
-                        league_tagline,
-                        contact_email,
-                        social_links_json,
-                        feature_flags_json,
-                        theme_config_json,
-                        updated_at
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    """,
-                    base_payload + (timestamp,),
-                )
-            db.commit()
-            invalidate_site_settings_cache()
-            flash('Site settings updated.', 'success')
-        except Exception as exc:
-            db.rollback()
-            flash('Failed to update site settings: ' + str(exc), 'error')
-        finally:
-            cur.close()
+
         return redirect(url_for('admin.site_settings'))
 
     theme_for_display = copy.deepcopy(settings.get('theme', DEFAULT_THEME_CONFIG))
@@ -5587,6 +5680,7 @@ def site_settings():
 
     settings_for_template = copy.deepcopy(settings)
     settings_for_template['theme'] = theme_for_display
+    preview_label_default = theme_preview_record.get('label') if theme_preview_record and theme_preview_record.get('label') else ''
     settings_for_template['social_labels'] = social_labels
     settings_for_template['font_selection'] = {
         'base_choice': base_font_choice,
@@ -5604,6 +5698,32 @@ def site_settings():
         font_presets=font_presets,
         font_preset_weights=font_preset_weights,
         font_preset_lookup=font_preset_lookup,
+        theme_preview=theme_preview_record,
+        theme_versions=theme_versions,
+        theme_preview_active=preview_active,
+        preview_label_default=preview_label_default,
     )
+
+
+@admin_bp.route('/data_management')
+@login_required
+@admin_required
+@tenant_required
+def data_management():
+    """Data export/import management page."""
+    return render_template('data_management.html')
+
+
+@admin_bp.route('/automation_integrations')
+@login_required
+@admin_required
+@tenant_required
+def automation_integrations():
+    """Automation and integrations management page."""
+    return render_template('automation_integrations.html')
+
+
+
+
 
 

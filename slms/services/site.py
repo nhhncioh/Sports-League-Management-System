@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import copy
 import json
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Set
+from urllib.parse import urlparse
 
-from flask import g, url_for
+from flask import g, url_for, session
 
 from slms.services.db import get_db
 
@@ -244,6 +246,150 @@ DEFAULT_THEME_CONFIG: Dict[str, Any] = {
     },
 }
 
+CTA_SLOT_KEYS: tuple[str, ...] = (
+    "hero_primary",
+    "hero_secondary",
+    "footer_primary",
+    "footer_secondary",
+)
+
+CTA_ALLOWED_STYLES: Set[str] = {"primary", "secondary", "outline", "ghost", "link"}
+CTA_ALLOWED_URL_SCHEMES: Set[str] = {"http", "https", "mailto", "tel"}
+CTA_LABEL_MAX_LENGTH = 80
+CTA_ICON_MAX_LENGTH = 80
+CTA_URL_MAX_LENGTH = 500
+
+DEFAULT_THEME_CTA_SLOTS: Dict[str, Dict[str, Any]] = {
+    "hero_primary": {
+        "label": "View Schedule",
+        "url": "/schedule",
+        "style": "primary",
+        "icon": "ph ph-calendar-dots",
+        "enabled": True,
+        "new_tab": False,
+    },
+    "hero_secondary": {
+        "label": "Register Team",
+        "url": "/register",
+        "style": "outline",
+        "icon": "ph ph-users-three",
+        "enabled": True,
+        "new_tab": False,
+    },
+    "footer_primary": {
+        "label": "Contact League Office",
+        "url": "/contact",
+        "style": "secondary",
+        "icon": "ph ph-envelope",
+        "enabled": True,
+        "new_tab": False,
+    },
+    "footer_secondary": {
+        "label": "Download Schedule",
+        "url": "/downloads/schedule.pdf",
+        "style": "ghost",
+        "icon": "ph ph-arrow-square-out",
+        "enabled": False,
+        "new_tab": True,
+    },
+}
+
+
+def default_cta_slots() -> Dict[str, Dict[str, Any]]:
+    return {key: copy.deepcopy(value) for key, value in DEFAULT_THEME_CTA_SLOTS.items()}
+
+
+def _as_bool(value: Any, fallback: bool) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        candidate = value.strip().lower()
+        if candidate in {"true", "1", "yes", "on"}:
+            return True
+        if candidate in {"false", "0", "no", "off"}:
+            return False
+    return fallback
+
+
+def _clean_cta_text(value: Any, fallback: str, limit: int) -> str:
+    candidate = str(value or "").strip()
+    if not candidate:
+        candidate = fallback
+    return candidate[:limit]
+
+
+def _clean_cta_url(value: Any, fallback: str) -> str:
+    candidate = str(value or "").strip()
+    if not candidate:
+        return fallback
+    if candidate.startswith(('#', '/')):
+        return candidate[:CTA_URL_MAX_LENGTH]
+    parsed = urlparse(candidate)
+    if parsed.scheme and parsed.scheme.lower() in CTA_ALLOWED_URL_SCHEMES and parsed.netloc:
+        return candidate[:CTA_URL_MAX_LENGTH]
+    return fallback
+
+
+def _normalize_cta_slot(data: Any, defaults: Dict[str, Any]) -> Dict[str, Any]:
+    base = copy.deepcopy(defaults)
+    if not isinstance(data, dict):
+        return base
+    base['label'] = _clean_cta_text(data.get('label'), base.get('label', ''), CTA_LABEL_MAX_LENGTH)
+    default_url = base.get('url') or '#'
+    base['url'] = _clean_cta_url(data.get('url'), default_url)
+    style = str(data.get('style') or base.get('style') or 'primary').strip().lower()
+    if style in CTA_ALLOWED_STYLES:
+        base['style'] = style
+    icon_value = _clean_cta_text(data.get('icon'), base.get('icon', ''), CTA_ICON_MAX_LENGTH)
+    base['icon'] = icon_value or None
+    base['enabled'] = _as_bool(data.get('enabled'), bool(base.get('enabled', True)))
+    base['new_tab'] = _as_bool(data.get('new_tab'), bool(base.get('new_tab', False)))
+    return base
+
+
+def normalize_cta_slots(slots: Any, *, include_defaults: bool = True) -> Dict[str, Dict[str, Any]]:
+    source = slots if isinstance(slots, dict) else {}
+    normalized: Dict[str, Dict[str, Any]] = {}
+    fallback_defaults = DEFAULT_THEME_CTA_SLOTS['hero_primary']
+    if include_defaults:
+        keys = list(DEFAULT_THEME_CTA_SLOTS.keys())
+    else:
+        keys = list(source.keys())
+    for key in keys:
+        defaults = DEFAULT_THEME_CTA_SLOTS.get(key, fallback_defaults)
+        normalized[key] = _normalize_cta_slot(source.get(key), defaults)
+    for key, value in source.items():
+        if key in normalized:
+            continue
+        defaults = DEFAULT_THEME_CTA_SLOTS.get(key, fallback_defaults)
+        normalized[key] = _normalize_cta_slot(value, defaults)
+    return normalized
+
+
+def ensure_theme_cta_slots(theme_config: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    slots = normalize_cta_slots(theme_config.get('cta_slots'), include_defaults=True)
+    theme_config['cta_slots'] = slots
+    return slots
+
+
+def merge_theme_cta_slots(theme_config: Dict[str, Any], updates: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    existing = normalize_cta_slots(theme_config.get('cta_slots'), include_defaults=True)
+    incoming = normalize_cta_slots(updates, include_defaults=False)
+    if incoming:
+        existing.update(incoming)
+    theme_config['cta_slots'] = existing
+    return existing
+
+
+def get_theme_cta_slots(settings: Optional[Dict[str, Any]] = None) -> Dict[str, Dict[str, Any]]:
+    if settings is None:
+        settings = _load_site_settings()
+    theme = copy.deepcopy(settings.get('theme', DEFAULT_THEME_CONFIG))
+    return ensure_theme_cta_slots(theme)
+
+
 
 
 def _merge_nested(default: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
@@ -305,6 +451,71 @@ def _ensure_site_settings_schema(cur) -> None:
         """
 
     cur.execute(create_sql)
+    if dialect_name == "sqlite":
+        create_versions_sql = """
+        CREATE TABLE IF NOT EXISTS site_theme_versions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            site_settings_id INTEGER NOT NULL,
+            status TEXT NOT NULL DEFAULT 'preview',
+            label TEXT,
+            author_id INTEGER,
+            payload TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            published_at TIMESTAMP,
+            FOREIGN KEY(site_settings_id) REFERENCES site_settings(id) ON DELETE CASCADE
+        );
+        """
+        create_media_sql = """
+        CREATE TABLE IF NOT EXISTS site_media (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            site_settings_id INTEGER NOT NULL,
+            file_name TEXT NOT NULL,
+            original_name TEXT,
+            mime_type TEXT,
+            file_size INTEGER,
+            url TEXT NOT NULL,
+            alt_text TEXT,
+            category TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            uploaded_by INTEGER,
+            FOREIGN KEY(site_settings_id) REFERENCES site_settings(id) ON DELETE CASCADE
+        );
+        """
+    else:
+        create_versions_sql = """
+        CREATE TABLE IF NOT EXISTS site_theme_versions (
+            id SERIAL PRIMARY KEY,
+            site_settings_id INTEGER NOT NULL REFERENCES site_settings(id) ON DELETE CASCADE,
+            status TEXT NOT NULL DEFAULT 'preview',
+            label TEXT,
+            author_id INTEGER,
+            payload TEXT NOT NULL,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            published_at TIMESTAMP WITH TIME ZONE
+        );
+        """
+        create_media_sql = """
+        CREATE TABLE IF NOT EXISTS site_media (
+            id SERIAL PRIMARY KEY,
+            site_settings_id INTEGER NOT NULL REFERENCES site_settings(id) ON DELETE CASCADE,
+            file_name TEXT NOT NULL,
+            original_name TEXT,
+            mime_type TEXT,
+            file_size BIGINT,
+            url TEXT NOT NULL,
+            alt_text TEXT,
+            category TEXT,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            uploaded_by INTEGER
+        );
+        """
+
+    cur.execute(create_versions_sql)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_site_theme_versions_status ON site_theme_versions(status)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_site_theme_versions_created ON site_theme_versions(created_at)")
+
+    cur.execute(create_media_sql)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_site_media_created ON site_media(created_at)")
 
     existing_columns: Set[str] = set()
     try:
@@ -536,6 +747,7 @@ def _load_site_settings() -> Dict[str, Any]:
             iconography.setdefault(key, default_value)
         for key, default_value in DEFAULT_THEME_CONFIG["components"].items():
             components.setdefault(key, default_value)
+        cta_slots = ensure_theme_cta_slots(theme_config)
         if "custom_css" not in theme_config:
             theme_config["custom_css"] = ""
         if "social_labels" not in theme_config or not isinstance(theme_config.get("social_labels"), dict):
@@ -555,6 +767,7 @@ def _load_site_settings() -> Dict[str, Any]:
             "social_links": social_links,
             "feature_flags": feature_flags,
             "theme": theme_config,
+            "cta_slots": cta_slots,
         }
 
         for palette_key, palette_value in palette.items():
@@ -570,6 +783,7 @@ def _load_site_settings() -> Dict[str, Any]:
     except Exception:
         fallback_links = _default_nav_links()
         fallback_theme = copy.deepcopy(DEFAULT_THEME_CONFIG)
+        fallback_cta_slots = ensure_theme_cta_slots(fallback_theme)
         settings = {
             "site_title": "Sports League Management System",
             "brand_image_url": None,
@@ -584,6 +798,7 @@ def _load_site_settings() -> Dict[str, Any]:
             "feature_flags": dict(DEFAULT_FEATURE_FLAGS),
             "theme": fallback_theme,
             "custom_css": fallback_theme.get("custom_css", ""),
+            "cta_slots": fallback_cta_slots,
         }
         for key, value in settings["social_links"].items():
             settings[f"{key}_url"] = value
@@ -600,7 +815,18 @@ def invalidate_site_settings_cache() -> None:
 
 def inject_site_settings():
     settings = _load_site_settings()
+    preview_active = False
+    if session.get('theme_preview_active') and session.get('is_admin'):
+        preview = get_site_theme_preview()
+        if preview:
+            settings = _apply_payload_to_settings(settings, preview['payload'])
+            preview_active = True
+        else:
+            session.pop('theme_preview_active', None)
     theme = settings.get("theme", DEFAULT_THEME_CONFIG)
+    if not isinstance(theme, dict):
+        theme = copy.deepcopy(DEFAULT_THEME_CONFIG)
+    cta_slots = ensure_theme_cta_slots(theme)
     palette = theme.get("palette", {})
     iconography = theme.get("iconography", {})
     weight = str(iconography.get("weight", "regular")).lower()
@@ -627,6 +853,380 @@ def inject_site_settings():
         site_social_links=settings.get("social_links", {}),
         site_feature_flags=settings.get("feature_flags", {}),
         site_theme=theme,
+        site_cta_slots=cta_slots,
         site_icon_class=icon_class,
+        theme_preview_active=preview_active,
     )
+
+
+
+
+def _get_site_settings_id(cur) -> Optional[int]:
+    cur.execute('SELECT id FROM site_settings ORDER BY id ASC LIMIT 1')
+    row = cur.fetchone()
+    return row[0] if row else None
+
+
+def _serialize_settings_payload(payload: Dict[str, Any]) -> str:
+    return json.dumps(payload, separators=(',', ':'), ensure_ascii=False)
+
+
+def get_site_theme_preview() -> Optional[Dict[str, Any]]:
+    db = get_db()
+    cur = db.cursor()
+    try:
+        cur.execute(
+            """
+            SELECT id, payload, label, author_id, status, created_at
+            FROM site_theme_versions
+            WHERE status = 'preview'
+            ORDER BY created_at DESC
+            LIMIT 1
+            """
+        )
+        row = cur.fetchone()
+        if not row:
+            return None
+        payload = json.loads(row[1]) if row[1] else {}
+        created_at = row[5]
+        if isinstance(created_at, str):
+            try:
+                created_at = datetime.fromisoformat(created_at)
+            except ValueError:
+                created_at = None
+        return {
+            'id': row[0],
+            'payload': payload,
+            'label': row[2],
+            'author_id': row[3],
+            'status': row[4],
+            'created_at': created_at,
+        }
+    finally:
+        cur.close()
+
+
+def list_site_theme_versions(limit: int = 20) -> List[Dict[str, Any]]:
+    db = get_db()
+    cur = db.cursor()
+    results: List[Dict[str, Any]] = []
+    try:
+        cur.execute(
+            """
+            SELECT v.id, v.status, v.label, v.author_id, v.payload, v.created_at, v.published_at,
+                   u.first_name, u.last_name, u.email
+            FROM site_theme_versions v
+            LEFT JOIN "user" u ON v.author_id = u.id
+            ORDER BY v.created_at DESC
+            LIMIT %s
+            """,
+            (limit,),
+        )
+
+        for row in cur.fetchall():
+            author_label = None
+            if row[7] or row[8] or row[9]:
+                names = [n for n in (row[7], row[8]) if n]
+                if names:
+                    author_label = ' '.join(names)
+                elif row[9]:
+                    author_label = row[9]
+            created_at = row[5]
+            published_at = row[6]
+            if isinstance(created_at, str):
+                try:
+                    created_at = datetime.fromisoformat(created_at)
+                except ValueError:
+                    created_at = None
+            if isinstance(published_at, str):
+                try:
+                    published_at = datetime.fromisoformat(published_at)
+                except ValueError:
+                    published_at = None
+            results.append(
+                {
+                    'id': row[0],
+                    'status': row[1],
+                    'label': row[2],
+                    'author_id': row[3],
+                    'created_at': created_at,
+                    'published_at': published_at,
+                    'author_label': author_label,
+                }
+            )
+    finally:
+        cur.close()
+    return results
+
+
+def get_site_theme_version(version_id: int) -> Optional[Dict[str, Any]]:
+    db = get_db()
+    cur = db.cursor()
+    try:
+        cur.execute(
+            "SELECT id, status, payload, label, author_id FROM site_theme_versions WHERE id = %s",
+            (version_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            return None
+        return {
+            'id': row[0],
+            'status': row[1],
+            'payload': json.loads(row[2]) if row[2] else {},
+            'label': row[3],
+            'author_id': row[4],
+        }
+    finally:
+        cur.close()
+
+
+def save_site_theme_preview(payload: Dict[str, Any], author_id: Optional[int] = None, label: Optional[str] = None) -> None:
+    db = get_db()
+    cur = db.cursor()
+    try:
+        site_id = _get_site_settings_id(cur)
+        if site_id is None:
+            return
+        payload_json = _serialize_settings_payload(payload)
+        label = label or f"Preview {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}"
+        cur.execute(
+            "SELECT id FROM site_theme_versions WHERE site_settings_id = %s AND status = 'preview' ORDER BY created_at DESC LIMIT 1",
+            (site_id,),
+        )
+        row = cur.fetchone()
+        if row:
+            cur.execute(
+                """
+                UPDATE site_theme_versions
+                SET payload = %s, label = %s, author_id = %s, created_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+                """,
+                (payload_json, label, author_id, row[0]),
+            )
+        else:
+            cur.execute(
+                """
+                INSERT INTO site_theme_versions (site_settings_id, status, label, author_id, payload)
+                VALUES (%s, 'preview', %s, %s, %s)
+                """,
+                (site_id, label, author_id, payload_json),
+            )
+        db.commit()
+    finally:
+        cur.close()
+    invalidate_site_settings_cache()
+
+
+def discard_site_theme_preview() -> None:
+    db = get_db()
+    cur = db.cursor()
+    try:
+        cur.execute("DELETE FROM site_theme_versions WHERE status = 'preview'")
+        db.commit()
+    finally:
+        cur.close()
+    invalidate_site_settings_cache()
+
+
+def _apply_payload_to_settings(settings: Dict[str, Any], payload: Dict[str, Any]) -> Dict[str, Any]:
+    merged = copy.deepcopy(settings)
+    simple_keys = [
+        'site_title',
+        'brand_image_url',
+        'primary_color',
+        'favicon_url',
+        'league_tagline',
+        'contact_email',
+        'nav_layout',
+        'custom_css',
+    ]
+    for key in simple_keys:
+        if key in payload:
+            merged[key] = payload[key]
+    if 'social_links' in payload:
+        merged['social_links'] = payload['social_links']
+    if 'feature_flags' in payload:
+        merged['feature_flags'] = payload['feature_flags']
+    if 'theme' in payload:
+        merged['theme'] = _merge_nested(DEFAULT_THEME_CONFIG, payload['theme'])
+    theme_ref = merged.get('theme')
+    if isinstance(theme_ref, dict):
+        merged['cta_slots'] = ensure_theme_cta_slots(theme_ref)
+    if 'navigation_links_raw' in payload:
+        merged['navigation_links_raw'] = payload['navigation_links_raw']
+        merged['navigation_links'] = _resolve_nav_links(payload['navigation_links_raw'])
+    return merged
+
+
+def _record_site_theme_version(status: str, payload: Dict[str, Any], author_id: Optional[int], label: Optional[str]) -> int:
+    db = get_db()
+    cur = db.cursor()
+    try:
+        site_id = _get_site_settings_id(cur)
+        if site_id is None:
+            return 0
+        payload_json = _serialize_settings_payload(payload)
+        label = label or f"{status.title()} {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}"
+        cur.execute(
+            """
+            INSERT INTO site_theme_versions (site_settings_id, status, label, author_id, payload, published_at)
+            VALUES (%s, %s, %s, %s, %s, CASE WHEN %s = 'published' THEN CURRENT_TIMESTAMP ELSE NULL END)
+            RETURNING id
+            """,
+            (site_id, status, label, author_id, payload_json, status),
+        )
+        version_id = cur.fetchone()[0]
+        db.commit()
+        return version_id
+    finally:
+        cur.close()
+
+
+def publish_site_theme(payload: Dict[str, Any], author_id: Optional[int], label: Optional[str]) -> int:
+    version_id = _record_site_theme_version('published', payload, author_id, label)
+    discard_site_theme_preview()
+    return version_id
+
+
+def get_active_preview_payload() -> Optional[Dict[str, Any]]:
+    preview = get_site_theme_preview()
+    if not preview:
+        return None
+    return preview['payload']
+
+
+def list_site_media_assets() -> List[Dict[str, Any]]:
+    db = get_db()
+    cur = db.cursor()
+    items: List[Dict[str, Any]] = []
+    try:
+        cur.execute(
+            """
+            SELECT id, file_name, original_name, mime_type, file_size, url, alt_text, category, created_at
+            FROM site_media
+            ORDER BY created_at DESC
+            """
+        )
+        for row in cur.fetchall():
+            items.append(
+                {
+                    'id': row[0],
+                    'file_name': row[1],
+                    'original_name': row[2],
+                    'mime_type': row[3],
+                    'file_size': row[4],
+                    'url': row[5],
+                    'alt_text': row[6],
+                    'category': row[7],
+                    'created_at': row[8],
+                }
+            )
+    finally:
+        cur.close()
+    return items
+
+
+def add_site_media_record(record: Dict[str, Any]) -> None:
+    db = get_db()
+    cur = db.cursor()
+    try:
+        site_id = _get_site_settings_id(cur)
+        if site_id is None:
+            return
+        cur.execute(
+            """
+            INSERT INTO site_media (site_settings_id, file_name, original_name, mime_type, file_size, url, alt_text, category, uploaded_by)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                site_id,
+                record['file_name'],
+                record.get('original_name'),
+                record.get('mime_type'),
+                record.get('file_size'),
+                record['url'],
+                record.get('alt_text'),
+                record.get('category'),
+                record.get('uploaded_by'),
+            ),
+        )
+        db.commit()
+    finally:
+        cur.close()
+
+
+def delete_site_media_record(media_id: int) -> None:
+    db = get_db()
+    cur = db.cursor()
+    try:
+        cur.execute('DELETE FROM site_media WHERE id = %s', (media_id,))
+        db.commit()
+    finally:
+        cur.close()
+
+
+
+def apply_site_payload(payload: Dict[str, Any]) -> None:
+    """Persist a full site settings payload and refresh caches."""
+    db = get_db()
+    cur = db.cursor()
+    try:
+        site_id = _get_site_settings_id(cur)
+        timestamp = datetime.now(timezone.utc)
+        social_links = payload.get('social_links') or {}
+        feature_flags = payload.get('feature_flags') or {}
+        theme_payload = _merge_nested(DEFAULT_THEME_CONFIG, payload.get('theme', {}))
+        ensure_theme_cta_slots(theme_payload)
+        base_payload = (
+            payload.get('site_title', 'Sports League Management System'),
+            payload.get('brand_image_url'),
+            payload.get('primary_color', DEFAULT_PRIMARY_COLOR),
+            payload.get('favicon_url'),
+            payload.get('league_tagline'),
+            payload.get('contact_email'),
+            json.dumps(social_links),
+            json.dumps(feature_flags),
+            json.dumps(theme_payload),
+        )
+        if site_id:
+            cur.execute(
+                """
+                UPDATE site_settings
+                SET site_title = %s,
+                    brand_image_url = %s,
+                    primary_color = %s,
+                    favicon_url = %s,
+                    league_tagline = %s,
+                    contact_email = %s,
+                    social_links_json = %s,
+                    feature_flags_json = %s,
+                    theme_config_json = %s,
+                    updated_at = %s
+                WHERE id = %s
+                """,
+                base_payload + (timestamp, site_id),
+            )
+        else:
+            cur.execute(
+                """
+                INSERT INTO site_settings (
+                    site_title,
+                    brand_image_url,
+                    primary_color,
+                    favicon_url,
+                    league_tagline,
+                    contact_email,
+                    social_links_json,
+                    feature_flags_json,
+                    theme_config_json,
+                    updated_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                base_payload + (timestamp,),
+            )
+        db.commit()
+    finally:
+        cur.close()
+    invalidate_site_settings_cache()
 

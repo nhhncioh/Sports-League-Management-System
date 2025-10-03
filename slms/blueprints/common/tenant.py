@@ -115,6 +115,11 @@ def _extract_request_slug() -> str | None:
     if not host or host in {"localhost", "127.0.0.1", "0.0.0.0"}:
         return None
 
+    # Check for custom domain match first
+    org_by_domain = Organization.query.filter_by(custom_domain=host).first()
+    if org_by_domain:
+        return org_by_domain.slug
+
     parts = host.split(".")
     if len(parts) < 2:
         return None

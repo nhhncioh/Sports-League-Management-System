@@ -1,0 +1,470 @@
+{% extends "base.html" %}
+{% block title %}Articles - Content Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-badge {
+        padding: 0.35rem 0.65rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    .status-draft { background-color: #e9ecef; color: #495057; }
+    .status-pending_review { background-color: #fff3cd; color: #856404; }
+    .status-approved { background-color: #d1ecf1; color: #0c5460; }
+    .status-published { background-color: #d4edda; color: #155724; }
+    .status-trashed { background-color: #f8d7da; color: #721c24; }
+
+    .article-row {
+        transition: background-color 0.2s;
+    }
+    .article-row:hover {
+        background-color: #f8f9fa;
+    }
+    .article-title {
+        font-weight: 600;
+        color: #212529;
+        text-decoration: none;
+    }
+    .article-title:hover {
+        color: #0d6efd;
+    }
+    .filter-pill {
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .filter-pill:hover {
+        transform: translateY(-1px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Articles</h1>
+            <p class="text-muted mb-0">Manage your news articles and content</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('content_mgmt.dashboard') }}" class="btn btn-outline-secondary">
+                <i class="ph ph-house"></i> Dashboard
+            </a>
+            <a href="{{ url_for('content_mgmt.article_new') }}" class="btn btn-primary">
+                <i class="ph ph-plus"></i> New Article
+            </a>
+        </div>
+    </div>
+
+    <!-- Status Filter Pills -->
+    <div class="mb-4">
+        <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-sm btn-outline-secondary filter-pill active" data-status="">
+                All Articles <span class="badge bg-secondary ms-1" id="count-all">0</span>
+            </button>
+            <button class="btn btn-sm btn-outline-secondary filter-pill" data-status="draft">
+                <i class="ph ph-file-dashed"></i> Drafts <span class="badge bg-secondary ms-1" id="count-draft">0</span>
+            </button>
+            <button class="btn btn-sm btn-outline-warning filter-pill" data-status="pending_review">
+                <i class="ph ph-clock"></i> Pending Review <span class="badge bg-secondary ms-1" id="count-pending">0</span>
+            </button>
+            <button class="btn btn-sm btn-outline-info filter-pill" data-status="approved">
+                <i class="ph ph-check-circle"></i> Approved <span class="badge bg-secondary ms-1" id="count-approved">0</span>
+            </button>
+            <button class="btn btn-sm btn-outline-success filter-pill" data-status="published">
+                <i class="ph ph-globe"></i> Published <span class="badge bg-secondary ms-1" id="count-published">0</span>
+            </button>
+            <button class="btn btn-sm btn-outline-danger filter-pill" data-status="trashed">
+                <i class="ph ph-trash"></i> Trash <span class="badge bg-secondary ms-1" id="count-trashed">0</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="ph ph-magnifying-glass"></i></span>
+                        <input type="text" class="form-control" id="search-input" placeholder="Search articles...">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="author-filter">
+                        <option value="">All Authors</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="sort-select">
+                        <option value="created_desc">Newest First</option>
+                        <option value="created_asc">Oldest First</option>
+                        <option value="updated_desc">Recently Updated</option>
+                        <option value="title_asc">Title A-Z</option>
+                        <option value="views_desc">Most Viewed</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Articles Table -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div id="articles-container">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="text-muted mt-2">Loading articles...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Actions (hidden by default) -->
+<div class="position-fixed bottom-0 start-50 translate-middle-x mb-4" id="bulk-actions-bar" style="display: none; z-index: 1000;">
+    <div class="card shadow-lg border-primary">
+        <div class="card-body p-3">
+            <div class="d-flex align-items-center gap-3">
+                <span id="selected-count" class="fw-bold">0 selected</span>
+                <button class="btn btn-sm btn-danger" id="bulk-trash-btn">
+                    <i class="ph ph-trash"></i> Trash
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" id="bulk-deselect-btn">
+                    <i class="ph ph-x"></i> Deselect All
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let allArticles = [];
+let filteredArticles = [];
+let currentStatus = '';
+let selectedArticles = new Set();
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadArticles();
+
+    // Filter pills
+    document.querySelectorAll('.filter-pill').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            currentStatus = this.dataset.status;
+            filterArticles();
+        });
+    });
+
+    // Search
+    document.getElementById('search-input').addEventListener('input', filterArticles);
+
+    // Author filter
+    document.getElementById('author-filter').addEventListener('change', filterArticles);
+
+    // Sort
+    document.getElementById('sort-select').addEventListener('change', sortArticles);
+
+    // Bulk actions
+    document.getElementById('bulk-trash-btn').addEventListener('click', bulkTrash);
+    document.getElementById('bulk-deselect-btn').addEventListener('click', deselectAll);
+});
+
+async function loadArticles() {
+    try {
+        const response = await fetch('/content/api/articles?include_trashed=true');
+        allArticles = await response.json();
+
+        // Populate author filter
+        const authors = [...new Set(allArticles.map(a => a.author).filter(a => a))];
+        const authorSelect = document.getElementById('author-filter');
+        authorSelect.innerHTML = '<option value="">All Authors</option>' +
+            authors.map(a => `<option value="${a.id}">${a.email}</option>`).join('');
+
+        // Update counts
+        updateCounts();
+        filterArticles();
+    } catch (err) {
+        console.error('Failed to load articles:', err);
+        showError('Failed to load articles');
+    }
+}
+
+function updateCounts() {
+    const counts = {
+        all: allArticles.length,
+        draft: allArticles.filter(a => a.status === 'draft').length,
+        pending: allArticles.filter(a => a.status === 'pending_review').length,
+        approved: allArticles.filter(a => a.status === 'approved').length,
+        published: allArticles.filter(a => a.status === 'published').length,
+        trashed: allArticles.filter(a => a.status === 'trashed').length
+    };
+
+    document.getElementById('count-all').textContent = counts.all;
+    document.getElementById('count-draft').textContent = counts.draft;
+    document.getElementById('count-pending').textContent = counts.pending;
+    document.getElementById('count-approved').textContent = counts.approved;
+    document.getElementById('count-published').textContent = counts.published;
+    document.getElementById('count-trashed').textContent = counts.trashed;
+}
+
+function filterArticles() {
+    const search = document.getElementById('search-input').value.toLowerCase();
+    const authorFilter = document.getElementById('author-filter').value;
+
+    filteredArticles = allArticles.filter(article => {
+        const matchesSearch = article.title.toLowerCase().includes(search) ||
+                            (article.excerpt && article.excerpt.toLowerCase().includes(search));
+        const matchesStatus = !currentStatus || article.status === currentStatus;
+        const matchesAuthor = !authorFilter || (article.author && article.author.id === authorFilter);
+
+        return matchesSearch && matchesStatus && matchesAuthor;
+    });
+
+    sortArticles();
+}
+
+function sortArticles() {
+    const sortBy = document.getElementById('sort-select').value;
+
+    filteredArticles.sort((a, b) => {
+        switch (sortBy) {
+            case 'created_desc':
+                return new Date(b.created_at) - new Date(a.created_at);
+            case 'created_asc':
+                return new Date(a.created_at) - new Date(b.created_at);
+            case 'updated_desc':
+                return new Date(b.updated_at) - new Date(a.updated_at);
+            case 'title_asc':
+                return a.title.localeCompare(b.title);
+            case 'views_desc':
+                return (b.view_count || 0) - (a.view_count || 0);
+            default:
+                return 0;
+        }
+    });
+
+    renderArticles();
+}
+
+function renderArticles() {
+    const container = document.getElementById('articles-container');
+
+    if (filteredArticles.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-5">
+                <i class="ph ph-article" style="font-size: 4rem; color: #ccc;"></i>
+                <p class="text-muted mt-3">No articles found</p>
+                <a href="{{ url_for('content_mgmt.article_new') }}" class="btn btn-primary">
+                    <i class="ph ph-plus"></i> Create Your First Article
+                </a>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;">
+                            <input type="checkbox" class="form-check-input" id="select-all">
+                        </th>
+                        <th>Title</th>
+                        <th>Author</th>
+                        <th>Status</th>
+                        <th>Views</th>
+                        <th>Updated</th>
+                        <th style="width: 120px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filteredArticles.map(article => `
+                        <tr class="article-row">
+                            <td>
+                                <input type="checkbox" class="form-check-input article-checkbox"
+                                       data-id="${article.id}" ${selectedArticles.has(article.id) ? 'checked' : ''}>
+                            </td>
+                            <td>
+                                <a href="/content/articles/${article.id}/edit" class="article-title">
+                                    ${article.title}
+                                </a>
+                                ${article.is_featured ? '<i class="ph ph-star-four text-warning ms-1" title="Featured"></i>' : ''}
+                                ${article.is_pinned ? '<i class="ph ph-push-pin text-primary ms-1" title="Pinned"></i>' : ''}
+                                ${article.excerpt ? `<br><small class="text-muted">${truncate(article.excerpt, 80)}</small>` : ''}
+                            </td>
+                            <td>
+                                <small>${article.author ? article.author.email : 'Unknown'}</small>
+                            </td>
+                            <td>
+                                <span class="status-badge status-${article.status}">
+                                    ${article.status.replace('_', ' ')}
+                                </span>
+                            </td>
+                            <td>
+                                <small class="text-muted">${article.view_count || 0}</small>
+                            </td>
+                            <td>
+                                <small class="text-muted">${formatDate(article.updated_at)}</small>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="/content/articles/${article.id}/edit" class="btn btn-outline-primary" title="Edit">
+                                        <i class="ph ph-pencil"></i>
+                                    </a>
+                                    ${article.status === 'published' ? `
+                                        <a href="/articles/${article.slug}" target="_blank" class="btn btn-outline-secondary" title="View">
+                                            <i class="ph ph-eye"></i>
+                                        </a>
+                                    ` : ''}
+                                    ${article.status === 'trashed' ? `
+                                        <button class="btn btn-outline-success" onclick="restoreArticle('${article.id}')" title="Restore">
+                                            <i class="ph ph-arrow-counter-clockwise"></i>
+                                        </button>
+                                    ` : `
+                                        <button class="btn btn-outline-danger" onclick="trashArticle('${article.id}')" title="Trash">
+                                            <i class="ph ph-trash"></i>
+                                        </button>
+                                    `}
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    // Setup checkbox handlers
+    document.getElementById('select-all')?.addEventListener('change', function(e) {
+        document.querySelectorAll('.article-checkbox').forEach(cb => {
+            cb.checked = e.target.checked;
+            if (e.target.checked) {
+                selectedArticles.add(cb.dataset.id);
+            } else {
+                selectedArticles.delete(cb.dataset.id);
+            }
+        });
+        updateBulkActionsBar();
+    });
+
+    document.querySelectorAll('.article-checkbox').forEach(cb => {
+        cb.addEventListener('change', function(e) {
+            if (e.target.checked) {
+                selectedArticles.add(e.target.dataset.id);
+            } else {
+                selectedArticles.delete(e.target.dataset.id);
+            }
+            updateBulkActionsBar();
+        });
+    });
+}
+
+function updateBulkActionsBar() {
+    const bar = document.getElementById('bulk-actions-bar');
+    const count = document.getElementById('selected-count');
+
+    if (selectedArticles.size > 0) {
+        bar.style.display = 'block';
+        count.textContent = `${selectedArticles.size} selected`;
+    } else {
+        bar.style.display = 'none';
+    }
+}
+
+function deselectAll() {
+    selectedArticles.clear();
+    document.querySelectorAll('.article-checkbox').forEach(cb => cb.checked = false);
+    document.getElementById('select-all').checked = false;
+    updateBulkActionsBar();
+}
+
+async function bulkTrash() {
+    if (!confirm(`Move ${selectedArticles.size} article(s) to trash?`)) return;
+
+    const promises = Array.from(selectedArticles).map(id =>
+        fetch(`/content/api/articles/${id}/trash`, { method: 'POST' })
+    );
+
+    try {
+        await Promise.all(promises);
+        alert('Articles moved to trash');
+        deselectAll();
+        loadArticles();
+    } catch (err) {
+        alert('Some articles failed to move to trash');
+    }
+}
+
+async function trashArticle(id) {
+    if (!confirm('Move this article to trash?')) return;
+
+    try {
+        const response = await fetch(`/content/api/articles/${id}/trash`, {
+            method: 'POST'
+        });
+
+        if (response.ok) {
+            alert('Article moved to trash');
+            loadArticles();
+        } else {
+            alert('Failed to trash article');
+        }
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+
+async function restoreArticle(id) {
+    try {
+        const response = await fetch(`/content/api/articles/${id}/restore`, {
+            method: 'POST'
+        });
+
+        if (response.ok) {
+            alert('Article restored');
+            loadArticles();
+        } else {
+            alert('Failed to restore article');
+        }
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+
+    return date.toLocaleDateString();
+}
+
+function truncate(text, length) {
+    return text.length > length ? text.substring(0, length) + '...' : text;
+}
+
+function showError(message) {
+    const container = document.getElementById('articles-container');
+    container.innerHTML = `
+        <div class="alert alert-danger" role="alert">
+            <i class="ph ph-warning-circle"></i> ${message}
+        </div>
+    `;
+}
+</script>
+{% endblock %}

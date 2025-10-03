@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Match Creation & Scheduling - Admin Panel{% endblock %}
+{% block title %}Match Ops Console - Admin Panel{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -371,8 +371,8 @@
     <div class="match-creation-hub">
         <div class="d-flex justify-content-between align-items-center">
             <div>
-                <h1 class="mb-2"><i class="ph ph-calendar-plus me-2"></i>Match Creation & Scheduling</h1>
-                <p class="mb-0 opacity-75">Create individual matches or bulk generate fixtures for your leagues</p>
+                <h1 class="mb-2"><i class="ph ph-broadcast me-2"></i>Match Ops Console</h1>
+                <p class="mb-0 opacity-75">Day-to-day control for live fixtures, quick adds, bulk score entry, and emergency adjustments.</p>
             </div>
             <div class="text-center">
                 <div class="display-6 fw-bold">{{ total_matches }}</div>
@@ -381,10 +381,12 @@
         </div>
     </div>
 
+    <div class="alert alert-info mb-4"><i class="ph ph-compass me-2"></i>Need long-range planning, blackout management, or approvals? Visit the <a href="{{ url_for('schedule_mgmt.index') }}" class="alert-link">Season Planner</a>.</div>
+
     <div class="row g-4">
         <!-- Match Creation Methods -->
         <div class="col-lg-8">
-            <h3 class="mb-4">Create Matches</h3>
+            <h3 class="mb-4">Match Operations Toolkit</h3>
 
             <div class="row g-4">
                 <div class="col-md-4">
@@ -401,8 +403,8 @@
                     <div class="creation-method-card" onclick="selectCreationMethod('round-robin', this)">
                         <div class="text-center">
                             <i class="ph ph-arrows-clockwise display-4 text-success mb-3"></i>
-                            <h5>Complete League Schedule</h5>
-                            <p class="text-muted small">Auto-generate all league matches</p>
+                            <h5>Quick Season Generator</h5>
+                            <p class="text-muted small">Instantly build a full fixture list for emergencies</p>
                         </div>
                     </div>
                 </div>
@@ -411,8 +413,8 @@
                     <div class="creation-method-card" onclick="selectCreationMethod('custom-bulk', this)">
                         <div class="text-center">
                             <i class="ph ph-stack display-4 text-warning mb-3"></i>
-                            <h5>Bulk Entry</h5>
-                            <p class="text-muted small">Multiple matches at once</p>
+                            <h5>Bulk Match Entry</h5>
+                            <p class="text-muted small">Upload or paste multiple fixtures in one go</p>
                         </div>
                     </div>
                 </div>
@@ -942,3 +944,5 @@ function backToMethodSelection() {
 }
 </script>
 {% endblock %}
+
+

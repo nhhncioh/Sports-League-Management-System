@@ -1,0 +1,509 @@
+{% extends "layout.html" %}
+
+{% block title %}Live Game Console{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-3">
+        <div class="col-md-8">
+            <h2>Live Game Console</h2>
+            <p class="text-muted">{{ game.home_team.name if game.home_team else 'TBD' }} vs {{ game.away_team.name if game.away_team else 'TBD' }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <span class="badge bg-{{ 'success' if game.status.value == 'in_progress' else 'secondary' }} fs-6">
+                {{ game.status.value.upper().replace('_', ' ') }}
+            </span>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Scoreboard -->
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-clipboard-data"></i> Scoreboard</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center mb-3">
+                        <div class="col-5">
+                            <h6 class="text-muted">{{ game.home_team.name if game.home_team else 'HOME' }}</h6>
+                            <h1 class="display-3 fw-bold text-primary" id="homeScore">{{ game.home_score }}</h1>
+                        </div>
+                        <div class="col-2 d-flex align-items-center justify-content-center">
+                            <h3>-</h3>
+                        </div>
+                        <div class="col-5">
+                            <h6 class="text-muted">{{ game.away_team.name if game.away_team else 'AWAY' }}</h6>
+                            <h1 class="display-3 fw-bold text-danger" id="awayScore">{{ game.away_score }}</h1>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Home Score</label>
+                        <input type="number" class="form-control" id="inputHomeScore" value="{{ game.home_score }}" min="0">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Away Score</label>
+                        <input type="number" class="form-control" id="inputAwayScore" value="{{ game.away_score }}" min="0">
+                    </div>
+                    <button class="btn btn-primary w-100" onclick="updateScore()">
+                        <i class="bi bi-check-lg"></i> Update Score
+                    </button>
+
+                    <hr>
+
+                    <div class="d-grid gap-2">
+                        {% if game.status.value == 'scheduled' %}
+                        <button class="btn btn-success" onclick="startGame()">
+                            <i class="bi bi-play-fill"></i> Start Game
+                        </button>
+                        {% elif game.status.value == 'in_progress' %}
+                        <button class="btn btn-warning" onclick="setHalftime()">
+                            <i class="bi bi-pause-fill"></i> Halftime
+                        </button>
+                        <button class="btn btn-info" onclick="startOvertime()">
+                            <i class="bi bi-clock-history"></i> Start Overtime
+                        </button>
+                        <button class="btn btn-danger" onclick="endGame()">
+                            <i class="bi bi-stop-fill"></i> End Game
+                        </button>
+                        {% elif game.status.value == 'halftime' %}
+                        <button class="btn btn-success" onclick="resumeGame()">
+                            <i class="bi bi-play-fill"></i> Resume Game
+                        </button>
+                        {% elif game.status.value == 'overtime' %}
+                        <button class="btn btn-danger" onclick="endGame()">
+                            <i class="bi bi-stop-fill"></i> End Game
+                        </button>
+                        {% elif game.status.value == 'final' and not game.is_reconciled %}
+                        <button class="btn btn-success" onclick="reconcileGame()">
+                            <i class="bi bi-check-circle"></i> Reconcile Game
+                        </button>
+                        {% endif %}
+                    </div>
+
+                    {% if game.went_to_overtime %}
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-info-circle"></i> Overtime ({{ game.overtime_periods }} period{{ 's' if game.overtime_periods > 1 else '' }})
+                    </div>
+                    {% endif %}
+
+                    {% if game.is_reconciled %}
+                    <div class="alert alert-success mt-3">
+                        <i class="bi bi-check-circle"></i> Game Reconciled
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Events & Actions -->
+        <div class="col-lg-8">
+            <ul class="nav nav-tabs mb-3" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" data-bs-toggle="tab" href="#eventsTab">Events</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#penaltiesTab">Penalties</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#statsTab">Player Stats</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#historyTab">Score History</a>
+                </li>
+            </ul>
+
+            <div class="tab-content">
+                <!-- Events Tab -->
+                <div class="tab-pane fade show active" id="eventsTab">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">Game Events</h6>
+                                <button class="btn btn-sm btn-primary" onclick="showAddEventModal()">
+                                    <i class="bi bi-plus"></i> Add Event
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="eventsContainer">
+                                <p class="text-muted">Loading events...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Penalties Tab -->
+                <div class="tab-pane fade" id="penaltiesTab">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">Penalties</h6>
+                                <button class="btn btn-sm btn-primary" onclick="showAddPenaltyModal()">
+                                    <i class="bi bi-plus"></i> Add Penalty
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="penaltiesContainer">
+                                <p class="text-muted">Loading penalties...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats Tab -->
+                <div class="tab-pane fade" id="statsTab">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">Player Statistics</h6>
+                                <button class="btn btn-sm btn-primary" onclick="showAddStatModal()">
+                                    <i class="bi bi-plus"></i> Add Stat
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="statsContainer">
+                                <p class="text-muted">Loading stats...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- History Tab -->
+                <div class="tab-pane fade" id="historyTab">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">Score Update History</h6>
+                        </div>
+                        <div class="card-body">
+                            <div id="historyContainer">
+                                <p class="text-muted">Loading history...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Event Modal -->
+<div class="modal fade" id="addEventModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Game Event</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addEventForm">
+                    <div class="mb-3">
+                        <label class="form-label">Event Type</label>
+                        <select class="form-select" id="eventType" required>
+                            <option value="goal">Goal</option>
+                            <option value="timeout">Timeout</option>
+                            <option value="substitution">Substitution</option>
+                            <option value="period_start">Period Start</option>
+                            <option value="period_end">Period End</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="eventDescription" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="addEvent()">Add Event</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Penalty Modal -->
+<div class="modal fade" id="addPenaltyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Penalty</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addPenaltyForm">
+                    <div class="mb-3">
+                        <label class="form-label">Team</label>
+                        <select class="form-select" id="penaltyTeam" required>
+                            {% if game.home_team %}
+                            <option value="{{ game.home_team_id }}">{{ game.home_team.name }}</option>
+                            {% endif %}
+                            {% if game.away_team %}
+                            <option value="{{ game.away_team_id }}">{{ game.away_team.name }}</option>
+                            {% endif %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Penalty Type</label>
+                        <select class="form-select" id="penaltyType" required>
+                            <option value="personal_foul">Personal Foul</option>
+                            <option value="technical_foul">Technical Foul</option>
+                            <option value="yellow_card">Yellow Card</option>
+                            <option value="red_card">Red Card</option>
+                            <option value="minor_penalty">Minor Penalty</option>
+                            <option value="major_penalty">Major Penalty</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="penaltyDescription" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="addPenalty()">Add Penalty</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const gameId = '{{ game.id }}';
+
+// Auto-refresh every 10 seconds
+setInterval(() => {
+    loadEvents();
+    loadPenalties();
+    loadStats();
+}, 10000);
+
+// Load initial data
+document.addEventListener('DOMContentLoaded', () => {
+    loadEvents();
+    loadPenalties();
+    loadStats();
+    loadHistory();
+});
+
+async function updateScore() {
+    const homeScore = parseInt(document.getElementById('inputHomeScore').value);
+    const awayScore = parseInt(document.getElementById('inputAwayScore').value);
+
+    try {
+        const response = await fetch(`/live-scoring/api/games/${gameId}/score`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({home_score: homeScore, away_score: awayScore})
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            document.getElementById('homeScore').textContent = data.home_score;
+            document.getElementById('awayScore').textContent = data.away_score;
+            loadHistory();
+        }
+    } catch (error) {
+        console.error('Error updating score:', error);
+    }
+}
+
+async function startGame() {
+    if (!confirm('Start this game?')) return;
+    try {
+        await fetch(`/live-scoring/api/games/${gameId}/start`, {method: 'POST'});
+        location.reload();
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+async function setHalftime() {
+    try {
+        await fetch(`/live-scoring/api/games/${gameId}/halftime`, {method: 'POST'});
+        location.reload();
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+async function resumeGame() {
+    try {
+        await fetch(`/live-scoring/api/games/${gameId}/resume`, {method: 'POST'});
+        location.reload();
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+async function startOvertime() {
+    if (!confirm('Start overtime?')) return;
+    try {
+        await fetch(`/live-scoring/api/games/${gameId}/overtime`, {method: 'POST'});
+        location.reload();
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+async function endGame() {
+    if (!confirm('End this game?')) return;
+    try {
+        await fetch(`/live-scoring/api/games/${gameId}/end`, {method: 'POST'});
+        location.reload();
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+async function reconcileGame() {
+    if (!confirm('Reconcile this game? This confirms the final score.')) return;
+    try {
+        await fetch(`/live-scoring/api/games/${gameId}/reconcile`, {method: 'POST'});
+        location.reload();
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+async function loadEvents() {
+    try {
+        const response = await fetch(`/live-scoring/api/games/${gameId}/events`);
+        const events = await response.json();
+        const container = document.getElementById('eventsContainer');
+
+        if (events.length === 0) {
+            container.innerHTML = '<p class="text-muted">No events yet</p>';
+            return;
+        }
+
+        container.innerHTML = events.map(e => `
+            <div class="border-bottom pb-2 mb-2">
+                <strong>${e.event_type.replace('_', ' ').toUpperCase()}</strong>
+                ${e.description ? `<br><small class="text-muted">${e.description}</small>` : ''}
+                <br><small class="text-muted">${new Date(e.created_at).toLocaleString()}</small>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading events:', error);
+    }
+}
+
+async function loadPenalties() {
+    try {
+        const response = await fetch(`/live-scoring/api/games/${gameId}/penalties`);
+        const penalties = await response.json();
+        const container = document.getElementById('penaltiesContainer');
+
+        if (penalties.length === 0) {
+            container.innerHTML = '<p class="text-muted">No penalties yet</p>';
+            return;
+        }
+
+        container.innerHTML = penalties.map(p => `
+            <div class="border-bottom pb-2 mb-2">
+                <strong>${p.penalty_type.replace('_', ' ').toUpperCase()}</strong>
+                ${p.player_name ? `<br>${p.player_name}` : ''}
+                ${p.description ? `<br><small class="text-muted">${p.description}</small>` : ''}
+                ${p.resulted_in_ejection ? '<br><span class="badge bg-danger">Ejection</span>' : ''}
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading penalties:', error);
+    }
+}
+
+async function loadStats() {
+    try {
+        const response = await fetch(`/live-scoring/api/games/${gameId}/stats`);
+        const stats = await response.json();
+        const container = document.getElementById('statsContainer');
+
+        if (stats.length === 0) {
+            container.innerHTML = '<p class="text-muted">No stats yet</p>';
+            return;
+        }
+
+        container.innerHTML = stats.map(s => `
+            <div class="border-bottom pb-2 mb-2">
+                <strong>${s.player_name}</strong>: ${s.stat_type.replace('_', ' ')} = ${s.value}
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading stats:', error);
+    }
+}
+
+async function loadHistory() {
+    try {
+        const response = await fetch(`/live-scoring/api/games/${gameId}/score-history`);
+        const history = await response.json();
+        const container = document.getElementById('historyContainer');
+
+        if (history.length === 0) {
+            container.innerHTML = '<p class="text-muted">No score updates yet</p>';
+            return;
+        }
+
+        container.innerHTML = history.map(h => `
+            <div class="border-bottom pb-2 mb-2">
+                ${h.previous_home_score}-${h.previous_away_score} → ${h.new_home_score}-${h.new_away_score}
+                <span class="badge bg-secondary">${h.update_type}</span>
+                <br><small class="text-muted">${new Date(h.created_at).toLocaleString()}</small>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading history:', error);
+    }
+}
+
+function showAddEventModal() {
+    new bootstrap.Modal(document.getElementById('addEventModal')).show();
+}
+
+function showAddPenaltyModal() {
+    new bootstrap.Modal(document.getElementById('addPenaltyModal')).show();
+}
+
+async function addEvent() {
+    const data = {
+        event_type: document.getElementById('eventType').value,
+        description: document.getElementById('eventDescription').value
+    };
+
+    try {
+        await fetch(`/live-scoring/api/games/${gameId}/events`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        bootstrap.Modal.getInstance(document.getElementById('addEventModal')).hide();
+        loadEvents();
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+async function addPenalty() {
+    const data = {
+        team_id: document.getElementById('penaltyTeam').value,
+        penalty_type: document.getElementById('penaltyType').value,
+        description: document.getElementById('penaltyDescription').value
+    };
+
+    try {
+        await fetch(`/live-scoring/api/games/${gameId}/penalties`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        bootstrap.Modal.getInstance(document.getElementById('addPenaltyModal')).hide();
+        loadPenalties();
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+</script>
+{% endblock %}

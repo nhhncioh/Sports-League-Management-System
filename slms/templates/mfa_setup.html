@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Setup Two-Factor Authentication - Sports League Management{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <h2>Setup Two-Factor Authentication</h2>
+        <p class="text-muted">Enhance your account security with two-factor authentication (2FA).</p>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Step 1: Scan QR Code</h5>
+                <p>Use an authenticator app (Google Authenticator, Authy, Microsoft Authenticator, etc.) to scan this QR code:</p>
+                <div class="text-center mb-3">
+                    <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" class="img-fluid" style="max-width: 300px;">
+                </div>
+                <p class="text-center">
+                    <small class="text-muted">
+                        Can't scan? Manual entry code: <code>{{ secret }}</code>
+                    </small>
+                </p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Step 2: Verify Setup</h5>
+                <p>Enter the 6-digit code from your authenticator app to complete setup:</p>
+                <form method="POST">
+                    <div class="form-group mb-3">
+                        <label for="token" class="form-label">Verification Code</label>
+                        <input type="text" class="form-control" id="token" name="token"
+                               placeholder="123456" maxlength="6" pattern="[0-9]{6}"
+                               required autofocus autocomplete="off">
+                    </div>
+                    <div class="form-group d-flex justify-content-between">
+                        <button type="submit" class="btn btn-primary">Verify & Enable 2FA</button>
+                        <a href="{{ url_for('public.home', org=session.get('org_slug')) }}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="alert alert-info mt-4">
+            <i class="ph ph-info"></i>
+            <strong>Important:</strong> After enabling 2FA, you'll receive backup recovery codes.
+            Save them in a secure location - you'll need them if you lose access to your authenticator app.
+        </div>
+    </div>
+</div>
+{% endblock %}

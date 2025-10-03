@@ -1,0 +1,165 @@
+{% extends "layout.html" %}
+{% block title %}Organization Settings - {{ org.name }}{% endblock %}
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-lg-8">
+            <h2>Organization Settings</h2>
+            <p class="text-muted">Manage your organization's information and configuration</p>
+
+            <form method="POST">
+                {{ form.hidden_tag() }}
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Basic Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            {{ form.name.label(class="form-label") }}
+                            {{ form.name(class="form-control") }}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.slug.label(class="form-label") }}
+                            <div class="input-group">
+                                {{ form.slug(class="form-control") }}
+                                <span class="input-group-text">.yourdomain.com</span>
+                            </div>
+                            <small class="text-muted">
+                                <i class="ph ph-warning"></i>
+                                Changing the slug will change your organization's URL
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control", rows="3") }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Contact Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.contact_email.label(class="form-label") }}
+                                {{ form.contact_email(class="form-control") }}
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                {{ form.contact_phone.label(class="form-label") }}
+                                {{ form.contact_phone(class="form-control") }}
+                            </div>
+
+                            <div class="col-md-12 mb-3">
+                                {{ form.website_url.label(class="form-label") }}
+                                {{ form.website_url(class="form-control") }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('public.home', org=org.slug) }}" class="btn btn-secondary">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Organization Stats</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span><i class="ph ph-users"></i> Users</span>
+                            <strong>{{ stats.users }}</strong>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span><i class="ph ph-trophy"></i> Leagues</span>
+                            <strong>{{ stats.leagues }}</strong>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span><i class="ph ph-users-three"></i> Teams</span>
+                            <strong>{{ stats.teams }}</strong>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span><i class="ph ph-calendar"></i> Seasons</span>
+                            <strong>{{ stats.seasons }}</strong>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span><i class="ph ph-basketball"></i> Games</span>
+                            <strong>{{ stats.games }}</strong>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="mb-2">
+                        <small class="text-muted">Storage Used</small>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar" role="progressbar"
+                                 style="width: {{ stats.storage_percent }}%"
+                                 aria-valuenow="{{ stats.storage_percent }}"
+                                 aria-valuemin="0" aria-valuemax="100">
+                                {{ "%.1f"|format(stats.storage_percent) }}%
+                            </div>
+                        </div>
+                        <small class="text-muted">
+                            {{ (stats.storage_used / 1024 / 1024)|round(2) }} MB
+                            {% if stats.storage_quota %}
+                                / {{ (stats.storage_quota / 1024 / 1024)|round(0)|int }} MB
+                            {% else %}
+                                / Unlimited
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Plan & Billing</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <span class="badge bg-primary">{{ org.plan_type|upper }}</span>
+                    </div>
+                    <p class="text-muted">
+                        {% if org.plan_expires_at %}
+                            Expires: {{ org.plan_expires_at.strftime('%B %d, %Y') }}
+                        {% else %}
+                            No expiration
+                        {% endif %}
+                    </p>
+                    <a href="#" class="btn btn-outline-primary btn-sm">
+                        Upgrade Plan
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

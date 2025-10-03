@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Create Your Organization - Sports League Management{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-body p-5">
+                <h2 class="text-center mb-4">Create Your Organization</h2>
+                <p class="text-center text-muted mb-4">
+                    Set up your sports league management system in minutes
+                </p>
+
+                <form method="POST" id="signup-form">
+                    {{ form.hidden_tag() }}
+
+                    <h5 class="mt-4 mb-3">Organization Information</h5>
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            {{ form.org_name.label(class="form-label") }}
+                            {{ form.org_name(class="form-control form-control-lg", autofocus=true) }}
+                            <small class="text-muted">The name of your league or organization</small>
+                        </div>
+
+                        <div class="col-md-12 mb-3">
+                            {{ form.org_slug.label(class="form-label") }}
+                            <div class="input-group">
+                                {{ form.org_slug(class="form-control", id="org_slug") }}
+                                <span class="input-group-text">.yourdomain.com</span>
+                            </div>
+                            <small class="text-muted">
+                                Your unique URL identifier (auto-generated if left blank)
+                            </small>
+                        </div>
+
+                        <div class="col-md-12 mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control") }}
+                        </div>
+                    </div>
+
+                    <h5 class="mt-4 mb-3">Your Account (Organization Owner)</h5>
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            {{ form.owner_email.label(class="form-label") }}
+                            {{ form.owner_email(class="form-control") }}
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            {{ form.owner_password.label(class="form-label") }}
+                            {{ form.owner_password(class="form-control") }}
+                            <small class="text-muted">Minimum 8 characters</small>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            {{ form.owner_password_confirm.label(class="form-label") }}
+                            {{ form.owner_password_confirm(class="form-control") }}
+                        </div>
+                    </div>
+
+                    <h5 class="mt-4 mb-3">Contact Information (Optional)</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.contact_email.label(class="form-label") }}
+                            {{ form.contact_email(class="form-control") }}
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            {{ form.contact_phone.label(class="form-label") }}
+                            {{ form.contact_phone(class="form-control") }}
+                        </div>
+
+                        <div class="col-md-12 mb-3">
+                            {{ form.website_url.label(class="form-label") }}
+                            {{ form.website_url(class="form-control") }}
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="form-check mb-4">
+                        {{ form.terms_accepted(class="form-check-input", id="terms") }}
+                        <label class="form-check-label" for="terms">
+                            I accept the <a href="#" target="_blank">Terms of Service</a>
+                            and <a href="#" target="_blank">Privacy Policy</a>
+                        </label>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            Create Organization
+                        </button>
+                        <a href="{{ url_for('auth.login') }}" class="btn btn-link">
+                            Already have an account? Log in
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="text-center mt-4 text-muted">
+            <small>
+                <i class="ph ph-shield-check"></i>
+                Your data is secure and private. We never share your information.
+            </small>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-generate slug from organization name
+document.getElementById('org_name').addEventListener('input', function(e) {
+    const slugInput = document.getElementById('org_slug');
+    if (!slugInput.value || slugInput.dataset.autoGenerated) {
+        const slug = e.target.value
+            .toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, '')
+            .replace(/[\s-]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+        slugInput.value = slug;
+        slugInput.dataset.autoGenerated = 'true';
+    }
+});
+
+document.getElementById('org_slug').addEventListener('input', function(e) {
+    delete e.target.dataset.autoGenerated;
+});
+</script>
+{% endblock %}

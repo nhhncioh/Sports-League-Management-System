@@ -1,0 +1,526 @@
+{% extends "base.html" %}
+{% block title %}Asset Manager - Content Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .asset-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+    .asset-card {
+        border: 1px solid #dee2e6;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .asset-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        transform: translateY(-2px);
+    }
+    .asset-card.selected {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25);
+    }
+    .asset-thumbnail {
+        width: 100%;
+        height: 150px;
+        object-fit: cover;
+        background-color: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .asset-icon {
+        font-size: 4rem;
+        color: #6c757d;
+    }
+    .asset-info {
+        padding: 0.75rem;
+        background: white;
+    }
+    .upload-zone {
+        border: 2px dashed #dee2e6;
+        border-radius: 0.5rem;
+        padding: 3rem;
+        text-align: center;
+        background-color: #f8f9fa;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+        border-color: #0d6efd;
+        background-color: #e7f1ff;
+    }
+    .folder-tag {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        background-color: #e9ecef;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        margin-right: 0.25rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">Asset Manager</h1>
+            <p class="text-muted mb-0">Upload and manage images, videos, and documents</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary" id="refresh-btn">
+                <i class="ph ph-arrows-clockwise"></i> Refresh
+            </button>
+            <button type="button" class="btn btn-primary" id="upload-btn">
+                <i class="ph ph-upload"></i> Upload Assets
+            </button>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Sidebar Filters -->
+        <div class="col-lg-3">
+            <div class="card shadow-sm mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="ph ph-funnel"></i> Filters</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Asset Type</label>
+                        <select class="form-select form-select-sm" id="type-filter">
+                            <option value="">All Types</option>
+                            <option value="image">Images</option>
+                            <option value="video">Videos</option>
+                            <option value="document">Documents</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Folder</label>
+                        <select class="form-select form-select-sm" id="folder-filter">
+                            <option value="">All Folders</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary w-100" id="apply-filters-btn">
+                        <i class="ph ph-check"></i> Apply Filters
+                    </button>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="ph ph-info"></i> Storage Info</h6>
+                </div>
+                <div class="card-body">
+                    <div id="storage-stats">
+                        <p class="small text-muted mb-1">Total Assets: <strong id="total-assets">0</strong></p>
+                        <p class="small text-muted mb-0">Total Size: <strong id="total-size">0 MB</strong></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assets Grid -->
+        <div class="col-lg-9">
+            <!-- Search -->
+            <div class="mb-3">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="ph ph-magnifying-glass"></i></span>
+                    <input type="text" class="form-control" id="search-input" placeholder="Search assets by filename...">
+                </div>
+            </div>
+
+            <!-- Upload Zone (hidden by default) -->
+            <div id="upload-zone" class="upload-zone mb-4" style="display: none;">
+                <i class="ph ph-cloud-arrow-up" style="font-size: 4rem; color: #6c757d;"></i>
+                <h5 class="mt-3">Drag and drop files here</h5>
+                <p class="text-muted">or click to browse</p>
+                <input type="file" id="file-input" multiple accept="image/*,video/*,.pdf,.doc,.docx" style="display: none;">
+                <div class="mt-3">
+                    <label class="form-label small">Folder (optional)</label>
+                    <input type="text" class="form-control form-control-sm d-inline-block" id="upload-folder"
+                           placeholder="e.g., banners, team-photos" style="max-width: 300px;">
+                </div>
+            </div>
+
+            <!-- Upload Progress -->
+            <div id="upload-progress" style="display: none;" class="mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="mb-3">Uploading Assets...</h6>
+                        <div id="progress-list"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Assets Grid -->
+            <div id="assets-container">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="text-muted mt-2">Loading assets...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Asset Details Modal -->
+<div class="modal fade" id="assetModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Asset Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div id="asset-preview" class="mb-3"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Filename</label>
+                            <p id="asset-filename" class="mb-0"></p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Public URL</label>
+                            <div class="input-group input-group-sm">
+                                <input type="text" class="form-control" id="asset-url" readonly>
+                                <button class="btn btn-outline-secondary" type="button" id="copy-url-btn">
+                                    <i class="ph ph-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="asset-description" class="form-label small fw-bold">Description</label>
+                            <textarea class="form-control form-control-sm" id="asset-description" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="asset-alt-text" class="form-label small fw-bold">Alt Text (for images)</label>
+                            <input type="text" class="form-control form-control-sm" id="asset-alt-text">
+                        </div>
+                        <div class="row">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">Type</label>
+                                <p id="asset-type" class="mb-0 small"></p>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">Size</label>
+                                <p id="asset-size" class="mb-0 small"></p>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">Dimensions</label>
+                                <p id="asset-dimensions" class="mb-0 small"></p>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">Usage Count</label>
+                                <p id="asset-usage" class="mb-0 small"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" id="delete-asset-btn">
+                    <i class="ph ph-trash"></i> Delete
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let assets = [];
+let filteredAssets = [];
+let currentAsset = null;
+let assetModal;
+
+document.addEventListener('DOMContentLoaded', function() {
+    assetModal = new bootstrap.Modal(document.getElementById('assetModal'));
+
+    // Load assets
+    loadAssets();
+
+    // Upload button
+    document.getElementById('upload-btn').addEventListener('click', () => {
+        const zone = document.getElementById('upload-zone');
+        zone.style.display = zone.style.display === 'none' ? 'block' : 'none';
+    });
+
+    // File input
+    const uploadZone = document.getElementById('upload-zone');
+    const fileInput = document.getElementById('file-input');
+
+    uploadZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', handleFileSelect);
+
+    // Drag and drop
+    uploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadZone.classList.add('drag-over');
+    });
+
+    uploadZone.addEventListener('dragleave', () => {
+        uploadZone.classList.remove('drag-over');
+    });
+
+    uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadZone.classList.remove('drag-over');
+        handleFileSelect({ target: { files: e.dataTransfer.files } });
+    });
+
+    // Search
+    document.getElementById('search-input').addEventListener('input', filterAssets);
+
+    // Filter buttons
+    document.getElementById('apply-filters-btn').addEventListener('click', filterAssets);
+    document.getElementById('refresh-btn').addEventListener('click', loadAssets);
+
+    // Copy URL
+    document.getElementById('copy-url-btn').addEventListener('click', () => {
+        const urlInput = document.getElementById('asset-url');
+        urlInput.select();
+        document.execCommand('copy');
+        alert('URL copied to clipboard!');
+    });
+
+    // Delete asset
+    document.getElementById('delete-asset-btn').addEventListener('click', deleteAsset);
+});
+
+async function loadAssets() {
+    try {
+        const response = await fetch('/content/api/assets');
+        assets = await response.json();
+
+        // Populate folder filter
+        const folders = [...new Set(assets.map(a => a.folder).filter(f => f))];
+        const folderSelect = document.getElementById('folder-filter');
+        folderSelect.innerHTML = '<option value="">All Folders</option>' +
+            folders.map(f => `<option value="${f}">${f}</option>`).join('');
+
+        // Update stats
+        const totalSize = assets.reduce((sum, a) => sum + a.file_size, 0);
+        document.getElementById('total-assets').textContent = assets.length;
+        document.getElementById('total-size').textContent = (totalSize / 1024 / 1024).toFixed(2);
+
+        filterAssets();
+    } catch (err) {
+        console.error('Failed to load assets:', err);
+        showError('Failed to load assets');
+    }
+}
+
+function filterAssets() {
+    const search = document.getElementById('search-input').value.toLowerCase();
+    const typeFilter = document.getElementById('type-filter').value;
+    const folderFilter = document.getElementById('folder-filter').value;
+
+    filteredAssets = assets.filter(asset => {
+        const matchesSearch = asset.filename.toLowerCase().includes(search) ||
+                            asset.original_filename.toLowerCase().includes(search);
+        const matchesType = !typeFilter || asset.asset_type === typeFilter;
+        const matchesFolder = !folderFilter || asset.folder === folderFilter;
+
+        return matchesSearch && matchesType && matchesFolder;
+    });
+
+    renderAssets();
+}
+
+function renderAssets() {
+    const container = document.getElementById('assets-container');
+
+    if (filteredAssets.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-5">
+                <i class="ph ph-folder-open" style="font-size: 4rem; color: #ccc;"></i>
+                <p class="text-muted mt-3">No assets found</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = `<div class="asset-grid">${filteredAssets.map(asset => {
+        const thumbnail = getAssetThumbnail(asset);
+        return `
+            <div class="asset-card" onclick="showAssetDetails('${asset.id}')">
+                ${thumbnail}
+                <div class="asset-info">
+                    <div class="small fw-bold text-truncate" title="${asset.original_filename}">
+                        ${asset.original_filename}
+                    </div>
+                    <div class="small text-muted">
+                        ${formatFileSize(asset.file_size)}
+                    </div>
+                    ${asset.folder ? `<span class="folder-tag">${asset.folder}</span>` : ''}
+                </div>
+            </div>
+        `;
+    }).join('')}</div>`;
+}
+
+function getAssetThumbnail(asset) {
+    if (asset.asset_type === 'image') {
+        return `<img src="${asset.public_url}" class="asset-thumbnail" alt="${asset.alt_text || asset.filename}">`;
+    }
+
+    const iconMap = {
+        'video': 'ph-video',
+        'document': 'ph-file-text'
+    };
+    const icon = iconMap[asset.asset_type] || 'ph-file';
+
+    return `<div class="asset-thumbnail"><i class="ph ${icon} asset-icon"></i></div>`;
+}
+
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+}
+
+function showAssetDetails(assetId) {
+    currentAsset = assets.find(a => a.id === assetId);
+    if (!currentAsset) return;
+
+    // Preview
+    const preview = document.getElementById('asset-preview');
+    if (currentAsset.asset_type === 'image') {
+        preview.innerHTML = `<img src="${currentAsset.public_url}" class="img-fluid rounded" alt="${currentAsset.filename}">`;
+    } else if (currentAsset.asset_type === 'video') {
+        preview.innerHTML = `<video src="${currentAsset.public_url}" controls class="w-100 rounded"></video>`;
+    } else {
+        preview.innerHTML = `<div class="text-center p-5 bg-light rounded">
+            <i class="ph ph-file-text" style="font-size: 5rem; color: #6c757d;"></i>
+        </div>`;
+    }
+
+    // Details
+    document.getElementById('asset-filename').textContent = currentAsset.original_filename;
+    document.getElementById('asset-url').value = currentAsset.public_url || '';
+    document.getElementById('asset-description').value = currentAsset.description || '';
+    document.getElementById('asset-alt-text').value = currentAsset.alt_text || '';
+    document.getElementById('asset-type').textContent = currentAsset.mime_type;
+    document.getElementById('asset-size').textContent = formatFileSize(currentAsset.file_size);
+    document.getElementById('asset-dimensions').textContent =
+        currentAsset.width && currentAsset.height ? `${currentAsset.width} × ${currentAsset.height}` : 'N/A';
+    document.getElementById('asset-usage').textContent = currentAsset.usage_count || 0;
+
+    assetModal.show();
+}
+
+async function deleteAsset() {
+    if (!currentAsset || !confirm(`Delete "${currentAsset.original_filename}"?`)) return;
+
+    try {
+        const response = await fetch(`/content/api/assets/${currentAsset.id}`, {
+            method: 'DELETE'
+        });
+
+        if (response.ok) {
+            assetModal.hide();
+            alert('Asset deleted successfully');
+            loadAssets();
+        } else {
+            alert('Failed to delete asset');
+        }
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+
+async function handleFileSelect(e) {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    const folder = document.getElementById('upload-folder').value.trim();
+    const progressDiv = document.getElementById('upload-progress');
+    const progressList = document.getElementById('progress-list');
+
+    progressDiv.style.display = 'block';
+    document.getElementById('upload-zone').style.display = 'none';
+
+    for (const file of files) {
+        const progressItem = document.createElement('div');
+        progressItem.className = 'mb-2';
+        progressItem.innerHTML = `
+            <div class="d-flex justify-content-between small mb-1">
+                <span>${file.name}</span>
+                <span id="progress-${file.name}">0%</span>
+            </div>
+            <div class="progress">
+                <div class="progress-bar" id="bar-${file.name}" style="width: 0%"></div>
+            </div>
+        `;
+        progressList.appendChild(progressItem);
+
+        try {
+            await uploadFile(file, folder, (progress) => {
+                document.getElementById(`progress-${file.name}`).textContent = progress + '%';
+                document.getElementById(`bar-${file.name}`).style.width = progress + '%';
+            });
+        } catch (err) {
+            console.error('Upload failed:', err);
+        }
+    }
+
+    setTimeout(() => {
+        progressDiv.style.display = 'none';
+        progressList.innerHTML = '';
+        document.getElementById('file-input').value = '';
+        document.getElementById('upload-folder').value = '';
+        loadAssets();
+    }, 1000);
+}
+
+async function uploadFile(file, folder, onProgress) {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (folder) formData.append('folder', folder);
+
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+
+        xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+                const progress = Math.round((e.loaded / e.total) * 100);
+                onProgress(progress);
+            }
+        });
+
+        xhr.addEventListener('load', () => {
+            if (xhr.status === 200 || xhr.status === 201) {
+                resolve(JSON.parse(xhr.responseText));
+            } else {
+                reject(new Error('Upload failed'));
+            }
+        });
+
+        xhr.addEventListener('error', () => reject(new Error('Network error')));
+
+        xhr.open('POST', '/api/upload-asset');
+        xhr.send(formData);
+    });
+}
+
+function showError(message) {
+    const container = document.getElementById('assets-container');
+    container.innerHTML = `
+        <div class="alert alert-danger" role="alert">
+            <i class="ph ph-warning-circle"></i> ${message}
+        </div>
+    `;
+}
+</script>
+{% endblock %}

@@ -1,0 +1,1017 @@
+{% extends "base.html" %}
+{% block title %}Season Planner - Admin Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+.schedule-hub {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 1rem;
+    padding: 2rem;
+    color: white;
+    margin-bottom: 2rem;
+}
+
+.tab-content {
+    padding: 2rem 0;
+}
+
+.draft-card {
+    border: 2px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+}
+
+.draft-card:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.draft-card.status-draft {
+    border-left: 4px solid #94a3b8;
+}
+
+.draft-card.status-pending {
+    border-left: 4px solid #f59e0b;
+}
+
+.draft-card.status-approved {
+    border-left: 4px solid #10b981;
+}
+
+.draft-card.status-rejected {
+    border-left: 4px solid #ef4444;
+}
+
+.match-row {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    cursor: move;
+    transition: all 0.2s ease;
+}
+
+.match-row:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-color: #cbd5e1;
+}
+
+.match-row.dragging {
+    opacity: 0.5;
+}
+
+.match-row.dragover {
+    border-top: 3px solid #667eea;
+}
+
+.conflict-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.conflict-badge.severity-error {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.conflict-badge.severity-warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.conflict-badge.severity-info {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.blackout-date-item {
+    background: #fef2f2;
+    border-left: 4px solid #dc2626;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.timeline-item {
+    position: relative;
+    padding-left: 2rem;
+    padding-bottom: 1.5rem;
+    border-left: 2px solid #e2e8f0;
+}
+
+.timeline-item:last-child {
+    border-left: 2px solid transparent;
+}
+
+.timeline-dot {
+    position: absolute;
+    left: -0.5rem;
+    top: 0;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    background: #667eea;
+    border: 3px solid white;
+    box-shadow: 0 0 0 2px #e2e8f0;
+}
+
+.matchday-section {
+    background: #f8fafc;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.drag-handle {
+    cursor: grab;
+    color: #94a3b8;
+    margin-right: 0.75rem;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+.filter-bar {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.stat-card {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.stat-card .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.stat-card .stat-label {
+    color: #64748b;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+}
+
+.export-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.export-btn {
+    padding: 0.75rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 0.5rem;
+    background: white;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.export-btn:hover {
+    border-color: #667eea;
+    background: #f8f9ff;
+}
+
+.conflict-details {
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.auto-resolve-badge {
+    background: #d1fae5;
+    color: #065f46;
+    padding: 0.125rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="schedule-hub">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-2"><i class="ph ph-compass me-2"></i>Season Planner</h1>
+                <p class="mb-0 opacity-90">Pre-season workspace to build, validate, and approve full-season fixture plans before they go live.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a class="btn btn-outline-light" href="{{ url_for('admin.manage_matches') }}">
+                    <i class="ph ph-rocket-launch me-2"></i>Go to Match Ops
+                </a>
+                <button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#blackoutDatesModal">
+                    <i class="ph ph-calendar-x me-2"></i>Blackout Dates
+                </button>
+                <button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#newDraftModal">
+                    <i class="ph ph-plus-circle me-2"></i>New Season Plan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">League</label>
+                <select class="form-select" id="filterLeague" onchange="filterSchedules()">
+                    <option value="">All Leagues</option>
+                    {% for league in leagues %}
+                        <option value="{{ league.id }}">{{ league.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Season</label>
+                <select class="form-select" id="filterSeason" onchange="filterSchedules()">
+                    <option value="">All Seasons</option>
+                    {% for season in seasons %}
+                        <option value="{{ season[0] }}" data-league="{{ season[2] }}">{{ season[1] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Status</label>
+                <select class="form-select" id="filterStatus" onchange="filterSchedules()">
+                    <option value="">All Statuses</option>
+                    <option value="draft">Draft</option>
+                    <option value="pending_approval">Pending Approval</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                    <option value="published">Published</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">View</label>
+                <div class="btn-group w-100" role="group">
+                    <input type="radio" class="btn-check" name="viewMode" id="viewList" value="list" checked>
+                    <label class="btn btn-outline-primary" for="viewList"><i class="ph ph-list"></i> List</label>
+                    <input type="radio" class="btn-check" name="viewMode" id="viewCalendar" value="calendar">
+                    <label class="btn btn-outline-primary" for="viewCalendar"><i class="ph ph-calendar"></i> Calendar</label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-value">{{ stats.total_drafts }}</div>
+                <div class="stat-label">Season Plans</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-value">{{ stats.pending_approval }}</div>
+                <div class="stat-label">Pending Approval</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-value text-danger">{{ stats.total_conflicts }}</div>
+                <div class="stat-label">Active Conflicts</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-value">{{ stats.blackout_dates }}</div>
+                <div class="stat-label">Blackout Dates</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs nav-fill mb-3" id="scheduleTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="drafts-tab" data-bs-toggle="tab" data-bs-target="#drafts" type="button">
+                <i class="ph ph-file-text me-2"></i>Season Planning Workspace
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="review-tab" data-bs-toggle="tab" data-bs-target="#review" type="button">
+                <i class="ph ph-eye me-2"></i>Review & Reorder
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="conflicts-tab" data-bs-toggle="tab" data-bs-target="#conflicts" type="button">
+                <i class="ph ph-warning-circle me-2"></i>Conflicts
+                {% if stats.total_conflicts > 0 %}
+                    <span class="badge bg-danger ms-1">{{ stats.total_conflicts }}</span>
+                {% endif %}
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="import-export-tab" data-bs-toggle="tab" data-bs-target="#import-export" type="button">
+                <i class="ph ph-export me-2"></i>Import/Export
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="scheduleTabContent">
+        <!-- Plans Tab -->
+        <div class="alert alert-info mt-3"><i class="ph ph-broadcast me-2"></i>Need to tweak live fixtures or record scores? Head over to the <a href="{{ url_for('admin.manage_matches') }}" class="alert-link">Match Ops Console</a>.</div>
+
+        <div class="tab-pane fade show active" id="drafts" role="tabpanel">
+            <div id="draftsContainer">
+                {% if drafts %}
+                    {% for draft in drafts %}
+                        <div class="draft-card status-{{ draft.status }}" data-draft-id="{{ draft.draft_id }}">
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <h5 class="mb-1">{{ draft.draft_name }}</h5>
+                                    <div class="text-muted small">
+                                        {{ draft.league_name }} • {{ draft.season_year }}
+                                    </div>
+                                    <div class="mt-2">
+                                        <span class="badge bg-{{
+                                            'secondary' if draft.status == 'draft' else
+                                            'warning' if draft.status == 'pending_approval' else
+                                            'success' if draft.status == 'approved' else
+                                            'danger' if draft.status == 'rejected' else
+                                            'primary'
+                                        }}">{{ draft.status|replace('_', ' ')|title }}</span>
+                                        {% if draft.conflict_count > 0 %}
+                                            <span class="badge bg-danger ms-2">
+                                                <i class="ph ph-warning"></i> {{ draft.conflict_count }} conflicts
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-3 text-muted small">
+                                    <div><i class="ph ph-calendar"></i> Created: {{ draft.created_at.strftime('%Y-%m-%d') }}</div>
+                                    {% if draft.reviewed_at %}
+                                        <div><i class="ph ph-check-circle"></i> Reviewed: {{ draft.reviewed_at.strftime('%Y-%m-%d') }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-3 text-end">
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary" onclick="viewDraft({{ draft.draft_id }})">
+                                            <i class="ph ph-eye"></i> View
+                                        </button>
+                                        {% if draft.status == 'draft' %}
+                                            <button class="btn btn-outline-success" onclick="submitForApproval({{ draft.draft_id }})">
+                                                <i class="ph ph-check"></i> Submit
+                                            </button>
+                                        {% endif %}
+                                        {% if draft.status == 'pending_approval' %}
+                                            <button class="btn btn-outline-success" onclick="approveDraft({{ draft.draft_id }})">
+                                                <i class="ph ph-check-circle"></i> Approve
+                                            </button>
+                                            <button class="btn btn-outline-danger" onclick="rejectDraft({{ draft.draft_id }})">
+                                                <i class="ph ph-x-circle"></i> Reject
+                                            </button>
+                                        {% endif %}
+                                        {% if draft.status == 'approved' %}
+                                            <button class="btn btn-outline-primary" onclick="publishDraft({{ draft.draft_id }})">
+                                                <i class="ph ph-upload"></i> Publish
+                                            </button>
+                                        {% endif %}
+                                        <button class="btn btn-outline-danger" onclick="deleteDraft({{ draft.draft_id }})">
+                                            <i class="ph ph-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="ph ph-info me-2"></i>No season plans yet. Create your first plan to get started!
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Review & Reorder Tab -->
+        <div class="tab-pane fade" id="review" role="tabpanel">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5><i class="ph ph-arrows-out-cardinal me-2"></i>Drag & Drop Reordering</h5>
+                        <div>
+                            <button class="btn btn-outline-secondary btn-sm me-2" onclick="resetOrder()">
+                                <i class="ph ph-arrow-counter-clockwise"></i> Reset Order
+                            </button>
+                            <button class="btn btn-primary btn-sm" onclick="saveOrder()">
+                                <i class="ph ph-floppy-disk"></i> Save Changes
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <select class="form-select" id="reviewDraftSelect" onchange="loadDraftForReview()">
+                            <option value="">Select a plan to review...</option>
+                            {% for draft in drafts %}
+                                <option value="{{ draft.draft_id }}">{{ draft.draft_name }} - {{ draft.league_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div id="reorderContainer">
+                        <div class="alert alert-info">
+                            <i class="ph ph-hand-pointing me-2"></i>Select a plan above to start reordering matches
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Conflicts Tab -->
+        <div class="tab-pane fade" id="conflicts" role="tabpanel">
+            <div id="conflictsContainer">
+                {% if conflicts %}
+                    {% for conflict in conflicts %}
+                        <div class="conflict-details mb-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <span class="conflict-badge severity-{{ conflict.severity }}">
+                                        <i class="ph ph-warning"></i> {{ conflict.severity|upper }}
+                                    </span>
+                                    <strong class="ms-2">{{ conflict.conflict_type|replace('_', ' ')|title }}</strong>
+                                    {% if conflict.auto_resolvable %}
+                                        <span class="auto-resolve-badge ms-2">Auto-fixable</span>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    {% if conflict.auto_resolvable %}
+                                        <button class="btn btn-sm btn-success" onclick="autoResolveConflict({{ conflict.conflict_id }})">
+                                            <i class="ph ph-magic-wand"></i> Auto Resolve
+                                        </button>
+                                    {% endif %}
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="viewConflictDetails({{ conflict.conflict_id }})">
+                                        <i class="ph ph-info"></i> Details
+                                    </button>
+                                </div>
+                            </div>
+                            <p class="mt-2 mb-1">{{ conflict.description }}</p>
+                            {% if conflict.resolution_suggestion %}
+                                <div class="text-muted small">
+                                    <i class="ph ph-lightbulb me-1"></i>Suggestion: {{ conflict.resolution_suggestion }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="alert alert-success">
+                        <i class="ph ph-check-circle me-2"></i>No conflicts detected! All schedules are clear.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Import/Export Tab -->
+        <div class="tab-pane fade" id="import-export" role="tabpanel">
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h5 class="mb-3"><i class="ph ph-download-simple me-2"></i>Import Schedule</h5>
+                            <form id="importForm" enctype="multipart/form-data">
+                                <div class="mb-3">
+                                    <label class="form-label">Import Format</label>
+                                    <select class="form-select" id="importFormat">
+                                        <option value="csv">CSV</option>
+                                        <option value="excel">Excel (XLSX)</option>
+                                        <option value="json">JSON</option>
+                                        <option value="ical">iCalendar (ICS)</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Select File</label>
+                                    <input type="file" class="form-control" id="importFile" accept=".csv,.xlsx,.json,.ics">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Import to Draft</label>
+                                    <select class="form-select" id="importToDraft">
+                                        <option value="new">Create New Plan</option>
+                                        {% for draft in drafts %}
+                                            {% if draft.status == 'draft' %}
+                                                <option value="{{ draft.draft_id }}">{{ draft.draft_name }}</option>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <button type="button" class="btn btn-primary" onclick="importSchedule()">
+                                    <i class="ph ph-upload"></i> Import Schedule
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h5 class="mb-3"><i class="ph ph-export me-2"></i>Export Schedule</h5>
+                            <div class="mb-3">
+                                <label class="form-label">Select Plan</label>
+                                <select class="form-select" id="exportDraftSelect">
+                                    {% for draft in drafts %}
+                                        <option value="{{ draft.draft_id }}">{{ draft.draft_name }} - {{ draft.league_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Export Format</label>
+                                <div class="export-options">
+                                    <div class="export-btn" onclick="exportSchedule('csv')">
+                                        <i class="ph ph-file-csv fs-3 mb-2"></i>
+                                        <div class="fw-semibold">CSV</div>
+                                    </div>
+                                    <div class="export-btn" onclick="exportSchedule('excel')">
+                                        <i class="ph ph-file-xls fs-3 mb-2"></i>
+                                        <div class="fw-semibold">Excel</div>
+                                    </div>
+                                    <div class="export-btn" onclick="exportSchedule('json')">
+                                        <i class="ph ph-file-code fs-3 mb-2"></i>
+                                        <div class="fw-semibold">JSON</div>
+                                    </div>
+                                    <div class="export-btn" onclick="exportSchedule('pdf')">
+                                        <i class="ph ph-file-pdf fs-3 mb-2"></i>
+                                        <div class="fw-semibold">PDF</div>
+                                    </div>
+                                    <div class="export-btn" onclick="exportSchedule('ical')">
+                                        <i class="ph ph-calendar-blank fs-3 mb-2"></i>
+                                        <div class="fw-semibold">iCal</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Plan Modal -->
+<div class="modal fade" id="newDraftModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" action="{{ url_for('schedule_mgmt.index') }}" id="newDraftForm">
+                <input type="hidden" name="action" value="create_draft">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="ph ph-plus-circle me-2"></i>Create New Season Plan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Plan Name</label>
+                        <input type="text" class="form-control" name="draft_name" required placeholder="e.g., '2024 Season - Version 1'">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">League</label>
+                            <select class="form-select" name="league_id" required id="newDraftLeague">
+                                <option value="">Select League</option>
+                                {% for league in leagues %}
+                                    <option value="{{ league.id }}">{{ league.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Season</label>
+                            <select class="form-select" name="season_id" required id="newDraftSeason">
+                                <option value="">Select Season</option>
+                                {% for season in seasons %}
+                                    <option value="{{ season[0] }}" data-league="{{ season[2] }}">{{ season[1] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+                    <h6 class="mb-3">Generation Parameters</h6>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" class="form-control" name="start_date" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Interval Between Matches (days)</label>
+                            <input type="number" class="form-control" name="interval_days" value="7" min="1">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="doubleRound" name="double_round">
+                                <label class="form-check-label" for="doubleRound">
+                                    Double Round Robin (Home/Away)
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="shuffleTeams" name="shuffle_teams">
+                                <label class="form-check-label" for="shuffleTeams">
+                                    Shuffle Team Order
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="respectBlackouts" name="respect_blackouts" checked>
+                            <label class="form-check-label" for="respectBlackouts">
+                                Respect Blackout Dates
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info mb-0">
+                        <i class="ph ph-info me-2"></i>
+                        This will create a season plan that you can review, edit, and submit for approval.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="ph ph-magic-wand me-2"></i>Generate Draft
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Blackout Dates Modal -->
+<div class="modal fade" id="blackoutDatesModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="ph ph-calendar-x me-2"></i>Manage Blackout Dates</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-5">
+                        <h6 class="mb-3">Add Blackout Date</h6>
+                        <form id="blackoutForm">
+                            <div class="mb-3">
+                                <label class="form-label">League</label>
+                                <select class="form-select" name="league_id" id="blackoutLeague">
+                                    <option value="">All Leagues</option>
+                                    {% for league in leagues %}
+                                        <option value="{{ league.id }}">{{ league.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Start Date</label>
+                                    <input type="date" class="form-control" name="start_date" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">End Date</label>
+                                    <input type="date" class="form-control" name="end_date" required>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Reason</label>
+                                <input type="text" class="form-control" name="reason" placeholder="e.g., International Break, Holidays">
+                            </div>
+                            <button type="button" class="btn btn-primary" onclick="addBlackoutDate()">
+                                <i class="ph ph-plus"></i> Add Blackout Period
+                            </button>
+                        </form>
+                    </div>
+                    <div class="col-md-7">
+                        <h6 class="mb-3">Existing Blackout Dates</h6>
+                        <div id="blackoutList" style="max-height: 400px; overflow-y: auto;">
+                            {% if blackout_dates %}
+                                {% for blackout in blackout_dates %}
+                                    <div class="blackout-date-item">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <strong>{{ blackout.reason or 'Blackout Period' }}</strong>
+                                                <div class="text-muted small mt-1">
+                                                    {{ blackout.start_date.strftime('%Y-%m-%d') }} to {{ blackout.end_date.strftime('%Y-%m-%d') }}
+                                                    {% if blackout.league_name %}
+                                                        • {{ blackout.league_name }}
+                                                    {% else %}
+                                                        • All Leagues
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <button class="btn btn-sm btn-outline-danger" onclick="deleteBlackout({{ blackout.blackout_id }})">
+                                                <i class="ph ph-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="alert alert-info">No blackout dates configured</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+<script>
+// Filter seasons by league
+document.getElementById('newDraftLeague')?.addEventListener('change', function() {
+    const leagueId = this.value;
+    const seasonSelect = document.getElementById('newDraftSeason');
+    for (let opt of seasonSelect.options) {
+        if (!opt.value) continue;
+        opt.hidden = opt.dataset.league && opt.dataset.league !== leagueId;
+    }
+});
+
+// Filter functions
+function filterSchedules() {
+    const league = document.getElementById('filterLeague').value;
+    const season = document.getElementById('filterSeason').value;
+    const status = document.getElementById('filterStatus').value;
+
+    document.querySelectorAll('.draft-card').forEach(card => {
+        const draftLeague = card.dataset.leagueId;
+        const draftSeason = card.dataset.seasonId;
+        const draftStatus = card.dataset.status;
+
+        const matchLeague = !league || draftLeague === league;
+        const matchSeason = !season || draftSeason === season;
+        const matchStatus = !status || draftStatus === status;
+
+        card.style.display = matchLeague && matchSeason && matchStatus ? '' : 'none';
+    });
+}
+
+// View draft
+function viewDraft(draftId) {
+    window.location.href = `/admin/schedule_management/draft/${draftId}`;
+}
+
+// Submit for approval
+function submitForApproval(draftId) {
+    if (confirm('Submit this plan for approval?')) {
+        fetch(`/admin/schedule_management/draft/${draftId}/submit`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'}
+        }).then(response => {
+            if (response.ok) {
+                location.reload();
+            }
+        });
+    }
+}
+
+// Approve draft
+function approveDraft(draftId) {
+    const notes = prompt('Approval notes (optional):');
+    fetch(`/admin/schedule_management/draft/${draftId}/approve`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({notes})
+    }).then(response => {
+        if (response.ok) {
+            location.reload();
+        }
+    });
+}
+
+// Reject draft
+function rejectDraft(draftId) {
+    const reason = prompt('Rejection reason (required):');
+    if (reason) {
+        fetch(`/admin/schedule_management/draft/${draftId}/reject`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({reason})
+        }).then(response => {
+            if (response.ok) {
+                location.reload();
+            }
+        });
+    }
+}
+
+// Publish draft
+function publishDraft(draftId) {
+    if (confirm('This will publish the schedule and create actual matches. Continue?')) {
+        fetch(`/admin/schedule_management/draft/${draftId}/publish`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'}
+        }).then(response => {
+            if (response.ok) {
+                alert('Schedule published successfully!');
+                location.reload();
+            }
+        });
+    }
+}
+
+// Delete draft
+function deleteDraft(draftId) {
+    if (confirm('Delete this plan? This action cannot be undone.')) {
+        fetch(`/admin/schedule_management/draft/${draftId}`, {
+            method: 'DELETE'
+        }).then(response => {
+            if (response.ok) {
+                location.reload();
+            }
+        });
+    }
+}
+
+// Load draft for review
+function loadDraftForReview() {
+    const draftId = document.getElementById('reviewDraftSelect').value;
+    if (!draftId) return;
+
+    fetch(`/admin/schedule_management/draft/${draftId}/matches`)
+        .then(r => r.json())
+        .then(data => {
+            renderReorderUI(data.matches);
+        });
+}
+
+// Render reorder UI
+function renderReorderUI(matches) {
+    const container = document.getElementById('reorderContainer');
+
+    // Group by matchday
+    const matchdays = {};
+    matches.forEach(m => {
+        if (!matchdays[m.matchday]) matchdays[m.matchday] = [];
+        matchdays[m.matchday].push(m);
+    });
+
+    let html = '';
+    for (let [day, matchList] of Object.entries(matchdays)) {
+        html += `
+            <div class="matchday-section" data-matchday="${day}">
+                <h6 class="mb-3">Matchday ${day}</h6>
+                <div class="sortable-matches" data-matchday="${day}">
+        `;
+
+        matchList.forEach(match => {
+            html += `
+                <div class="match-row" draggable="true" data-match-id="${match.draft_match_id}">
+                    <span class="drag-handle"><i class="ph ph-dots-six-vertical"></i></span>
+                    <strong>${match.home_team}</strong> vs <strong>${match.away_team}</strong>
+                    <span class="text-muted ms-2">${match.proposed_date}</span>
+                    ${match.has_conflict ? '<span class="conflict-badge severity-warning ms-2"><i class="ph ph-warning"></i> Conflict</span>' : ''}
+                </div>
+            `;
+        });
+
+        html += `</div></div>`;
+    }
+
+    container.innerHTML = html;
+
+    // Initialize drag-and-drop
+    document.querySelectorAll('.sortable-matches').forEach(el => {
+        new Sortable(el, {
+            animation: 150,
+            handle: '.drag-handle',
+            ghostClass: 'dragging',
+            onEnd: function() {
+                // Mark as changed
+            }
+        });
+    });
+}
+
+// Save order
+function saveOrder() {
+    const order = [];
+    document.querySelectorAll('.match-row').forEach((row, index) => {
+        order.push({
+            draft_match_id: row.dataset.matchId,
+            display_order: index
+        });
+    });
+
+    const draftId = document.getElementById('reviewDraftSelect').value;
+    fetch(`/admin/schedule_management/draft/${draftId}/reorder`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({order})
+    }).then(response => {
+        if (response.ok) {
+            alert('Order saved successfully!');
+        }
+    });
+}
+
+// Reset order
+function resetOrder() {
+    if (confirm('Reset to original order?')) {
+        loadDraftForReview();
+    }
+}
+
+// Add blackout date
+function addBlackoutDate() {
+    const form = document.getElementById('blackoutForm');
+    const formData = new FormData(form);
+
+    fetch('/admin/schedule_management/blackout', {
+        method: 'POST',
+        body: formData
+    }).then(response => {
+        if (response.ok) {
+            location.reload();
+        }
+    });
+}
+
+// Delete blackout
+function deleteBlackout(blackoutId) {
+    if (confirm('Delete this blackout date?')) {
+        fetch(`/admin/schedule_management/blackout/${blackoutId}`, {
+            method: 'DELETE'
+        }).then(response => {
+            if (response.ok) {
+                location.reload();
+            }
+        });
+    }
+}
+
+// Export schedule
+function exportSchedule(format) {
+    const draftId = document.getElementById('exportDraftSelect').value;
+    window.location.href = `/admin/schedule_management/draft/${draftId}/export?format=${format}`;
+}
+
+// Import schedule
+function importSchedule() {
+    const fileInput = document.getElementById('importFile');
+    const file = fileInput.files[0];
+    if (!file) {
+        alert('Please select a file');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('format', document.getElementById('importFormat').value);
+    formData.append('draft_id', document.getElementById('importToDraft').value);
+
+    fetch('/admin/schedule_management/import', {
+        method: 'POST',
+        body: formData
+    }).then(response => {
+        if (response.ok) {
+            alert('Schedule imported successfully!');
+            location.reload();
+        } else {
+            alert('Import failed. Please check the file format.');
+        }
+    });
+}
+
+// Auto resolve conflict
+function autoResolveConflict(conflictId) {
+    fetch(`/admin/schedule_management/conflict/${conflictId}/resolve`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'}
+    }).then(response => {
+        if (response.ok) {
+            location.reload();
+        }
+    });
+}
+</script>
+{% endblock %}
+
+
+
+

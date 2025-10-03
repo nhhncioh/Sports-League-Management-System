@@ -175,6 +175,18 @@
                     <form method="POST" action="{{ url_for('admin.site_settings') }}" class="settings-form">
 
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        {% if theme_preview_active %}
+                        <div class="alert alert-warning d-flex align-items-center gap-2">
+                            <i class="ph ph-warning"></i>
+                            <div><strong>Preview mode active.</strong> You're viewing unsaved theme changes. Publish to push live or exit preview to return to the live site.</div>
+                        </div>
+                        {% elif theme_preview %}
+                        <div class="alert alert-info d-flex align-items-center gap-2">
+                            <i class="ph ph-info"></i>
+                            <div><strong>Preview saved.</strong> Activate preview to review changes before publishing.</div>
+                        </div>
+                        {% endif %}
+
 
                         <ul class="nav nav-pills flex-wrap gap-2 mb-4" id="settingsTab" role="tablist">
 
@@ -1090,18 +1102,39 @@
 
                             <div class="text-muted small">
 
-                                Theme preview updates live as you tweak options. Save to apply across the entire site.
+                                Use preview to stage changes safely, then publish when you're ready to go live.
 
                             </div>
 
-                            <div class="d-flex gap-2">
+                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                <input type="text" class="form-control form-control-sm w-auto" name="version_label" placeholder="Version label (optional)" value="{{ preview_label_default }}">
 
-                                <button type="submit" class="btn btn-primary">
-
+                                <button type="submit" class="btn btn-outline-primary" name="action" value="save_preview">
                                     <i class="{{ site_icon_class }} ph-floppy-disk"></i>
+                                    Save Preview
+                                </button>
 
-                                    Save Settings
+                                {% if theme_preview %}
+                                    {% if theme_preview_active %}
+                                        <button type="submit" class="btn btn-outline-secondary" name="action" value="deactivate_preview">
+                                            <i class="{{ site_icon_class }} ph-eye-slash"></i>
+                                            Exit Preview
+                                        </button>
+                                    {% else %}
+                                        <button type="submit" class="btn btn-outline-secondary" name="action" value="activate_preview">
+                                            <i class="{{ site_icon_class }} ph-eye"></i>
+                                            Activate Preview
+                                        </button>
+                                    {% endif %}
+                                    <button type="submit" class="btn btn-outline-danger" name="action" value="discard_preview">
+                                        <i class="{{ site_icon_class }} ph-trash"></i>
+                                        Discard Preview
+                                    </button>
+                                {% endif %}
 
+                                <button type="submit" class="btn btn-primary" name="action" value="publish">
+                                    <i class="{{ site_icon_class }} ph-upload-simple"></i>
+                                    Publish Live
                                 </button>
 
                                 <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-outline-secondary">Cancel</a>
@@ -1116,6 +1149,47 @@
 
             </div>
 
+            {% if theme_preview %}
+            <div class="card mt-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Saved Preview</span>
+                    <span class="badge {{ 'bg-warning text-dark' if theme_preview_active else 'bg-info text-dark' }}">{{ 'Active' if theme_preview_active else 'Saved' }}</span>
+                </div>
+                <div class="card-body">
+                    <div class="fw-semibold">{{ theme_preview.label or 'Preview' }}</div>
+                    <div class="text-muted small">{{ theme_preview.created_at.strftime('%Y-%m-%d %H:%M') if theme_preview.created_at else '' }}</div>
+                    {% if theme_preview.author_id %}<div class="text-muted small">Author ID #{{ theme_preview.author_id }}</div>{% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if theme_versions %}
+            <div class="card mt-3">
+                <div class="card-header">Version History</div>
+                <div class="list-group list-group-flush">
+                    {% for version in theme_versions %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="fw-semibold">{{ version.label or version.status|title }}</div>
+                            <div class="text-muted small">{{ version.status|title }} · {{ version.created_at.strftime('%Y-%m-%d %H:%M') if version.created_at else '' }}{% if version.author_label %} · {{ version.author_label }}{% endif %}</div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            {% if version.status == 'published' %}
+                            <span class="badge bg-success">Live</span>
+                            {% endif %}
+                            <form method="post" class="m-0">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="action" value="restore_version">
+                                <input type="hidden" name="version_id" value="{{ version.id }}">
+                                <button type="submit" class="btn btn-sm btn-outline-primary">Restore</button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
         </div>
 
         <div class="col-lg-4">
@@ -1124,9 +1198,13 @@
 
                 <div class="card-header d-flex justify-content-between align-items-center">
 
-                    <span>Live Theme Preview</span>
+                    <span>Theme Preview</span>
 
-                    <span class="badge bg-primary-subtle text-primary-emphasis">New</span>
+                    {% if theme_preview_active %}
+                    <span class="badge bg-warning text-dark">Preview Mode</span>
+                    {% else %}
+                    <span class="badge bg-primary-subtle text-primary-emphasis">Live</span>
+                    {% endif %}
 
                 </div>
 

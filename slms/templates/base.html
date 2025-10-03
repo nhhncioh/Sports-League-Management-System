@@ -40,7 +40,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&family=Nunito:wght@300;400;600;700;800&family=Raleway:wght@200;300;400;500;600;700&family=Work+Sans:wght@300;400;500;600;700&family=Source+Sans+Pro:wght@300;400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Roboto+Slab:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Merriweather:wght@300;400;700&family=Lora:wght@400;500;600;700&family=Abril+Fatface&family=IBM+Plex+Serif:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+    <link id="app-stylesheet" rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
     {% block extra_css %}{% endblock %}
     {% if favicon_url %}
     <link rel="icon" href="{{ favicon_url }}" type="image/png">
@@ -266,34 +266,34 @@
     <style id="site-inline-custom">{{ site_theme.custom_css }}</style>
     {% endif %}
 <!-- injected: admin css + fallbacks -->
-<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-fallback.css') }}" media="print" onload="this.media='all'">
+
 <script>
 (function(){
   try{
-    var main = document.querySelector('link[href*="css/app.css"]');
+    var main = document.getElementById('app-stylesheet');
+    var ensureFallback = function(link){
+      if(!link) { return; }
+      link.addEventListener('error', function(){
+        var s = document.createElement('script');
+        s.src = 'https://cdn.tailwindcss.com';
+        document.head.appendChild(s);
+      }, { once: true });
+    };
     if(!main){
-      // No main css tag present: add it, listen for error to attach Tailwind CDN
       main = document.createElement('link');
+      main.id = 'app-stylesheet';
       main.rel = 'stylesheet';
       main.href = '{{ url_for("static", filename="css/app.css") }}';
-      main.addEventListener('error', function(){
-        var s = document.createElement('script');
-        s.src = 'https://cdn.tailwindcss.com';
-        document.head.appendChild(s);
-      });
+      ensureFallback(main);
       document.head.appendChild(main);
-    }else{
-      // If app.css fails to load, inject Tailwind CDN so Tailwind utility classes still work
-      main.addEventListener('error', function(){
-        var s = document.createElement('script');
-        s.src = 'https://cdn.tailwindcss.com';
-        document.head.appendChild(s);
-      });
+    } else {
+      ensureFallback(main);
     }
   }catch(e){}
 })();
 </script>
+
 <!-- /injected -->
 </head>
 {% set nav_layout = nav_layout|default('top') %}
@@ -304,7 +304,7 @@
 {% macro themed_icon(name, extra_classes='') -%}
     <i class="{{ site_icon_class }} {{ name }} {{ extra_classes }}"></i>
 {%- endmacro %}
-{% macro render_nav_items(items, item_class='nav-item', link_class='nav-link', icon_gap='me-2') -%}
+{% macro render_nav_items(items, item_class='nav-item', link_class='nav-link', icon_gap='me-1') -%}
     {%- for item in items %}
         {%- set audience = item.audience or 'everyone' %}
         {%- if audience == 'everyone'
@@ -439,6 +439,12 @@
                     {{ render_nav_items(nav_links) }}
                 </ul>
                 <ul class="navbar-nav align-items-lg-center gap-lg-2">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('public.search') }}" title="Search">
+                            <i class="ph ph-magnifying-glass"></i>
+                            <span class="d-lg-none ms-2">Search</span>
+                        </a>
+                    </li>
                     {% if is_authenticated %}
                         {% set avatar_text = current_user.email[:2]|upper %}
                         <li class="nav-item dropdown">

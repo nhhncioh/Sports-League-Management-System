@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+{% block title %}{{ venue.name }} - Venue Profile{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 3rem 0;
+        margin-bottom: 2rem;
+    }
+    .venue-icon {
+        width: 120px;
+        height: 120px;
+        background: white;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 4rem;
+        color: #667eea;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    }
+    .info-card {
+        border-left: 4px solid #667eea;
+        background: white;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 1rem;
+    }
+    .info-label {
+        color: #6c757d;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+    }
+    .info-value {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #212529;
+    }
+    .game-list-item {
+        padding: 1rem;
+        border-bottom: 1px solid #e9ecef;
+        transition: background-color 0.2s;
+    }
+    .game-list-item:hover {
+        background-color: #f8f9fa;
+    }
+    .game-list-item:last-child {
+        border-bottom: none;
+    }
+    .map-placeholder {
+        height: 300px;
+        background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+        border-radius: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Venue Header -->
+<div class="profile-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="venue-icon">
+                    <i class="ph ph-map-pin"></i>
+                </div>
+            </div>
+            <div class="col">
+                <h1 class="mb-2">{{ venue.name }}</h1>
+                {% if venue.city %}
+                <p class="mb-0 opacity-75">
+                    <i class="ph ph-map-pin-line"></i> {{ venue.address }}{% if venue.address and venue.city %}, {% endif %}{{ venue.city }}
+                </p>
+                {% endif %}
+            </div>
+            <div class="col-auto">
+                <a href="{{ url_for('public.search') }}" class="btn btn-light">
+                    <i class="ph ph-arrow-left"></i> Back to Search
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container pb-5">
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Venue Details -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="ph ph-info"></i> Venue Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% if venue.address %}
+                        <div class="col-md-6">
+                            <div class="info-card">
+                                <div class="info-label">Address</div>
+                                <div class="info-value">{{ venue.address }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if venue.city %}
+                        <div class="col-md-6">
+                            <div class="info-card">
+                                <div class="info-label">City</div>
+                                <div class="info-value">{{ venue.city }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if venue.court_label %}
+                        <div class="col-md-6">
+                            <div class="info-card">
+                                <div class="info-label">Court/Field Type</div>
+                                <div class="info-value">{{ venue.court_label }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if venue.timezone %}
+                        <div class="col-md-6">
+                            <div class="info-card">
+                                <div class="info-label">Timezone</div>
+                                <div class="info-value">{{ venue.timezone }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    {% if venue.open_time or venue.close_time %}
+                    <hr class="my-4">
+                    <h6 class="mb-3"><i class="ph ph-clock"></i> Operating Hours</h6>
+                    <div class="row g-3">
+                        {% if venue.open_time %}
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Opens</span>
+                                <strong>{{ venue.open_time }}</strong>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if venue.close_time %}
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Closes</span>
+                                <strong>{{ venue.close_time }}</strong>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Map Placeholder -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="ph ph-map-trifold"></i> Location</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="map-placeholder">
+                        <div class="text-center">
+                            <i class="ph ph-map-trifold" style="font-size: 4rem;"></i>
+                            <p class="mt-2 mb-0">Map integration coming soon</p>
+                            {% if venue.address and venue.city %}
+                            <a href="https://www.google.com/maps/search/?api=1&query={{ (venue.address + ', ' + venue.city)|urlencode }}"
+                               target="_blank"
+                               class="btn btn-sm btn-outline-primary mt-3">
+                                <i class="ph ph-map-pin"></i> Open in Google Maps
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upcoming Games -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="ph ph-calendar"></i> Games at this Venue</h5>
+                    <span class="badge bg-primary">{{ games|length }}</span>
+                </div>
+                <div class="card-body p-0">
+                    {% if games %}
+                    <div class="list-group list-group-flush">
+                        {% for game in games %}
+                        <div class="game-list-item">
+                            <div class="row align-items-center">
+                                <div class="col">
+                                    <div class="fw-bold mb-1">
+                                        {{ game.home_team.name if game.home_team else 'Home' }}
+                                        <span class="text-muted">vs</span>
+                                        {{ game.away_team.name if game.away_team else 'Away' }}
+                                    </div>
+                                    <div class="small text-muted">
+                                        <i class="ph ph-calendar"></i>
+                                        {% if game.start_time %}
+                                        {{ game.start_time.strftime('%A, %B %d, %Y at %I:%M %p') }}
+                                        {% else %}
+                                        Time TBD
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    {% if game.status.value == 'final' %}
+                                    <div class="text-center">
+                                        <span class="badge bg-success mb-1">Final</span>
+                                        <div class="fw-bold">{{ game.home_score or 0 }} - {{ game.away_score or 0 }}</div>
+                                    </div>
+                                    {% else %}
+                                    <span class="badge bg-{{ 'warning' if game.status.value == 'in_progress' else 'secondary' }} text-capitalize">
+                                        {{ game.status.value.replace('_', ' ') if hasattr(game.status, 'value') else game.status }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="ph ph-calendar-x" style="font-size: 4rem; color: #dee2e6;"></i>
+                        <p class="text-muted mt-3 mb-0">No games scheduled at this venue</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Quick Stats -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0"><i class="ph ph-chart-bar"></i> Quick Stats</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="text-muted">Total Games</span>
+                        <strong class="fs-4 text-primary">{{ games|length }}</strong>
+                    </div>
+
+                    {% if games %}
+                    {% set completed_games = games|selectattr('status.value', 'equalto', 'final')|list %}
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="text-muted">Completed</span>
+                        <strong>{{ completed_games|length }}</strong>
+                    </div>
+
+                    {% set upcoming_games = games|rejectattr('status.value', 'equalto', 'final')|list %}
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Upcoming</span>
+                        <strong>{{ upcoming_games|length }}</strong>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0"><i class="ph ph-lightning"></i> Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        {% if venue.address and venue.city %}
+                        <a href="https://www.google.com/maps/search/?api=1&query={{ (venue.address + ', ' + venue.city)|urlencode }}"
+                           target="_blank"
+                           class="btn btn-outline-primary">
+                            <i class="ph ph-navigation-arrow"></i> Get Directions
+                        </a>
+                        {% endif %}
+
+                        <button class="btn btn-outline-secondary" onclick="window.print()">
+                            <i class="ph ph-printer"></i> Print Schedule
+                        </button>
+
+                        <button class="btn btn-outline-secondary" onclick="exportSchedule()">
+                            <i class="ph ph-download"></i> Export Games
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Facilities -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0"><i class="ph ph-buildings"></i> Facilities</h6>
+                </div>
+                <div class="card-body">
+                    <div class="small text-muted mb-2">Available Amenities</div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="badge bg-light text-dark">Parking</span>
+                        <span class="badge bg-light text-dark">Restrooms</span>
+                        <span class="badge bg-light text-dark">Concessions</span>
+                        <span class="badge bg-light text-dark">Seating</span>
+                    </div>
+                    <p class="text-muted small mt-3 mb-0">
+                        <i class="ph ph-info"></i> Facility details coming soon
+                    </p>
+                </div>
+            </div>
+
+            <!-- Share -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0"><i class="ph ph-share-network"></i> Share Venue</h6>
+                </div>
+                <div class="card-body">
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control" id="venue-url"
+                               value="{{ request.url }}" readonly>
+                        <button class="btn btn-outline-secondary" onclick="copyVenueUrl()">
+                            <i class="ph ph-copy"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function copyVenueUrl() {
+    const urlInput = document.getElementById('venue-url');
+    urlInput.select();
+    document.execCommand('copy');
+    alert('Venue URL copied to clipboard!');
+}
+
+function exportSchedule() {
+    // Could link to export API
+    window.location.href = '/api/v1/export/Game?format=csv&venue_id={{ venue.id }}';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,418 @@
+{% extends "base.html" %}
+{% block title %}Data Management - Export/Import{% endblock %}
+
+{% block extra_css %}
+<style>
+    .data-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        cursor: pointer;
+    }
+    .data-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+    }
+    .import-zone {
+        border: 2px dashed #dee2e6;
+        border-radius: 0.5rem;
+        padding: 2rem;
+        text-align: center;
+        background-color: #f8f9fa;
+        transition: all 0.2s;
+    }
+    .import-zone.drag-over {
+        border-color: #0d6efd;
+        background-color: #e7f1ff;
+    }
+    .model-badge {
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+        margin: 0.25rem;
+        display: inline-block;
+        border-radius: 0.25rem;
+        border: 1px solid #dee2e6;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .model-badge:hover {
+        background-color: #e9ecef;
+    }
+    .model-badge.selected {
+        background-color: #0d6efd;
+        color: white;
+        border-color: #0d6efd;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Data Management</h1>
+            <p class="text-muted mb-0">Export and import your league data</p>
+        </div>
+        <div>
+            <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-outline-secondary">
+                <i class="ph ph-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-4" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="export-tab" data-bs-toggle="tab" data-bs-target="#export-pane" type="button">
+                <i class="ph ph-download"></i> Export Data
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="import-tab" data-bs-toggle="tab" data-bs-target="#import-pane" type="button">
+                <i class="ph ph-upload"></i> Import Data
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <!-- Export Tab -->
+        <div class="tab-pane fade show active" id="export-pane">
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="ph ph-database"></i> Select Data Type</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small mb-3">Choose which data you want to export</p>
+
+                            <div id="model-selection" class="mb-4">
+                                <span class="model-badge" data-model="Team">Teams</span>
+                                <span class="model-badge" data-model="Player">Players</span>
+                                <span class="model-badge" data-model="Coach">Coaches</span>
+                                <span class="model-badge" data-model="Referee">Referees</span>
+                                <span class="model-badge" data-model="Venue">Venues</span>
+                                <span class="model-badge" data-model="Game">Games</span>
+                                <span class="model-badge" data-model="League">Leagues</span>
+                                <span class="model-badge" data-model="Season">Seasons</span>
+                                <span class="model-badge" data-model="Sponsor">Sponsors</span>
+                                <span class="model-badge" data-model="Transaction">Transactions</span>
+                                <span class="model-badge" data-model="Registration">Registrations</span>
+                                <span class="model-badge" data-model="MediaAsset">Media Assets</span>
+                                <span class="model-badge" data-model="Article">Articles</span>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Format</label>
+                                    <div class="btn-group w-100" role="group">
+                                        <input type="radio" class="btn-check" name="export-format" id="format-csv" value="csv" checked>
+                                        <label class="btn btn-outline-primary" for="format-csv">
+                                            <i class="ph ph-file-csv"></i> CSV
+                                        </label>
+                                        <input type="radio" class="btn-check" name="export-format" id="format-xlsx" value="xlsx">
+                                        <label class="btn btn-outline-primary" for="format-xlsx">
+                                            <i class="ph ph-file-xls"></i> XLSX
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-4">
+                                <button type="button" class="btn btn-primary btn-lg" id="export-btn" disabled>
+                                    <i class="ph ph-download"></i> Export Data
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-lg" id="export-template-btn" disabled>
+                                    <i class="ph ph-file-dashed"></i> Download Template
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="card shadow-sm bg-light">
+                        <div class="card-body">
+                            <h6 class="fw-bold"><i class="ph ph-info"></i> About Exports</h6>
+                            <p class="small mb-2">Export your data to CSV or Excel format for:</p>
+                            <ul class="small">
+                                <li>Backup and archiving</li>
+                                <li>Data analysis in Excel</li>
+                                <li>Migration to other systems</li>
+                                <li>Bulk editing and re-import</li>
+                            </ul>
+                            <hr>
+                            <h6 class="fw-bold"><i class="ph ph-lightbulb"></i> Tips</h6>
+                            <ul class="small mb-0">
+                                <li>CSV files work in any spreadsheet app</li>
+                                <li>XLSX files preserve formatting</li>
+                                <li>Download templates for import structure</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Import Tab -->
+        <div class="tab-pane fade" id="import-pane">
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="ph ph-upload"></i> Import Data</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small mb-3">Import data from CSV or Excel files</p>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Data Type</label>
+                                <select class="form-select" id="import-model-select">
+                                    <option value="">-- Select Data Type --</option>
+                                    <option value="Team">Teams</option>
+                                    <option value="Player">Players</option>
+                                    <option value="Coach">Coaches</option>
+                                    <option value="Referee">Referees</option>
+                                    <option value="Venue">Venues</option>
+                                    <option value="Game">Games</option>
+                                    <option value="League">Leagues</option>
+                                    <option value="Season">Seasons</option>
+                                    <option value="Sponsor">Sponsors</option>
+                                    <option value="Transaction">Transactions</option>
+                                    <option value="Registration">Registrations</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="update-existing">
+                                    <label class="form-check-label" for="update-existing">
+                                        Update existing records (match by email or ID)
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="import-zone mb-3" id="import-zone">
+                                <i class="ph ph-cloud-arrow-up" style="font-size: 3rem; color: #6c757d;"></i>
+                                <h5 class="mt-3">Drag and drop file here</h5>
+                                <p class="text-muted">or click to browse</p>
+                                <p class="small text-muted mb-0">Supported formats: CSV, XLSX</p>
+                                <input type="file" id="import-file-input" accept=".csv,.xlsx" style="display: none;">
+                            </div>
+
+                            <div id="import-preview" style="display: none;" class="alert alert-info">
+                                <i class="ph ph-file"></i>
+                                <strong id="import-filename"></strong>
+                                <button type="button" class="btn-close float-end" id="clear-import-btn"></button>
+                            </div>
+
+                            <div class="d-grid">
+                                <button type="button" class="btn btn-primary btn-lg" id="import-btn" disabled>
+                                    <i class="ph ph-upload"></i> Import Data
+                                </button>
+                            </div>
+
+                            <div id="import-results" style="display: none;" class="mt-3"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="card shadow-sm bg-light">
+                        <div class="card-body">
+                            <h6 class="fw-bold"><i class="ph ph-warning"></i> Important Notes</h6>
+                            <ul class="small mb-3">
+                                <li>Make sure your file matches the expected format</li>
+                                <li>Download a template if you're unsure</li>
+                                <li>Large imports may take a few minutes</li>
+                                <li>Invalid rows will be skipped with errors shown</li>
+                            </ul>
+                            <hr>
+                            <h6 class="fw-bold"><i class="ph ph-shield-check"></i> Data Safety</h6>
+                            <ul class="small mb-0">
+                                <li>Always backup before importing</li>
+                                <li>Test with a small file first</li>
+                                <li>Review errors carefully</li>
+                                <li>Existing data is preserved unless "Update" is checked</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let selectedModel = null;
+let importFile = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Export: Model selection
+    document.querySelectorAll('.model-badge').forEach(badge => {
+        badge.addEventListener('click', function() {
+            document.querySelectorAll('.model-badge').forEach(b => b.classList.remove('selected'));
+            this.classList.add('selected');
+            selectedModel = this.dataset.model;
+            document.getElementById('export-btn').disabled = false;
+            document.getElementById('export-template-btn').disabled = false;
+        });
+    });
+
+    // Export button
+    document.getElementById('export-btn').addEventListener('click', exportData);
+    document.getElementById('export-template-btn').addEventListener('click', downloadTemplate);
+
+    // Import: File selection
+    const importZone = document.getElementById('import-zone');
+    const fileInput = document.getElementById('import-file-input');
+
+    importZone.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFileSelect(e.target.files[0]);
+        }
+    });
+
+    // Drag and drop
+    importZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        importZone.classList.add('drag-over');
+    });
+
+    importZone.addEventListener('dragleave', () => {
+        importZone.classList.remove('drag-over');
+    });
+
+    importZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        importZone.classList.remove('drag-over');
+        if (e.dataTransfer.files.length > 0) {
+            handleFileSelect(e.dataTransfer.files[0]);
+        }
+    });
+
+    // Import button
+    document.getElementById('import-btn').addEventListener('click', importData);
+
+    // Clear import
+    document.getElementById('clear-import-btn').addEventListener('click', () => {
+        importFile = null;
+        document.getElementById('import-preview').style.display = 'none';
+        document.getElementById('import-btn').disabled = true;
+        fileInput.value = '';
+    });
+});
+
+function handleFileSelect(file) {
+    if (!file.name.match(/\.(csv|xlsx)$/i)) {
+        alert('Please select a CSV or XLSX file');
+        return;
+    }
+
+    importFile = file;
+    document.getElementById('import-filename').textContent = file.name;
+    document.getElementById('import-preview').style.display = 'block';
+
+    const modelSelected = document.getElementById('import-model-select').value;
+    if (modelSelected) {
+        document.getElementById('import-btn').disabled = false;
+    }
+}
+
+function exportData() {
+    if (!selectedModel) return;
+
+    const format = document.querySelector('input[name="export-format"]:checked').value;
+    const url = `/api/v1/export/${selectedModel}?format=${format}`;
+
+    window.location.href = url;
+}
+
+function downloadTemplate() {
+    if (!selectedModel) return;
+
+    const format = document.querySelector('input[name="export-format"]:checked').value;
+    const url = `/api/v1/export-template/${selectedModel}?format=${format}`;
+
+    window.location.href = url;
+}
+
+async function importData() {
+    const model = document.getElementById('import-model-select').value;
+    if (!model || !importFile) {
+        alert('Please select a data type and file');
+        return;
+    }
+
+    const updateExisting = document.getElementById('update-existing').checked;
+
+    const formData = new FormData();
+    formData.append('file', importFile);
+    formData.append('update_existing', updateExisting);
+
+    const btn = document.getElementById('import-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Importing...';
+
+    try {
+        const response = await fetch(`/api/v1/import/${model}`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        const resultsDiv = document.getElementById('import-results');
+        resultsDiv.style.display = 'block';
+
+        if (result.success) {
+            resultsDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <h6><i class="ph ph-check-circle"></i> Import Successful!</h6>
+                    <ul class="mb-0">
+                        <li>Created: ${result.created} records</li>
+                        <li>Updated: ${result.updated} records</li>
+                    </ul>
+                </div>
+            `;
+        } else {
+            let errorsHtml = result.errors.map(e => `<li>${e}</li>`).join('');
+            resultsDiv.innerHTML = `
+                <div class="alert alert-warning">
+                    <h6><i class="ph ph-warning"></i> Import Completed with Errors</h6>
+                    <ul class="mb-2">
+                        <li>Created: ${result.created} records</li>
+                        <li>Updated: ${result.updated} records</li>
+                        <li>Errors: ${result.errors.length}</li>
+                    </ul>
+                    <details>
+                        <summary class="cursor-pointer">View Errors</summary>
+                        <ul class="small mt-2">${errorsHtml}</ul>
+                    </details>
+                </div>
+            `;
+        }
+
+    } catch (err) {
+        document.getElementById('import-results').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="ph ph-x-circle"></i> Import failed: ${err.message}
+            </div>
+        `;
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ph ph-upload"></i> Import Data';
+    }
+}
+
+// Enable import button when model selected
+document.getElementById('import-model-select').addEventListener('change', function() {
+    if (this.value && importFile) {
+        document.getElementById('import-btn').disabled = false;
+    }
+});
+</script>
+{% endblock %}

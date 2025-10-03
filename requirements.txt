@@ -17,4 +17,6 @@ redis==5.*
 rq==1.*
 openpyxl==3.*
 pandas==2.*
+pyotp==2.*
+qrcode[pil]==7.*
 

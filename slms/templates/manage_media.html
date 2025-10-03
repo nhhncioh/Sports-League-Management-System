@@ -1,77 +1,108 @@
 {% extends "base.html" %}
-{% block title %}Media Gallery - Admin Panel{% endblock %}
+{% block title %}Media Library - Admin Panel{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="h3 mb-1">Media Gallery</h1>
-            <p class="text-muted">Manage photos and videos for your league</p>
+            <h1 class="h3 mb-1">Media Library</h1>
+            <p class="text-muted">Upload images or link external media to reuse across your homepage and site blocks.</p>
         </div>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addMediaModal">
             <i class="ph ph-plus me-2"></i>Add Media
         </button>
     </div>
 
-    <!-- Filter Tabs -->
-    <ul class="nav nav-tabs mb-4" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all-media" type="button">
-                <i class="ph ph-stack me-2"></i>All Media
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="images-tab" data-bs-toggle="tab" data-bs-target="#images-only" type="button">
-                <i class="ph ph-image me-2"></i>Images
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="videos-tab" data-bs-toggle="tab" data-bs-target="#videos-only" type="button">
-                <i class="ph ph-video-camera me-2"></i>Videos
-            </button>
-        </li>
-    </ul>
+    <style>
+    .media-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        overflow: hidden;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        height: 100%;
+    }
+    .media-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 28px -12px rgba(15, 23, 42, 0.4);
+    }
+    .media-preview {
+        position: relative;
+        height: 200px;
+        background: linear-gradient(120deg, rgba(37,99,235,0.12), rgba(14,165,233,0.18));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+    .media-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .media-type-badge {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        background: rgba(17, 24, 39, 0.85);
+        color: #fff;
+        font-size: 0.75rem;
+        padding: 4px 10px;
+        border-radius: 999px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .media-card .card-body {
+        padding: 1rem;
+    }
+    .media-card .card-body .category {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        color: #6b7280;
+        letter-spacing: 0.04em;
+    }
+    </style>
+
+    {% set default_categories = [
+        ('', 'No category'),
+        ('match_highlights', 'Match Highlights'),
+        ('training', 'Training'),
+        ('team_photos', 'Team Photos'),
+        ('events', 'Events'),
+        ('celebrations', 'Celebrations'),
+        ('facilities', 'Facilities')
+    ] %}
 
     <div class="tab-content">
-        <!-- All Media Tab -->
-        <div class="tab-pane fade show active" id="all-media" role="tabpanel">
+        <div class="tab-pane fade show active" id="allMedia" role="tabpanel">
             <div class="row g-4">
                 {% if media_items %}
                     {% for item in media_items %}
                     <div class="col-md-6 col-lg-4 col-xl-3">
-                        <div class="card h-100 media-card" data-media-type="{{ item.media_type }}">
-                            <div class="media-thumbnail">
+                        <div class="media-card" data-media-type="{{ item.media_type }}" data-category="{{ item.category or '' }}">
+                            <div class="media-preview">
+                                <span class="media-type-badge">{{ item.media_type|upper }}</span>
                                 {% if item.media_type == 'image' %}
-                                    <img src="{{ item.url }}" alt="{{ item.title }}" class="card-img-top" style="height: 200px; object-fit: cover;">
-                                {% elif item.media_type == 'video' %}
-                                    <div class="video-thumbnail" style="height: 200px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); position: relative;">
-                                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
-                                            <i class="ph ph-play-circle" style="font-size: 4rem; color: white;"></i>
-                                        </div>
-                                    </div>
+                                    <img src="{{ item.url }}" alt="{{ item.alt_text or item.title }}">
+                                {% else %}
+                                    <i class="ph ph-video-camera text-white" style="font-size: 3rem;"></i>
                                 {% endif %}
-                                <div class="media-type-badge">
-                                    <i class="ph ph-{{ 'image' if item.media_type == 'image' else 'video-camera' }}"></i>
-                                </div>
                             </div>
                             <div class="card-body">
-                                <h6 class="card-title mb-2">{{ item.title }}</h6>
+                                <p class="category mb-1">{{ item.category or 'Uncategorized' }}</p>
+                                <h6 class="card-title mb-2">{{ item.title or 'Untitled asset' }}</h6>
                                 {% if item.description %}
-                                <p class="card-text small text-muted mb-2">{{ item.description[:80] }}{{ '...' if item.description|length > 80 else '' }}</p>
+                                <p class="text-muted small mb-3">{{ item.description }}</p>
                                 {% endif %}
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <small class="text-muted">{{ item.created_at.strftime('%b %d, %Y') if item.created_at else 'N/A' }}</small>
-                                    <div class="btn-group btn-group-sm">
-                                        <button class="btn btn-outline-primary" onclick="viewMedia({{ item.media_id }}, '{{ item.url }}', '{{ item.media_type }}', '{{ item.title }}')" title="View">
-                                            <i class="ph ph-eye"></i>
-                                        </button>
-                                        <button class="btn btn-outline-secondary" onclick="editMedia({{ item.media_id }}, '{{ item.title }}', '{{ item.description }}', '{{ item.url }}', '{{ item.media_type }}')" title="Edit">
-                                            <i class="ph ph-pencil"></i>
-                                        </button>
-                                        <button class="btn btn-outline-danger" onclick="deleteMedia({{ item.media_id }}, '{{ item.title }}')" title="Delete">
-                                            <i class="ph ph-trash"></i>
-                                        </button>
-                                    </div>
+                                <div class="btn-group btn-group-sm w-100">
+                                    <button class="btn btn-outline-secondary" onclick='viewMedia({{ item|tojson }}); return false;'>
+                                        <i class="ph ph-eye"></i> View
+                                    </button>
+                                    <button class="btn btn-outline-primary" onclick='editMedia({{ item|tojson }}); return false;'>
+                                        <i class="ph ph-pencil"></i> Edit
+                                    </button>
+                                    <button class="btn btn-outline-danger" onclick='deleteMedia({{ item|tojson }}); return false;'>
+                                        <i class="ph ph-trash"></i> Delete
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -79,125 +110,95 @@
                     {% endfor %}
                 {% else %}
                     <div class="col-12">
-                        <div class="text-center py-5">
-                            <i class="ph ph-images display-1 text-muted mb-3"></i>
-                            <h4 class="text-muted">No media items yet</h4>
-                            <p class="text-muted">Start by adding your first image or video</p>
-                            <button class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#addMediaModal">
-                                <i class="ph ph-plus me-2"></i>Add Media
-                            </button>
+                        <div class="text-center text-muted py-5 border rounded">
+                            <i class="ph ph-image-square mb-3" style="font-size: 2rem;"></i>
+                            <p class="mb-0">No media items yet. Click “Add Media” to upload your first image or link a highlight reel.</p>
                         </div>
                     </div>
                 {% endif %}
-            </div>
-        </div>
-
-        <!-- Images Only -->
-        <div class="tab-pane fade" id="images-only" role="tabpanel">
-            <div class="row g-4">
-                {% for item in media_items if item.media_type == 'image' %}
-                <div class="col-md-6 col-lg-4 col-xl-3">
-                    <div class="card h-100 media-card">
-                        <img src="{{ item.url }}" alt="{{ item.title }}" class="card-img-top" style="height: 200px; object-fit: cover;">
-                        <div class="card-body">
-                            <h6 class="card-title">{{ item.title }}</h6>
-                            <div class="btn-group btn-group-sm w-100">
-                                <button class="btn btn-outline-primary" onclick="viewMedia({{ item.media_id }}, '{{ item.url }}', '{{ item.media_type }}', '{{ item.title }}')">
-                                    <i class="ph ph-eye"></i> View
-                                </button>
-                                <button class="btn btn-outline-danger" onclick="deleteMedia({{ item.media_id }}, '{{ item.title }}')">
-                                    <i class="ph ph-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-
-        <!-- Videos Only -->
-        <div class="tab-pane fade" id="videos-only" role="tabpanel">
-            <div class="row g-4">
-                {% for item in media_items if item.media_type == 'video' %}
-                <div class="col-md-6 col-lg-4">
-                    <div class="card h-100 media-card">
-                        <div class="video-thumbnail" style="height: 200px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); position: relative;">
-                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
-                                <i class="ph ph-play-circle" style="font-size: 4rem; color: white;"></i>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <h6 class="card-title">{{ item.title }}</h6>
-                            <div class="btn-group btn-group-sm w-100">
-                                <button class="btn btn-outline-primary" onclick="viewMedia({{ item.media_id }}, '{{ item.url }}', '{{ item.media_type }}', '{{ item.title }}')">
-                                    <i class="ph ph-play"></i> Play
-                                </button>
-                                <button class="btn btn-outline-danger" onclick="deleteMedia({{ item.media_id }}, '{{ item.title }}')">
-                                    <i class="ph ph-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
             </div>
         </div>
     </div>
 </div>
 
 <!-- Add Media Modal -->
-<div class="modal fade" id="addMediaModal" tabindex="-1">
-    <div class="modal-dialog">
+<div class="modal fade" id="addMediaModal" tabindex="-1" aria-labelledby="addMediaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Add Media</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title" id="addMediaLabel">Add Media</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="post" action="{{ url_for('admin.manage_media') }}">
+            <form method="post" action="{{ url_for('admin.manage_media') }}" enctype="multipart/form-data">
                 <div class="modal-body">
+                    {{ csrf_token() }}
                     <input type="hidden" name="action" value="add">
+                    <input type="hidden" name="media_type" id="addMediaType" value="image">
 
-                    <div class="mb-3">
-                        <label class="form-label">Title</label>
-                        <input type="text" class="form-control" name="title" required>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Title</label>
+                            <input type="text" class="form-control" name="title" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Category</label>
+                            <select class="form-select" name="category">
+                                {% for value, label in default_categories %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                                {% for cat in categories %}
+                                    {% if cat %}
+                                        <option value="{{ cat }}">{{ cat|capitalize }}</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Description</label>
+                    <div class="mb-3 mt-3">
+                        <label class="form-label">Description (optional)</label>
                         <textarea class="form-control" name="description" rows="3"></textarea>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Media Type</label>
-                        <select class="form-select" name="media_type" id="mediaType" required onchange="toggleUrlPlaceholder()">
-                            <option value="image">Image</option>
-                            <option value="video">Video</option>
-                        </select>
+                        <label class="form-label">Add media using</label>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="add_media_mode" id="addModeUpload" value="upload" checked>
+                            <label class="form-check-label" for="addModeUpload">Upload image</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="add_media_mode" id="addModeExternal" value="external">
+                            <label class="form-check-label" for="addModeExternal">Link external media</label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3" id="addUploadField">
+                        <label class="form-label">Image file</label>
+                        <input type="file" class="form-control" name="file" accept="image/*">
+                        <small class="text-muted">PNG or JPG up to 5 MB. Leave blank if linking external media.</small>
+                    </div>
+
+                    <div class="mb-3 d-none" id="addSourceField">
+                        <label class="form-label">External URL</label>
+                        <input type="url" class="form-control" id="addSourceUrl" placeholder="https://example.com/image-or-embed" autocomplete="off">
+                        <small class="text-muted">For YouTube, use the embed URL (https://www.youtube.com/embed/VIDEO_ID).</small>
+                        <div class="mt-3">
+                            <label class="form-label">External media type</label>
+                            <select class="form-select" id="addSourceType">
+                                <option value="image">Image</option>
+                                <option value="video">Video</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">URL</label>
-                        <input type="url" class="form-control" name="url" id="mediaUrl" required placeholder="https://example.com/image.jpg">
-                        <small class="text-muted">Enter the full URL to your image or video. For YouTube videos, use the embed URL (e.g., https://www.youtube.com/embed/VIDEO_ID)</small>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Category (Optional)</label>
-                        <select class="form-select" name="category">
-                            <option value="">No category</option>
-                            <option value="match_highlights">Match Highlights</option>
-                            <option value="training">Training</option>
-                            <option value="team_photos">Team Photos</option>
-                            <option value="events">Events</option>
-                            <option value="celebrations">Celebrations</option>
-                            <option value="facilities">Facilities</option>
-                        </select>
+                        <label class="form-label">Alt text (optional)</label>
+                        <input type="text" class="form-control" name="alt_text" placeholder="Describe the image for accessibility">
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Add Media</button>
+                    <button type="submit" class="btn btn-primary">Save media</button>
                 </div>
             </form>
         </div>
@@ -205,70 +206,92 @@
 </div>
 
 <!-- Edit Media Modal -->
-<div class="modal fade" id="editMediaModal" tabindex="-1">
-    <div class="modal-dialog">
+<div class="modal fade" id="editMediaModal" tabindex="-1" aria-labelledby="editMediaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Edit Media</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title" id="editMediaLabel">Edit Media</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="post" action="{{ url_for('admin.manage_media') }}">
+            <form method="post" action="{{ url_for('admin.manage_media') }}" enctype="multipart/form-data">
                 <div class="modal-body">
+                    {{ csrf_token() }}
                     <input type="hidden" name="action" value="edit">
                     <input type="hidden" name="media_id" id="editMediaId">
+                    <input type="hidden" name="media_type" id="editMediaType" value="image">
 
-                    <div class="mb-3">
-                        <label class="form-label">Title</label>
-                        <input type="text" class="form-control" name="title" id="editTitle" required>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Title</label>
+                            <input type="text" class="form-control" name="title" id="editTitle" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Category</label>
+                            <select class="form-select" name="category" id="editCategory">
+                                {% for value, label in default_categories %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                                {% for cat in categories %}
+                                    {% if cat %}
+                                        <option value="{{ cat }}">{{ cat|capitalize }}</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Description</label>
+                    <div class="mb-3 mt-3">
+                        <label class="form-label">Description (optional)</label>
                         <textarea class="form-control" name="description" id="editDescription" rows="3"></textarea>
                     </div>
 
+                    <div class="mb-3" id="editUploadGroup">
+                        <label class="form-label">Replace image (optional)</label>
+                        <input type="file" class="form-control" name="file" accept="image/*">
+                        <small class="text-muted">Leave empty to keep the current file.</small>
+                    </div>
+
+                    <div class="mb-3 d-none" id="editSourceGroup">
+                        <label class="form-label">External URL</label>
+                        <input type="url" class="form-control" id="editSourceUrl" autocomplete="off">
+                        <small class="text-muted">Update the external link. Leave blank to keep the current link.</small>
+                        <div class="mt-3">
+                            <label class="form-label">External media type</label>
+                            <select class="form-select" id="editSourceType">
+                                <option value="image">Image</option>
+                                <option value="video">Video</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div class="mb-3">
-                        <label class="form-label">URL</label>
-                        <input type="url" class="form-control" name="url" id="editUrl" required>
+                        <label class="form-label">Alt text (optional)</label>
+                        <input type="text" class="form-control" name="alt_text" id="editAltText">
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <button type="submit" class="btn btn-primary">Save changes</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- View Media Modal -->
-<div class="modal fade" id="viewMediaModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="viewMediaTitle"></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-center" id="viewMediaContent">
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteMediaModal" tabindex="-1">
+<!-- Delete confirmation -->
+<div class="modal fade" id="deleteMediaModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Confirm Delete</h5>
+                <h5 class="modal-title">Delete media</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="post" action="{{ url_for('admin.manage_media') }}">
                 <div class="modal-body">
+                    {{ csrf_token() }}
                     <input type="hidden" name="action" value="delete">
                     <input type="hidden" name="media_id" id="deleteMediaId">
-                    <p>Are you sure you want to delete "<strong id="deleteMediaTitle"></strong>"?</p>
-                    <p class="text-danger small">This action cannot be undone.</p>
+                    <p class="mb-0">Are you sure you want to delete “<strong id="deleteMediaTitle"></strong>”? This cannot be undone.</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -279,76 +302,140 @@
     </div>
 </div>
 
-<style>
-.media-card {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    overflow: hidden;
-}
+<!-- View modal -->
+<div class="modal fade" id="viewMediaModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewMediaTitle"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="viewMediaContent"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
 
-.media-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-}
-
-.media-thumbnail {
-    position: relative;
-}
-
-.media-type-badge {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: rgba(0,0,0,0.7);
-    color: white;
-    padding: 6px 10px;
-    border-radius: 6px;
-    font-size: 1.2rem;
-}
-</style>
-
+{% block extra_js %}
 <script>
-function toggleUrlPlaceholder() {
-    const type = document.getElementById('mediaType').value;
-    const urlInput = document.getElementById('mediaUrl');
+document.addEventListener('DOMContentLoaded', function () {
+    const addUploadField = document.getElementById('addUploadField');
+    const addSourceField = document.getElementById('addSourceField');
+    const addSourceUrl = document.getElementById('addSourceUrl');
+    const addSourceType = document.getElementById('addSourceType');
+    const addMediaType = document.getElementById('addMediaType');
 
-    if (type === 'image') {
-        urlInput.placeholder = 'https://example.com/image.jpg';
-    } else {
-        urlInput.placeholder = 'https://www.youtube.com/embed/VIDEO_ID';
-    }
-}
-
-function viewMedia(id, url, type, title) {
-    document.getElementById('viewMediaTitle').textContent = title;
-    const content = document.getElementById('viewMediaContent');
-
-    if (type === 'image') {
-        content.innerHTML = `<img src="${url}" class="img-fluid" alt="${title}">`;
-    } else if (type === 'video') {
-        if (url.includes('youtube.com') || url.includes('youtu.be')) {
-            content.innerHTML = `<iframe width="100%" height="400" src="${url}" frameborder="0" allowfullscreen></iframe>`;
+    function setAddMode(mode) {
+        if (mode === 'external') {
+            addUploadField.classList.add('d-none');
+            addSourceField.classList.remove('d-none');
+            addSourceUrl.setAttribute('name', 'source_url');
+            addMediaType.value = addSourceType.value;
         } else {
-            content.innerHTML = `<video width="100%" height="400" controls><source src="${url}"></video>`;
+            addUploadField.classList.remove('d-none');
+            addSourceField.classList.add('d-none');
+            addSourceUrl.removeAttribute('name');
+            addSourceUrl.value = '';
+            addMediaType.value = 'image';
         }
     }
 
-    new bootstrap.Modal(document.getElementById('viewMediaModal')).show();
+    document.getElementById('addModeUpload').addEventListener('change', function () {
+        setAddMode('upload');
+    });
+    document.getElementById('addModeExternal').addEventListener('change', function () {
+        setAddMode('external');
+    });
+    addSourceType.addEventListener('change', function () {
+        if (!addSourceField.classList.contains('d-none')) {
+            addMediaType.value = this.value;
+        }
+    });
+
+    setAddMode('upload');
+});
+
+function viewMedia(item) {
+    const title = item.title || 'Media preview';
+    const modalTitle = document.getElementById('viewMediaTitle');
+    const modalBody = document.getElementById('viewMediaContent');
+    modalTitle.textContent = title;
+
+    if (item.media_type === 'image') {
+        modalBody.innerHTML = `<img src="${item.url}" class="img-fluid" alt="${item.alt_text || title}">`;
+    } else if (item.media_type === 'video') {
+        const url = item.url || '';
+        if (url.includes('youtube.com') || url.includes('youtu.be')) {
+            modalBody.innerHTML = `<div class="ratio ratio-16x9"><iframe src="${url}" title="${title}" allowfullscreen></iframe></div>`;
+        } else {
+            modalBody.innerHTML = `<video class="w-100" controls><source src="${url}"></video>`;
+        }
+    } else {
+        modalBody.innerHTML = `<p class="text-muted">Preview not available for this media type.</p>`;
+    }
+
+    const modal = new bootstrap.Modal(document.getElementById('viewMediaModal'));
+    modal.show();
 }
 
-function editMedia(id, title, description, url, type) {
-    document.getElementById('editMediaId').value = id;
-    document.getElementById('editTitle').value = title;
-    document.getElementById('editDescription').value = description || '';
-    document.getElementById('editUrl').value = url;
+function editMedia(item) {
+    document.getElementById('editMediaId').value = item.id;
+    document.getElementById('editTitle').value = item.title || '';
+    document.getElementById('editDescription').value = item.description || '';
+    document.getElementById('editAltText').value = item.alt_text || '';
+    document.getElementById('editMediaType').value = item.media_type || 'image';
 
-    new bootstrap.Modal(document.getElementById('editMediaModal')).show();
+    const categorySelect = document.getElementById('editCategory');
+    const categoryValue = item.category || '';
+    let hasOption = false;
+    for (const option of categorySelect.options) {
+        if (option.value === categoryValue) {
+            hasOption = true;
+            break;
+        }
+    }
+    if (!hasOption && categoryValue) {
+        const opt = document.createElement('option');
+        opt.value = categoryValue;
+        opt.textContent = categoryValue.charAt(0).toUpperCase() + categoryValue.slice(1);
+        categorySelect.appendChild(opt);
+    }
+    categorySelect.value = categoryValue;
+
+    const uploadGroup = document.getElementById('editUploadGroup');
+    const sourceGroup = document.getElementById('editSourceGroup');
+    const sourceInput = document.getElementById('editSourceUrl');
+    const sourceType = document.getElementById('editSourceType');
+
+    if (item.source_url) {
+        sourceGroup.classList.remove('d-none');
+        uploadGroup.classList.add('d-none');
+        sourceInput.setAttribute('name', 'source_url');
+        sourceInput.value = item.source_url;
+        sourceType.value = item.media_type || 'image';
+        document.getElementById('editMediaType').value = sourceType.value;
+    } else {
+        sourceGroup.classList.add('d-none');
+        uploadGroup.classList.remove('d-none');
+        sourceInput.removeAttribute('name');
+        sourceInput.value = '';
+        sourceType.value = 'image';
+        document.getElementById('editMediaType').value = 'image';
+    }
+
+    sourceType.addEventListener('change', function () {
+        document.getElementById('editMediaType').value = this.value;
+    }, { once: true });
+
+    const modal = new bootstrap.Modal(document.getElementById('editMediaModal'));
+    modal.show();
 }
 
-function deleteMedia(id, title) {
-    document.getElementById('deleteMediaId').value = id;
-    document.getElementById('deleteMediaTitle').textContent = title;
-
-    new bootstrap.Modal(document.getElementById('deleteMediaModal')).show();
+function deleteMedia(item) {
+    document.getElementById('deleteMediaId').value = item.id;
+    document.getElementById('deleteMediaTitle').textContent = item.title || 'this asset';
+    const modal = new bootstrap.Modal(document.getElementById('deleteMediaModal'));
+    modal.show();
 }
 </script>
 {% endblock %}

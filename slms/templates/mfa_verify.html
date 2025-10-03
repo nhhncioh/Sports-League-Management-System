@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Two-Factor Authentication - Sports League Management{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <h2>Two-Factor Authentication</h2>
+        <p class="text-muted">Enter the verification code from your authenticator app to continue.</p>
+
+        <form method="POST" id="mfa-form">
+            <div class="form-group mb-3">
+                <label for="token" class="form-label">Verification Code</label>
+                <input type="text" class="form-control form-control-lg text-center" id="token" name="token"
+                       placeholder="123456" maxlength="6" pattern="[0-9]{6}"
+                       required autofocus autocomplete="off" style="letter-spacing: 0.5em; font-size: 2rem;">
+                <input type="hidden" name="use_recovery" id="use_recovery" value="0">
+            </div>
+
+            <div class="form-group mb-3">
+                <button type="submit" class="btn btn-primary w-100">Verify</button>
+            </div>
+        </form>
+
+        <div class="text-center">
+            <button type="button" class="btn btn-link text-muted" id="use-recovery-btn">
+                Lost your device? Use a recovery code
+            </button>
+        </div>
+
+        <div id="recovery-code-help" class="alert alert-warning mt-3" style="display: none;">
+            <p><strong>Using a Recovery Code:</strong></p>
+            <p>Enter one of your 8-digit recovery codes instead of the 6-digit authenticator code.</p>
+            <p class="mb-0"><small>Each recovery code can only be used once.</small></p>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('use-recovery-btn').addEventListener('click', function() {
+    const tokenInput = document.getElementById('token');
+    const useRecoveryInput = document.getElementById('use_recovery');
+    const recoveryHelp = document.getElementById('recovery-code-help');
+
+    if (useRecoveryInput.value === '0') {
+        useRecoveryInput.value = '1';
+        tokenInput.placeholder = '12345678';
+        tokenInput.maxLength = 8;
+        tokenInput.pattern = '[0-9]{8}';
+        recoveryHelp.style.display = 'block';
+        this.textContent = 'Use authenticator app instead';
+    } else {
+        useRecoveryInput.value = '0';
+        tokenInput.placeholder = '123456';
+        tokenInput.maxLength = 6;
+        tokenInput.pattern = '[0-9]{6}';
+        recoveryHelp.style.display = 'none';
+        this.textContent = 'Lost your device? Use a recovery code';
+    }
+    tokenInput.value = '';
+    tokenInput.focus();
+});
+</script>
+{% endblock %}

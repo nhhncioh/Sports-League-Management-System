@@ -625,6 +625,11 @@
                                 <i class="ph ph-check-circle"></i>
                                 Match Completed
                             </div>
+                            <div class="mt-3">
+                                <a href="{{ url_for('live_scoring.game_console', game_id=match.match_id) }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                    <i class="ph ph-broadcast"></i> View Details & Stats
+                                </a>
+                            </div>
                         </div>
 
                         {% else %}
@@ -680,6 +685,10 @@
 
                             <!-- Match Actions -->
                             <div class="match-actions">
+                                <a href="{{ url_for('live_scoring.game_console', game_id=match.match_id) }}" class="btn-action btn-info" target="_blank">
+                                    <i class="ph ph-broadcast"></i>Live Console
+                                </a>
+
                                 {% if match.status != 'live' %}
                                 <button type="submit" name="set_status" value="live" class="btn-action btn-warning">
                                     <i class="ph ph-play"></i>Start Match

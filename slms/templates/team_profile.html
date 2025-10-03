@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+{% block title %}{{ team.name }} - Team Profile{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 3rem 0;
+        margin-bottom: 2rem;
+    }
+    .team-logo {
+        width: 120px;
+        height: 120px;
+        background: white;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 4rem;
+        color: #667eea;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    }
+    .record-badge {
+        font-size: 2rem;
+        font-weight: bold;
+        padding: 1rem 2rem;
+        background: rgba(255,255,255,0.2);
+        border-radius: 1rem;
+        backdrop-filter: blur(10px);
+    }
+    .player-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        cursor: pointer;
+        border-radius: 0.75rem;
+        overflow: hidden;
+    }
+    .player-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+    .player-avatar {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+    .game-card {
+        border-left: 4px solid #dee2e6;
+        transition: all 0.2s;
+    }
+    .game-card:hover {
+        border-left-color: #667eea;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .game-card.win {
+        border-left-color: #28a745;
+        background-color: #f8fff9;
+    }
+    .game-card.loss {
+        border-left-color: #dc3545;
+        background-color: #fff8f8;
+    }
+    .stat-box {
+        text-align: center;
+        padding: 1rem;
+    }
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #667eea;
+    }
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Team Header -->
+<div class="profile-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="team-logo">
+                    <i class="ph ph-shield"></i>
+                </div>
+            </div>
+            <div class="col">
+                <h1 class="mb-2">{{ team.name }}</h1>
+                {% if team.coach_name %}
+                <p class="mb-0 opacity-75">
+                    <i class="ph ph-chalkboard-teacher"></i> Coach: {{ team.coach_name }}
+                </p>
+                {% endif %}
+            </div>
+            <div class="col-auto">
+                {% if team.wins is not none and team.losses is not none %}
+                <div class="record-badge">
+                    {{ team.wins }}-{{ team.losses }}{% if team.ties %}-{{ team.ties }}{% endif %}
+                </div>
+                {% endif %}
+            </div>
+            <div class="col-auto">
+                <a href="{{ url_for('public.search') }}" class="btn btn-light">
+                    <i class="ph ph-arrow-left"></i> Back to Search
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container pb-5">
+    <!-- Stats Overview -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm">
+                <div class="card-body stat-box">
+                    <div class="stat-value">{{ team.wins or 0 }}</div>
+                    <div class="stat-label">Wins</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm">
+                <div class="card-body stat-box">
+                    <div class="stat-value">{{ team.losses or 0 }}</div>
+                    <div class="stat-label">Losses</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm">
+                <div class="card-body stat-box">
+                    <div class="stat-value">{{ team.ties or 0 }}</div>
+                    <div class="stat-label">Ties</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm">
+                <div class="card-body stat-box">
+                    <div class="stat-value">{{ players|length }}</div>
+                    <div class="stat-label">Players</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Roster -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="ph ph-users"></i> Team Roster</h5>
+                    <span class="badge bg-primary">{{ players|length }} Players</span>
+                </div>
+                <div class="card-body p-0">
+                    {% if players %}
+                    <div class="list-group list-group-flush">
+                        {% for player in players %}
+                        <a href="{{ url_for('public.player_profile', player_id=player.id) }}"
+                           class="list-group-item list-group-item-action player-card">
+                            <div class="d-flex align-items-center">
+                                <div class="player-avatar">
+                                    <i class="ph ph-user"></i>
+                                </div>
+                                <div class="ms-3 flex-grow-1">
+                                    <h6 class="mb-0">{{ player.first_name }} {{ player.last_name }}</h6>
+                                    {% if player.email %}
+                                    <small class="text-muted">{{ player.email }}</small>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    {% if player.jersey_number %}
+                                    <span class="badge bg-dark" style="font-size: 1.1rem; padding: 0.5rem 0.75rem;">
+                                        #{{ player.jersey_number }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="ph ph-users" style="font-size: 4rem; color: #dee2e6;"></i>
+                        <p class="text-muted mt-3 mb-0">No players on this roster yet</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Recent Games -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="ph ph-calendar"></i> Recent Games</h5>
+                </div>
+                <div class="card-body">
+                    {% if games %}
+                    <div class="vstack gap-3">
+                        {% for game in games %}
+                        <div class="card game-card mb-0">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col">
+                                        <small class="text-muted d-block mb-2">
+                                            {% if game.start_time %}
+                                            {{ game.start_time.strftime('%b %d, %Y') }}
+                                            {% endif %}
+                                        </small>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="text-end" style="min-width: 150px;">
+                                                <strong>{{ game.home_team.name if game.home_team else 'Home' }}</strong>
+                                            </div>
+                                            <div class="text-center">
+                                                <span class="badge bg-secondary">
+                                                    {{ game.home_score or 0 }} - {{ game.away_score or 0 }}
+                                                </span>
+                                            </div>
+                                            <div style="min-width: 150px;">
+                                                <strong>{{ game.away_team.name if game.away_team else 'Away' }}</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <span class="badge bg-{{ 'success' if game.status.value == 'final' else 'warning' }} text-capitalize">
+                                            {{ game.status.value.replace('_', ' ') if hasattr(game.status, 'value') else game.status }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="ph ph-calendar-x" style="font-size: 3rem; color: #dee2e6;"></i>
+                        <p class="text-muted mt-2 mb-0">No games scheduled yet</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Team Info -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0"><i class="ph ph-info"></i> Team Information</h6>
+                </div>
+                <div class="card-body">
+                    {% if team.coach_name %}
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="text-muted">Head Coach</span>
+                        <strong>{{ team.coach_name }}</strong>
+                    </div>
+                    {% endif %}
+
+                    {% if team.season %}
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="text-muted">Season</span>
+                        <strong>{{ team.season.name }}</strong>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="text-muted">Record</span>
+                        <strong>{{ team.wins or 0 }}-{{ team.losses or 0 }}{% if team.ties %}-{{ team.ties }}{% endif %}</strong>
+                    </div>
+
+                    {% if team.wins is not none and team.losses is not none %}
+                    {% set total_games = team.wins + team.losses + (team.ties or 0) %}
+                    {% if total_games > 0 %}
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Win %</span>
+                        <strong>{{ "%.1f"|format((team.wins / total_games * 100) if total_games > 0 else 0) }}%</strong>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0"><i class="ph ph-lightning"></i> Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary" onclick="window.print()">
+                            <i class="ph ph-printer"></i> Print Roster
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="exportRoster()">
+                            <i class="ph ph-download"></i> Export Roster
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Share -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0"><i class="ph ph-share-network"></i> Share Team</h6>
+                </div>
+                <div class="card-body">
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control" id="team-url"
+                               value="{{ request.url }}" readonly>
+                        <button class="btn btn-outline-secondary" onclick="copyTeamUrl()">
+                            <i class="ph ph-copy"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function copyTeamUrl() {
+    const urlInput = document.getElementById('team-url');
+    urlInput.select();
+    document.execCommand('copy');
+    alert('Team URL copied to clipboard!');
+}
+
+function exportRoster() {
+    // Could link to export API
+    window.location.href = '/api/v1/export/Player?format=csv&team_id={{ team.id }}';
+}
+</script>
+{% endblock %}

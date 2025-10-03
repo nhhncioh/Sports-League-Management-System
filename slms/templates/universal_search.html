@@ -1,0 +1,391 @@
+{% extends "base.html" %}
+{% block title %}Search{% endblock %}
+
+{% block extra_css %}
+<style>
+    .search-hero {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 3rem 0;
+        color: white;
+        margin-bottom: 2rem;
+    }
+    .search-box {
+        max-width: 700px;
+        margin: 0 auto;
+        position: relative;
+    }
+    .search-input {
+        font-size: 1.25rem;
+        padding: 1rem 3.5rem 1rem 1.5rem;
+        border-radius: 2rem;
+        border: none;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    .search-input:focus {
+        box-shadow: 0 6px 30px rgba(0,0,0,0.15);
+    }
+    .search-icon {
+        position: absolute;
+        right: 1.5rem;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 1.5rem;
+        color: #6c757d;
+    }
+    .typeahead-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        margin-top: 0.5rem;
+        background: white;
+        border-radius: 1rem;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+        max-height: 400px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+    }
+    .typeahead-dropdown.show {
+        display: block;
+    }
+    .typeahead-item {
+        padding: 0.75rem 1.5rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .typeahead-item:hover {
+        background-color: #f8f9fa;
+    }
+    .typeahead-item:last-child {
+        border-bottom: none;
+    }
+    .typeahead-icon {
+        width: 40px;
+        height: 40px;
+        background-color: #e9ecef;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+    .result-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        cursor: pointer;
+    }
+    .result-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    }
+    .filter-chip {
+        padding: 0.5rem 1rem;
+        border-radius: 2rem;
+        border: 1px solid #dee2e6;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .filter-chip:hover {
+        background-color: #e9ecef;
+    }
+    .filter-chip.active {
+        background-color: #0d6efd;
+        color: white;
+        border-color: #0d6efd;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+    }
+    .empty-state-icon {
+        font-size: 5rem;
+        color: #dee2e6;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Search Hero -->
+<div class="search-hero">
+    <div class="container">
+        <h1 class="text-center mb-4">Search</h1>
+        <div class="search-box">
+            <input type="text" class="form-control search-input" id="search-input"
+                   placeholder="Search for teams, players, venues, and more..."
+                   autocomplete="off"
+                   value="{{ request.args.get('q', '') }}">
+            <i class="ph ph-magnifying-glass search-icon"></i>
+
+            <!-- Typeahead Dropdown -->
+            <div class="typeahead-dropdown" id="typeahead-dropdown">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search Results -->
+<div class="container pb-5">
+    <!-- Filter Chips -->
+    <div class="mb-4 d-flex gap-2 flex-wrap">
+        <button class="filter-chip active" data-type="">All</button>
+        <button class="filter-chip" data-type="teams">Teams</button>
+        <button class="filter-chip" data-type="players">Players</button>
+        <button class="filter-chip" data-type="coaches">Coaches</button>
+        <button class="filter-chip" data-type="referees">Referees</button>
+        <button class="filter-chip" data-type="venues">Venues</button>
+        <button class="filter-chip" data-type="leagues">Leagues</button>
+        <button class="filter-chip" data-type="seasons">Seasons</button>
+        <button class="filter-chip" data-type="articles">Articles</button>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading-state" style="display: none;" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="text-muted mt-2">Searching...</p>
+    </div>
+
+    <!-- Empty State (Initial) -->
+    <div id="empty-initial" class="empty-state">
+        <i class="ph ph-magnifying-glass empty-state-icon"></i>
+        <h4>Start Searching</h4>
+        <p class="text-muted">Type in the search box above to find teams, players, venues, and more</p>
+    </div>
+
+    <!-- Empty State (No Results) -->
+    <div id="empty-no-results" class="empty-state" style="display: none;">
+        <i class="ph ph-folder-open empty-state-icon"></i>
+        <h4>No Results Found</h4>
+        <p class="text-muted">Try adjusting your search terms or filters</p>
+    </div>
+
+    <!-- Results Container -->
+    <div id="results-container" style="display: none;">
+        <!-- Populated dynamically -->
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let searchTimeout;
+let currentQuery = '';
+let currentFilter = '';
+
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('search-input');
+    const typeaheadDropdown = document.getElementById('typeahead-dropdown');
+
+    // Search input handler
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        const query = this.value.trim();
+
+        if (query.length >= 2) {
+            // Show typeahead after brief delay
+            searchTimeout = setTimeout(() => {
+                loadTypeahead(query);
+            }, 300);
+        } else {
+            typeaheadDropdown.classList.remove('show');
+        }
+    });
+
+    // Submit on Enter
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            typeaheadDropdown.classList.remove('show');
+            performSearch(this.value.trim());
+        }
+    });
+
+    // Close typeahead when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !typeaheadDropdown.contains(e.target)) {
+            typeaheadDropdown.classList.remove('show');
+        }
+    });
+
+    // Filter chips
+    document.querySelectorAll('.filter-chip').forEach(chip => {
+        chip.addEventListener('click', function() {
+            document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+            this.classList.add('active');
+            currentFilter = this.dataset.type;
+
+            if (currentQuery) {
+                performSearch(currentQuery);
+            }
+        });
+    });
+
+    // Initial search if query in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialQuery = urlParams.get('q');
+    if (initialQuery) {
+        performSearch(initialQuery);
+    }
+});
+
+async function loadTypeahead(query) {
+    try {
+        const types = currentFilter ? [currentFilter] : [];
+        const typeParams = types.map(t => `types=${t}`).join('&');
+        const url = `/api/v1/search/typeahead?q=${encodeURIComponent(query)}&limit=5${typeParams ? '&' + typeParams : ''}`;
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        const dropdown = document.getElementById('typeahead-dropdown');
+
+        if (data.results && data.results.length > 0) {
+            dropdown.innerHTML = data.results.map(result => `
+                <div class="typeahead-item" onclick="navigateTo('${result.url}')">
+                    <div class="d-flex align-items-center">
+                        <div class="typeahead-icon">
+                            <i class="${result.icon}"></i>
+                        </div>
+                        <div class="ms-3 flex-grow-1">
+                            <div class="fw-bold">${escapeHtml(result.display)}</div>
+                            ${result.subtitle ? `<small class="text-muted">${escapeHtml(result.subtitle)}</small>` : ''}
+                        </div>
+                        <div>
+                            <span class="badge bg-secondary text-capitalize">${result.type}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            dropdown.classList.add('show');
+        } else {
+            dropdown.classList.remove('show');
+        }
+    } catch (err) {
+        console.error('Typeahead error:', err);
+    }
+}
+
+async function performSearch(query) {
+    if (!query) {
+        showEmptyInitial();
+        return;
+    }
+
+    currentQuery = query;
+
+    // Update URL
+    const url = new URL(window.location);
+    url.searchParams.set('q', query);
+    window.history.pushState({}, '', url);
+
+    // Show loading
+    showLoading();
+
+    try {
+        const types = currentFilter ? `&types=${currentFilter}` : '';
+        const response = await fetch(`/api/v1/search?q=${encodeURIComponent(query)}${types}`);
+        const data = await response.json();
+
+        displayResults(data.results);
+    } catch (err) {
+        console.error('Search error:', err);
+        showError();
+    }
+}
+
+function displayResults(results) {
+    const container = document.getElementById('results-container');
+    const noResults = document.getElementById('empty-no-results');
+    const initial = document.getElementById('empty-initial');
+    const loading = document.getElementById('loading-state');
+
+    loading.style.display = 'none';
+    initial.style.display = 'none';
+
+    // Check if we have any results
+    const hasResults = Object.values(results).some(arr => arr.length > 0);
+
+    if (!hasResults) {
+        noResults.style.display = 'block';
+        container.style.display = 'none';
+        return;
+    }
+
+    noResults.style.display = 'none';
+    container.style.display = 'block';
+
+    // Group and display results
+    let html = '';
+
+    for (const [type, items] of Object.entries(results)) {
+        if (items.length === 0) continue;
+
+        html += `
+            <div class="mb-4">
+                <h5 class="text-capitalize mb-3">
+                    <i class="${items[0].icon}"></i> ${type}
+                    <span class="badge bg-secondary ms-2">${items.length}</span>
+                </h5>
+                <div class="row g-3">
+                    ${items.map(item => `
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card result-card" onclick="navigateTo('${item.url}')">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-shrink-0">
+                                            <div style="width: 48px; height: 48px; background-color: #e9ecef; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                                                <i class="${item.icon}"></i>
+                                            </div>
+                                        </div>
+                                        <div class="ms-3 flex-grow-1">
+                                            <h6 class="mb-0">${escapeHtml(item.display)}</h6>
+                                            ${item.subtitle ? `<small class="text-muted">${escapeHtml(item.subtitle)}</small>` : ''}
+                                        </div>
+                                        <div>
+                                            <i class="ph ph-arrow-right"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    container.innerHTML = html;
+}
+
+function showLoading() {
+    document.getElementById('loading-state').style.display = 'block';
+    document.getElementById('empty-initial').style.display = 'none';
+    document.getElementById('empty-no-results').style.display = 'none';
+    document.getElementById('results-container').style.display = 'none';
+}
+
+function showEmptyInitial() {
+    document.getElementById('loading-state').style.display = 'none';
+    document.getElementById('empty-initial').style.display = 'block';
+    document.getElementById('empty-no-results').style.display = 'none';
+    document.getElementById('results-container').style.display = 'none';
+}
+
+function showError() {
+    document.getElementById('loading-state').style.display = 'none';
+    document.getElementById('empty-no-results').style.display = 'block';
+    document.getElementById('results-container').style.display = 'none';
+}
+
+function navigateTo(url) {
+    window.location.href = url;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+</script>
+{% endblock %}

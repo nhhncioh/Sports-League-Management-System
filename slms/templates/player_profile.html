@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+{% block title %}{{ player.first_name }} {{ player.last_name }} - Player Profile{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 3rem 0;
+        margin-bottom: 2rem;
+    }
+    .profile-avatar {
+        width: 120px;
+        height: 120px;
+        background: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem;
+        color: #667eea;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    .stat-card {
+        text-align: center;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        background: white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }
+    .stat-card:hover {
+        transform: translateY(-4px);
+    }
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #667eea;
+    }
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        margin-top: 0.5rem;
+    }
+    .info-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+    .info-item:last-child {
+        border-bottom: none;
+    }
+    .jersey-number {
+        font-size: 4rem;
+        font-weight: bold;
+        color: #667eea;
+        opacity: 0.1;
+        position: absolute;
+        top: -10px;
+        right: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Profile Header -->
+<div class="profile-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="profile-avatar">
+                    <i class="ph ph-user"></i>
+                </div>
+            </div>
+            <div class="col">
+                <div class="d-flex align-items-center gap-3">
+                    <h1 class="mb-0">{{ player.first_name }} {{ player.last_name }}</h1>
+                    {% if player.jersey_number %}
+                    <span class="badge bg-white text-dark" style="font-size: 1.5rem; padding: 0.5rem 1rem;">
+                        #{{ player.jersey_number }}
+                    </span>
+                    {% endif %}
+                </div>
+                {% if team %}
+                <p class="mb-0 mt-2 opacity-75">
+                    <i class="ph ph-shield"></i>
+                    <a href="{{ url_for('public.team_profile', team_id=team.id) }}" class="text-white text-decoration-none">
+                        {{ team.name }}
+                    </a>
+                </p>
+                {% endif %}
+            </div>
+            <div class="col-auto">
+                <a href="{{ url_for('public.search') }}" class="btn btn-light">
+                    <i class="ph ph-arrow-left"></i> Back to Search
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container pb-5">
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Player Information -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="ph ph-info"></i> Player Information</h5>
+                </div>
+                <div class="card-body">
+                    {% if player.jersey_number %}
+                    <div class="jersey-number">#{{ player.jersey_number }}</div>
+                    {% endif %}
+
+                    <div class="info-item">
+                        <span class="fw-bold">Full Name</span>
+                        <span>{{ player.first_name }} {{ player.last_name }}</span>
+                    </div>
+
+                    {% if player.email %}
+                    <div class="info-item">
+                        <span class="fw-bold">Email</span>
+                        <span>{{ player.email }}</span>
+                    </div>
+                    {% endif %}
+
+                    {% if player.birthdate %}
+                    <div class="info-item">
+                        <span class="fw-bold">Date of Birth</span>
+                        <span>{{ player.birthdate.strftime('%B %d, %Y') }}</span>
+                    </div>
+                    {% endif %}
+
+                    {% if player.jersey_number %}
+                    <div class="info-item">
+                        <span class="fw-bold">Jersey Number</span>
+                        <span class="badge bg-primary" style="font-size: 1rem;">#{{ player.jersey_number }}</span>
+                    </div>
+                    {% endif %}
+
+                    {% if team %}
+                    <div class="info-item">
+                        <span class="fw-bold">Team</span>
+                        <span>
+                            <a href="{{ url_for('public.team_profile', team_id=team.id) }}" class="text-decoration-none">
+                                {{ team.name }}
+                            </a>
+                        </span>
+                    </div>
+                    {% endif %}
+
+                    <div class="info-item">
+                        <span class="fw-bold">Status</span>
+                        <span class="badge bg-success">Active</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Season Stats -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="ph ph-chart-bar"></i> Season Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="stat-card">
+                                <div class="stat-value">-</div>
+                                <div class="stat-label">Games Played</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-card">
+                                <div class="stat-value">-</div>
+                                <div class="stat-label">Points</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-card">
+                                <div class="stat-value">-</div>
+                                <div class="stat-label">Assists</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-4">
+                        <p class="text-muted small mb-0">
+                            <i class="ph ph-info"></i> Detailed statistics coming soon
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Games -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="ph ph-calendar"></i> Recent Games</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center py-4">
+                        <i class="ph ph-basketball" style="font-size: 3rem; color: #dee2e6;"></i>
+                        <p class="text-muted mt-2 mb-0">No recent games available</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Quick Actions -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0"><i class="ph ph-lightning"></i> Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        {% if player.email %}
+                        <a href="mailto:{{ player.email }}" class="btn btn-outline-primary">
+                            <i class="ph ph-envelope"></i> Send Email
+                        </a>
+                        {% endif %}
+
+                        {% if team %}
+                        <a href="{{ url_for('public.team_profile', team_id=team.id) }}" class="btn btn-outline-secondary">
+                            <i class="ph ph-shield"></i> View Team
+                        </a>
+                        {% endif %}
+
+                        <button class="btn btn-outline-secondary" onclick="window.print()">
+                            <i class="ph ph-printer"></i> Print Profile
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Team Card -->
+            {% if team %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0"><i class="ph ph-shield"></i> Team</h6>
+                </div>
+                <div class="card-body">
+                    <a href="{{ url_for('public.team_profile', team_id=team.id) }}"
+                       class="text-decoration-none text-dark">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="ph ph-shield" style="font-size: 2rem; color: white;"></i>
+                                </div>
+                            </div>
+                            <div class="ms-3">
+                                <h6 class="mb-0">{{ team.name }}</h6>
+                                {% if team.wins is not none and team.losses is not none %}
+                                <small class="text-muted">{{ team.wins }}-{{ team.losses }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Share -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0"><i class="ph ph-share-network"></i> Share Profile</h6>
+                </div>
+                <div class="card-body">
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control" id="profile-url"
+                               value="{{ request.url }}" readonly>
+                        <button class="btn btn-outline-secondary" onclick="copyProfileUrl()">
+                            <i class="ph ph-copy"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function copyProfileUrl() {
+    const urlInput = document.getElementById('profile-url');
+    urlInput.select();
+    document.execCommand('copy');
+    alert('Profile URL copied to clipboard!');
+}
+</script>
+{% endblock %}
