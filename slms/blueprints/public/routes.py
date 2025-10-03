@@ -845,9 +845,113 @@ def media_gallery():
 
 
 @public_bp.route('/search')
-def search():
+def search_page():
     """Universal search page."""
     return render_template('universal_search.html')
+
+
+@public_bp.route('/standings')
+def standings():
+    """Public standings page with filters."""
+    from slms.models.models import Season, Standing
+    from slms.extensions import db
+
+    # Get filter parameters
+    season_id = request.args.get('season_id')
+    division = request.args.get('division')
+
+    # Get all seasons for filter dropdown
+    seasons = Season.query.order_by(Season.start_date.desc()).all()
+
+    # Get available divisions
+    divisions_query = db.session.query(Standing.division).distinct()
+    divisions = [d[0] for d in divisions_query.all() if d[0]]
+
+    # Build standings query
+    standings_query = Standing.query
+
+    if season_id:
+        standings_query = standings_query.filter(Standing.season_id == season_id)
+    if division:
+        standings_query = standings_query.filter(Standing.division == division)
+
+    standings = standings_query.order_by(Standing.position).all()
+
+    return render_template('public_standings.html',
+                         standings=standings,
+                         seasons=seasons,
+                         divisions=divisions,
+                         selected_season_id=season_id,
+                         selected_division=division)
+
+
+@public_bp.route('/leaderboards')
+def leaderboards():
+    """Public stat leaderboards page."""
+    from slms.models.models import Season, PlayerSeasonStat, Player
+    from slms.extensions import db
+    from sqlalchemy import desc
+
+    # Get filter parameters
+    season_id = request.args.get('season_id')
+    stat_type = request.args.get('stat_type', 'points')
+
+    # Get all seasons for filter dropdown
+    seasons = Season.query.order_by(Season.start_date.desc()).all()
+
+    # Build query for stat leaders
+    query = PlayerSeasonStat.query.join(Player)
+
+    if season_id:
+        query = query.filter(PlayerSeasonStat.season_id == season_id)
+
+    # Map stat type to column
+    stat_column_map = {
+        'points': PlayerSeasonStat.total_points,
+        'goals': PlayerSeasonStat.total_goals,
+        'assists': PlayerSeasonStat.total_assists,
+        'rebounds': PlayerSeasonStat.total_rebounds,
+        'steals': PlayerSeasonStat.total_steals,
+        'blocks': PlayerSeasonStat.total_blocks,
+    }
+
+    stat_column = stat_column_map.get(stat_type, PlayerSeasonStat.total_points)
+    stat_leaders = query.order_by(desc(stat_column)).limit(20).all()
+
+    # Format leaders data
+    leaders = []
+    for stat in stat_leaders:
+        leaders.append({
+            'player_id': stat.player_id,
+            'player_name': f"{stat.player.first_name} {stat.player.last_name}" if stat.player else 'Unknown',
+            'team_name': stat.player.team.name if stat.player and stat.player.team else None,
+            'stat_value': getattr(stat, f'total_{stat_type}', 0),
+            'games_played': stat.games_played,
+        })
+
+    return render_template('public_leaderboards.html',
+                         leaders=leaders,
+                         seasons=seasons,
+                         stat_type=stat_type,
+                         selected_season_id=season_id)
+
+
+@public_bp.route('/games/<game_id>')
+def game_detail_public(game_id):
+    """Public game detail page with timeline and commentary."""
+    from slms.models.models import Game, GameEvent
+    from slms.extensions import db
+
+    game = Game.query.get_or_404(game_id)
+
+    # Get game events for timeline
+    events = GameEvent.query.filter(
+        GameEvent.game_id == game_id
+    ).order_by(GameEvent.event_time).all()
+
+    return render_template('public_game_detail.html',
+                         game=game,
+                         events=events)
 
 
 @public_bp.route('/teams/<team_id>')

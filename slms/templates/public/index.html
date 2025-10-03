@@ -3,6 +3,9 @@
 {% block title %}{{ super() }} - Home{% endblock %}
 
 {% block content %}
+<!-- Include Live Ticker at the top of the page -->
+{% include 'components/live_ticker.html' %}
+
 {% set ns = namespace(first_season=None) %}
 {% set config = config if config is defined else site_feature_flags or {} %}
 {% set cta_slots = site_cta_slots if site_cta_slots is defined else (site_theme.get('cta_slots') if site_theme else {}) %}

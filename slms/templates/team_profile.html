@@ -79,6 +79,37 @@
         font-size: 0.875rem;
         text-transform: uppercase;
     }
+    .media-gallery {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1rem;
+    }
+    .media-item {
+        position: relative;
+        aspect-ratio: 1;
+        border-radius: 8px;
+        overflow: hidden;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    .media-item:hover {
+        transform: scale(1.05);
+    }
+    .media-item img, .media-item video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .media-item-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+        color: white;
+        padding: 0.5rem;
+        font-size: 0.75rem;
+    }
 </style>
 {% endblock %}
 
@@ -195,6 +226,23 @@
                         <p class="text-muted mt-3 mb-0">No players on this roster yet</p>
                     </div>
                     {% endif %}
+                </div>
+            </div>
+
+            <!-- Team Media Gallery -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="ph ph-images"></i> Team Media</h5>
+                </div>
+                <div class="card-body">
+                    <div id="team-media-gallery" class="media-gallery">
+                        <!-- Media will be loaded dynamically -->
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -339,5 +387,57 @@ function exportRoster() {
     // Could link to export API
     window.location.href = '/api/v1/export/Player?format=csv&team_id={{ team.id }}';
 }
+
+// Load team media
+function loadTeamMedia() {
+    fetch('/api/media-assets?category=team_{{ team.id }}')
+        .then(response => response.json())
+        .then(data => {
+            const gallery = document.getElementById('team-media-gallery');
+            if (data.items && data.items.length > 0) {
+                gallery.innerHTML = data.items.slice(0, 6).map(media => `
+                    <div class="media-item" onclick="viewMedia('${media.url}', '${media.media_type}')">
+                        ${media.media_type === 'image' ?
+                            `<img src="${media.url}" alt="${media.title || 'Team media'}">` :
+                            `<video src="${media.url}" poster="${media.url}"></video>`
+                        }
+                        ${media.title ? `<div class="media-item-overlay">${media.title}</div>` : ''}
+                    </div>
+                `).join('');
+
+                if (data.items.length > 6) {
+                    gallery.innerHTML += `
+                        <div class="text-center mt-3">
+                            <a href="{{ url_for('public.media_gallery') }}?category=team_{{ team.id }}" class="btn btn-sm btn-outline-primary">
+                                View All (${data.items.length})
+                            </a>
+                        </div>
+                    `;
+                }
+            } else {
+                gallery.innerHTML = `
+                    <div class="text-center py-4 text-muted">
+                        <i class="ph ph-images" style="font-size: 3rem;"></i>
+                        <p class="mt-2 mb-0">No media available yet</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading media:', error);
+            document.getElementById('team-media-gallery').innerHTML = `
+                <div class="text-center py-4 text-muted">
+                    <p class="mb-0">Unable to load media</p>
+                </div>
+            `;
+        });
+}
+
+function viewMedia(url, type) {
+    window.open(url, '_blank');
+}
+
+// Load media on page load
+document.addEventListener('DOMContentLoaded', loadTeamMedia);
 </script>
 {% endblock %}

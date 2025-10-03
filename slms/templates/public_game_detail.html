@@ -1,0 +1,488 @@
+{% extends "base.html" %}
+
+{% block title %}Game Detail - {{ super() }}{% endblock %}
+
+{% block content %}
+<!-- Include Live Ticker -->
+{% include 'components/live_ticker.html' %}
+
+<div class="container-fluid px-0">
+    <!-- Game Header -->
+    <div class="game-detail-header mb-4">
+        <div class="row g-0">
+            <div class="col-12">
+                <div class="game-status-bar">
+                    <span class="badge {% if game.status.value == 'in_progress' %}bg-danger{% elif game.status.value == 'final' %}bg-success{% else %}bg-secondary{% endif %}">
+                        {% if game.status.value == 'in_progress' %}
+                            <span class="live-pulse"></span> LIVE
+                        {% else %}
+                            {{ game.status.value|upper|replace('_', ' ') }}
+                        {% endif %}
+                    </span>
+                    {% if game.venue %}
+                        <span class="venue-info">
+                            <i class="ph ph-map-pin"></i> {{ game.venue.name }}
+                        </span>
+                    {% endif %}
+                    {% if game.start_time %}
+                        <span class="game-time">
+                            <i class="ph ph-clock"></i> {{ game.start_time.strftime('%b %d, %Y at %I:%M %p') }}
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scoreboard -->
+    <div class="card scoreboard-card mb-4">
+        <div class="card-body p-4">
+            <div class="row align-items-center">
+                <!-- Home Team -->
+                <div class="col-5 text-center">
+                    <div class="team-display">
+                        {% if game.home_team and game.home_team.logo_url %}
+                            <img src="{{ game.home_team.logo_url }}" alt="{{ game.home_team.name }}" class="team-logo-large mb-3">
+                        {% else %}
+                            <div class="team-logo-large-placeholder mb-3">
+                                {{ game.home_team.name[:2] if game.home_team else 'TM' }}
+                            </div>
+                        {% endif %}
+                        <h3 class="team-name">{{ game.home_team.name if game.home_team else 'TBD' }}</h3>
+                        <p class="text-muted mb-0">Home</p>
+                    </div>
+                </div>
+
+                <!-- Score -->
+                <div class="col-2 text-center">
+                    <div class="score-display">
+                        <div class="score-value">{{ game.home_score }}</div>
+                        <div class="score-separator">-</div>
+                        <div class="score-value">{{ game.away_score }}</div>
+                    </div>
+                    {% if game.current_period %}
+                        <div class="game-clock-display mt-3">
+                            <div class="period-indicator">Period {{ game.current_period }}</div>
+                            {% if game.game_clock %}
+                                <div class="clock-time">{{ game.game_clock }}</div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Away Team -->
+                <div class="col-5 text-center">
+                    <div class="team-display">
+                        {% if game.away_team and game.away_team.logo_url %}
+                            <img src="{{ game.away_team.logo_url }}" alt="{{ game.away_team.name }}" class="team-logo-large mb-3">
+                        {% else %}
+                            <div class="team-logo-large-placeholder mb-3">
+                                {{ game.away_team.name[:2] if game.away_team else 'TM' }}
+                            </div>
+                        {% endif %}
+                        <h3 class="team-name">{{ game.away_team.name if game.away_team else 'TBD' }}</h3>
+                        <p class="text-muted mb-0">Away</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Period Scores -->
+            {% if game.period_scores and game.period_scores|length > 0 %}
+                <div class="period-scores mt-4 pt-4 border-top">
+                    <h6 class="text-muted mb-3">Period Breakdown</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-borderless">
+                            <thead>
+                                <tr>
+                                    <th>Team</th>
+                                    {% for period in game.period_scores %}
+                                        <th class="text-center">P{{ period.period }}</th>
+                                    {% endfor %}
+                                    <th class="text-center fw-bold">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold">{{ game.home_team.name if game.home_team else 'Home' }}</td>
+                                    {% for period in game.period_scores %}
+                                        <td class="text-center">{{ period.home }}</td>
+                                    {% endfor %}
+                                    <td class="text-center fw-bold">{{ game.home_score }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold">{{ game.away_team.name if game.away_team else 'Away' }}</td>
+                                    {% for period in game.period_scores %}
+                                        <td class="text-center">{{ period.away }}</td>
+                                    {% endfor %}
+                                    <td class="text-center fw-bold">{{ game.away_score }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Timeline -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="ph ph-clock-clockwise me-2"></i>Game Timeline</h5>
+                </div>
+                <div class="card-body">
+                    <div id="game-timeline">
+                        {% if events and events|length > 0 %}
+                            <div class="timeline">
+                                {% for event in events %}
+                                    <div class="timeline-item">
+                                        <div class="timeline-marker"></div>
+                                        <div class="timeline-content">
+                                            <div class="timeline-header">
+                                                <span class="timeline-time">
+                                                    {% if event.game_clock %}
+                                                        {{ event.game_clock }}
+                                                    {% else %}
+                                                        Period {{ event.period }}
+                                                    {% endif %}
+                                                </span>
+                                                <span class="badge bg-light text-dark">{{ event.event_type|replace('_', ' ')|title }}</span>
+                                            </div>
+                                            <p class="timeline-description mb-0">{{ event.description }}</p>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="empty-state py-4">
+                                <i class="ph ph-list-bullets display-4 text-muted"></i>
+                                <p class="text-muted mt-3 mb-0">No events recorded yet</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Info & Stats -->
+        <div class="col-lg-4">
+            <!-- Game Info -->
+            <div class="card mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="ph ph-info me-2"></i>Game Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="info-grid">
+                        {% if game.venue %}
+                            <div class="info-item">
+                                <i class="ph ph-map-pin text-primary"></i>
+                                <div>
+                                    <div class="info-label">Venue</div>
+                                    <div class="info-value">{{ game.venue.name }}</div>
+                                    {% if game.venue.address %}
+                                        <small class="text-muted">{{ game.venue.address }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        {% if game.start_time %}
+                            <div class="info-item">
+                                <i class="ph ph-calendar text-primary"></i>
+                                <div>
+                                    <div class="info-label">Date & Time</div>
+                                    <div class="info-value">{{ game.start_time.strftime('%B %d, %Y') }}</div>
+                                    <small class="text-muted">{{ game.start_time.strftime('%I:%M %p') }}</small>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        {% if game.season %}
+                            <div class="info-item">
+                                <i class="ph ph-trophy text-primary"></i>
+                                <div>
+                                    <div class="info-label">Season</div>
+                                    <div class="info-value">{{ game.season.name }}</div>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        {% if game.went_to_overtime %}
+                            <div class="info-item">
+                                <i class="ph ph-clock-countdown text-warning"></i>
+                                <div>
+                                    <div class="info-label">Overtime</div>
+                                    <div class="info-value">Yes ({{ game.overtime_periods }} period{% if game.overtime_periods != 1 %}s{% endif %})</div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Commentary -->
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="ph ph-chat-circle-text me-2"></i>Commentary</h5>
+                </div>
+                <div class="card-body">
+                    {% if game.notes %}
+                        <p class="mb-0">{{ game.notes }}</p>
+                    {% else %}
+                        <p class="text-muted mb-0 small">No commentary available for this game.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.game-detail-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+}
+
+.game-status-bar {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.game-status-bar .badge {
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+}
+
+.live-pulse {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: white;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.venue-info, .game-time {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.scoreboard-card {
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.team-logo-large {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+}
+
+.team-logo-large-placeholder {
+    width: 100px;
+    height: 100px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.team-name {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.score-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.score-value {
+    font-size: 4rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #212529;
+}
+
+.score-separator {
+    font-size: 2rem;
+    color: #6c757d;
+}
+
+.game-clock-display {
+    background: #f8f9fa;
+    padding: 0.75rem;
+    border-radius: 8px;
+}
+
+.period-indicator {
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #6c757d;
+}
+
+.clock-time {
+    font-size: 1.25rem;
+    font-weight: 700;
+    font-family: monospace;
+    color: #212529;
+}
+
+.period-scores {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+.timeline {
+    position: relative;
+    padding-left: 2rem;
+}
+
+.timeline-item {
+    position: relative;
+    padding-bottom: 2rem;
+}
+
+.timeline-item:last-child {
+    padding-bottom: 0;
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -1.5rem;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #e9ecef;
+}
+
+.timeline-item:last-child::before {
+    display: none;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -1.875rem;
+    top: 0.375rem;
+    width: 12px;
+    height: 12px;
+    background: #667eea;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 0 0 2px #667eea;
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+.timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.timeline-time {
+    font-weight: 600;
+    font-family: monospace;
+    color: #495057;
+}
+
+.timeline-description {
+    color: #212529;
+}
+
+.info-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.info-item {
+    display: flex;
+    gap: 1rem;
+}
+
+.info-item i {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.info-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: #6c757d;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.info-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #212529;
+}
+
+.empty-state {
+    text-align: center;
+}
+</style>
+
+<script>
+{% if game.status.value == 'in_progress' or game.status.value == 'halftime' or game.status.value == 'overtime' %}
+// Auto-refresh game data every 10 seconds for live games
+let gameRefreshInterval = setInterval(function() {
+    fetch('/api/games/{{ game.id }}')
+        .then(response => response.json())
+        .then(data => {
+            // Update scores
+            document.querySelectorAll('.score-value')[0].textContent = data.game.home_score;
+            document.querySelectorAll('.score-value')[1].textContent = data.game.away_score;
+
+            // Update period and clock if available
+            if (data.game.current_period) {
+                const periodEl = document.querySelector('.period-indicator');
+                if (periodEl) periodEl.textContent = 'Period ' + data.game.current_period;
+            }
+            if (data.game.game_clock) {
+                const clockEl = document.querySelector('.clock-time');
+                if (clockEl) clockEl.textContent = data.game.game_clock;
+            }
+
+            // Reload timeline if new events
+            if (data.events && data.events.length > {{ events|length if events else 0 }}) {
+                location.reload();
+            }
+        })
+        .catch(error => console.error('Error refreshing game data:', error));
+}, 10000);
+
+// Clean up on page unload
+window.addEventListener('beforeunload', () => {
+    if (gameRefreshInterval) {
+        clearInterval(gameRefreshInterval);
+    }
+});
+{% endif %}
+</script>
+{% endblock %}

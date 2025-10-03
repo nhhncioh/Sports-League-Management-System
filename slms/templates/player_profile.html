@@ -61,6 +61,48 @@
         top: -10px;
         right: 10px;
     }
+    .media-gallery {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1rem;
+    }
+    .media-item {
+        position: relative;
+        aspect-ratio: 16/9;
+        border-radius: 8px;
+        overflow: hidden;
+        cursor: pointer;
+        transition: transform 0.2s;
+        background: #f8f9fa;
+    }
+    .media-item:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .media-item img, .media-item video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .media-item-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+        color: white;
+        padding: 0.5rem;
+        font-size: 0.75rem;
+    }
+    .media-item-icon {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 3rem;
+        color: white;
+        opacity: 0.8;
+    }
 </style>
 {% endblock %}
 
@@ -194,6 +236,23 @@
                 </div>
             </div>
 
+            <!-- Player Highlights -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="ph ph-video"></i> Player Highlights</h5>
+                </div>
+                <div class="card-body">
+                    <div id="player-highlights-gallery" class="media-gallery">
+                        <!-- Highlights will be loaded dynamically -->
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Recent Games -->
             <div class="card shadow-sm">
                 <div class="card-header bg-white">
@@ -291,5 +350,58 @@ function copyProfileUrl() {
     document.execCommand('copy');
     alert('Profile URL copied to clipboard!');
 }
+
+// Load player highlights
+function loadPlayerHighlights() {
+    fetch('/api/media-assets?category=player_{{ player.id }}')
+        .then(response => response.json())
+        .then(data => {
+            const gallery = document.getElementById('player-highlights-gallery');
+            if (data.items && data.items.length > 0) {
+                gallery.innerHTML = data.items.slice(0, 6).map(media => `
+                    <div class="media-item" onclick="viewMedia('${media.url}', '${media.media_type}')">
+                        ${media.media_type === 'image' ?
+                            `<img src="${media.url}" alt="${media.title || 'Player highlight'}">` :
+                            `<video src="${media.url}" poster="${media.url}"></video>
+                             <i class="ph ph-play-circle media-item-icon"></i>`
+                        }
+                        ${media.title ? `<div class="media-item-overlay">${media.title}</div>` : ''}
+                    </div>
+                `).join('');
+
+                if (data.items.length > 6) {
+                    gallery.innerHTML += `
+                        <div class="col-12 text-center mt-3">
+                            <a href="{{ url_for('public.media_gallery') }}?category=player_{{ player.id }}" class="btn btn-sm btn-outline-primary">
+                                View All Highlights (${data.items.length})
+                            </a>
+                        </div>
+                    `;
+                }
+            } else {
+                gallery.innerHTML = `
+                    <div class="text-center py-4 text-muted" style="grid-column: 1/-1;">
+                        <i class="ph ph-video" style="font-size: 3rem;"></i>
+                        <p class="mt-2 mb-0">No highlights available yet</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading highlights:', error);
+            document.getElementById('player-highlights-gallery').innerHTML = `
+                <div class="text-center py-4 text-muted" style="grid-column: 1/-1;">
+                    <p class="mb-0">Unable to load highlights</p>
+                </div>
+            `;
+        });
+}
+
+function viewMedia(url, type) {
+    window.open(url, '_blank');
+}
+
+// Load highlights on page load
+document.addEventListener('DOMContentLoaded', loadPlayerHighlights);
 </script>
 {% endblock %}

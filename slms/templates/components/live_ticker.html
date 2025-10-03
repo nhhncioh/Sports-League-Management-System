@@ -1,0 +1,227 @@
+<!-- Live Game Ticker Component -->
+<div id="live-ticker" class="live-ticker mb-4" style="display: none;">
+    <div class="ticker-header">
+        <span class="live-indicator">
+            <span class="live-dot"></span>
+            LIVE
+        </span>
+        <h5 class="mb-0">Live Games</h5>
+    </div>
+    <div id="live-ticker-games" class="ticker-games">
+        <!-- Live games will be populated here -->
+    </div>
+</div>
+
+<style>
+.live-ticker {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    padding: 1.5rem;
+    color: white;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    animation: ticker-glow 2s ease-in-out infinite;
+}
+
+@keyframes ticker-glow {
+    0%, 100% { box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); }
+    50% { box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6); }
+}
+
+.ticker-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.live-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+}
+
+.live-dot {
+    width: 8px;
+    height: 8px;
+    background: #ff4444;
+    border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.2); }
+}
+
+.ticker-games {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.ticker-game {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 1rem;
+    backdrop-filter: blur(10px);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.ticker-game:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateX(5px);
+}
+
+.ticker-game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.ticker-game-status {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    background: rgba(255, 68, 68, 0.3);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+}
+
+.ticker-game-venue {
+    font-size: 0.75rem;
+    opacity: 0.9;
+}
+
+.ticker-matchup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.ticker-team {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1rem;
+}
+
+.ticker-team-name {
+    font-weight: 600;
+    flex: 1;
+}
+
+.ticker-team-score {
+    font-size: 1.5rem;
+    font-weight: 700;
+    min-width: 40px;
+    text-align: right;
+}
+
+.ticker-game-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    font-size: 0.875rem;
+}
+
+.ticker-period {
+    font-weight: 500;
+}
+
+.ticker-clock {
+    font-family: monospace;
+    font-weight: 600;
+}
+
+.ticker-no-games {
+    text-align: center;
+    padding: 2rem;
+    opacity: 0.8;
+    font-size: 0.875rem;
+}
+</style>
+
+<script>
+let liveTickerInterval = null;
+
+function initLiveTicker() {
+    loadLiveGames();
+    // Refresh every 10 seconds
+    if (liveTickerInterval) {
+        clearInterval(liveTickerInterval);
+    }
+    liveTickerInterval = setInterval(loadLiveGames, 10000);
+}
+
+function loadLiveGames() {
+    fetch('/api/games/live')
+        .then(response => response.json())
+        .then(data => {
+            const ticker = document.getElementById('live-ticker');
+            const gamesContainer = document.getElementById('live-ticker-games');
+
+            if (data.items && data.items.length > 0) {
+                ticker.style.display = 'block';
+                gamesContainer.innerHTML = data.items.map(game => renderTickerGame(game)).join('');
+            } else {
+                ticker.style.display = 'none';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading live games:', error);
+        });
+}
+
+function renderTickerGame(game) {
+    const statusText = game.status === 'in_progress' ? 'Live' :
+                      game.status === 'halftime' ? 'Halftime' :
+                      game.status === 'overtime' ? 'Overtime' : 'Live';
+
+    return `
+        <div class="ticker-game" onclick="window.location.href='/public/games/${game.id}'">
+            <div class="ticker-game-header">
+                <span class="ticker-game-status">${statusText}</span>
+                ${game.venue ? `<span class="ticker-game-venue"><i class="ph ph-map-pin"></i> ${game.venue}</span>` : ''}
+            </div>
+            <div class="ticker-matchup">
+                <div class="ticker-team">
+                    <span class="ticker-team-name">${game.home_team.name}</span>
+                    <span class="ticker-team-score">${game.home_score}</span>
+                </div>
+                <div class="ticker-team">
+                    <span class="ticker-team-name">${game.away_team.name}</span>
+                    <span class="ticker-team-score">${game.away_score}</span>
+                </div>
+            </div>
+            ${game.current_period || game.game_clock ? `
+                <div class="ticker-game-info">
+                    ${game.current_period ? `<span class="ticker-period">Period ${game.current_period}</span>` : ''}
+                    ${game.game_clock ? `<span class="ticker-clock">${game.game_clock}</span>` : ''}
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', initLiveTicker);
+
+// Clean up interval on page unload
+window.addEventListener('beforeunload', () => {
+    if (liveTickerInterval) {
+        clearInterval(liveTickerInterval);
+    }
+});
+</script>

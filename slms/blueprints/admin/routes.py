@@ -7,10 +7,11 @@ import random
 import re
 from urllib.parse import urlparse
 
-from flask_login import current_user
+from flask_login import current_user, login_required
 
 from slms.services.db import get_db
 from slms.extensions import db
+from slms.blueprints.common.tenant import tenant_required
 from slms.services.sport_config import get_sport_config, get_all_sports
 from slms.services.site import (
     _load_site_settings,

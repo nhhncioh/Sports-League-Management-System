@@ -69,6 +69,177 @@ def list_games():
     return jsonify({'items': [serialize_game(g) for g in games]})
 
 
+@api_bp.route('/games/live', methods=['GET'])
+@tenant_required
+def live_games():
+    """Get all currently live games with score updates."""
+    from slms.models import GameStatus
+    live_games = org_query(Game).filter(
+        Game.status.in_([GameStatus.IN_PROGRESS, GameStatus.HALFTIME, GameStatus.OVERTIME])
+    ).order_by(Game.start_time).all()
+
+    result = []
+    for game in live_games:
+        result.append({
+            'id': game.id,
+            'home_team': {
+                'id': game.home_team_id,
+                'name': game.home_team.name if game.home_team else 'TBD',
+            },
+            'away_team': {
+                'id': game.away_team_id,
+                'name': game.away_team.name if game.away_team else 'TBD',
+            },
+            'home_score': game.home_score,
+            'away_score': game.away_score,
+            'status': game.status.value if hasattr(game.status, 'value') else game.status,
+            'current_period': game.current_period,
+            'game_clock': game.game_clock,
+            'last_update': game.last_score_update.isoformat() if game.last_score_update else None,
+            'venue': game.venue.name if game.venue else None,
+        })
+
+    return jsonify({'items': result})
+
+
+@api_bp.route('/games/<game_id>', methods=['GET'])
+@tenant_required
+def game_detail(game_id):
+    """Get detailed game information including events and player stats."""
+    game = org_query(Game).filter(Game.id == game_id).first()
+    if not game:
+        return jsonify({'error': 'Game not found'}), 404
+
+    # Get game events (timeline)
+    from slms.models import GameEvent
+    events = org_query(GameEvent).filter(
+        GameEvent.game_id == game_id
+    ).order_by(GameEvent.event_time).all()
+
+    event_list = []
+    for event in events:
+        event_list.append({
+            'id': event.id,
+            'event_type': event.event_type.value if hasattr(event.event_type, 'value') else event.event_type,
+            'period': event.period,
+            'game_clock': event.game_clock,
+            'event_time': event.event_time.isoformat() if event.event_time else None,
+            'description': event.description,
+            'player_id': event.player_id,
+        })
+
+    return jsonify({
+        'game': {
+            'id': game.id,
+            'season_id': game.season_id,
+            'home_team': {
+                'id': game.home_team_id,
+                'name': game.home_team.name if game.home_team else 'TBD',
+            },
+            'away_team': {
+                'id': game.away_team_id,
+                'name': game.away_team.name if game.away_team else 'TBD',
+            },
+            'venue': {
+                'id': game.venue_id,
+                'name': game.venue.name if game.venue else None,
+                'address': game.venue.address if game.venue else None,
+            },
+            'start_time': game.start_time.isoformat() if game.start_time else None,
+            'status': game.status.value if hasattr(game.status, 'value') else game.status,
+            'home_score': game.home_score,
+            'away_score': game.away_score,
+            'current_period': game.current_period,
+            'game_clock': game.game_clock,
+            'period_scores': game.period_scores,
+            'went_to_overtime': game.went_to_overtime,
+        },
+        'events': event_list,
+    })
+
+
+@api_bp.route('/standings', methods=['GET'])
+@tenant_required
+def standings():
+    """Get standings with optional filters."""
+    season_id = request.args.get('season_id')
+    division = request.args.get('division')
+
+    from slms.models import Standing
+    query = org_query(Standing)
+
+    if season_id:
+        query = query.filter(Standing.season_id == season_id)
+    if division:
+        query = query.filter(Standing.division == division)
+
+    standings = query.order_by(Standing.position).all()
+
+    result = []
+    for standing in standings:
+        result.append({
+            'position': standing.position,
+            'team': {
+                'id': standing.team_id,
+                'name': standing.team.name if standing.team else 'Unknown',
+            },
+            'games_played': standing.games_played,
+            'wins': standing.wins,
+            'losses': standing.losses,
+            'ties': standing.ties,
+            'points': standing.points,
+            'goals_for': standing.goals_for,
+            'goals_against': standing.goals_against,
+            'goal_difference': standing.goal_difference,
+        })
+
+    return jsonify({'items': result})
+
+
+@api_bp.route('/stats/leaders', methods=['GET'])
+@tenant_required
+def stat_leaders():
+    """Get statistical leaders for various categories."""
+    season_id = request.args.get('season_id')
+    stat_type = request.args.get('stat_type', 'points')
+    limit = int(request.args.get('limit', 10))
+
+    from slms.models import PlayerSeasonStat, Player
+    from sqlalchemy import desc
+
+    query = org_query(PlayerSeasonStat).join(Player)
+
+    if season_id:
+        query = query.filter(PlayerSeasonStat.season_id == season_id)
+
+    # Map stat type to column
+    stat_column_map = {
+        'points': PlayerSeasonStat.total_points,
+        'goals': PlayerSeasonStat.total_goals,
+        'assists': PlayerSeasonStat.total_assists,
+        'rebounds': PlayerSeasonStat.total_rebounds,
+        'steals': PlayerSeasonStat.total_steals,
+        'blocks': PlayerSeasonStat.total_blocks,
+    }
+
+    stat_column = stat_column_map.get(stat_type, PlayerSeasonStat.total_points)
+    leaders = query.order_by(desc(stat_column)).limit(limit).all()
+
+    result = []
+    for stat in leaders:
+        result.append({
+            'player': {
+                'id': stat.player_id,
+                'name': f"{stat.player.first_name} {stat.player.last_name}" if stat.player else 'Unknown',
+                'team_id': stat.player.team_id if stat.player else None,
+            },
+            'value': getattr(stat, f'total_{stat_type}', 0),
+            'games_played': stat.games_played,
+        })
+
+    return jsonify({'items': result, 'stat_type': stat_type})
+
+
 @api_bp.route('/media-assets', methods=['GET'])
 @login_required
 @tenant_required

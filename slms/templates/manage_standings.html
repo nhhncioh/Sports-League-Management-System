@@ -9,7 +9,7 @@
             <p class="text-muted mb-0">Manage individual team standings and configure display settings.</p>
         </div>
         <div class="d-flex gap-2">
-            <button type="button" class="btn btn-outline-primary" onclick="alert('Standings configuration coming soon!')">
+            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#configureDisplayModal">
                 <i class="ph ph-gear-six"></i> Configure Display
             </button>
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#importStandingsModal">
@@ -313,6 +313,216 @@
     </div>
 </div>
 
+<!-- Configure Display Modal -->
+<div class="modal fade" id="configureDisplayModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="ph ph-gear-six me-2"></i>Configure Standings Display
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="displayConfigForm">
+                    <!-- Column Visibility -->
+                    <div class="mb-4">
+                        <h6 class="mb-3">
+                            <i class="ph ph-eye me-2"></i>Visible Columns
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="col_position" checked disabled>
+                                    <label class="form-check-label" for="col_position">Position</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="col_team" checked disabled>
+                                    <label class="form-check-label" for="col_team">Team Name</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="col_gp" checked>
+                                    <label class="form-check-label" for="col_gp">Games Played</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="col_w" checked>
+                                    <label class="form-check-label" for="col_w">Wins</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="col_d" checked>
+                                    <label class="form-check-label" for="col_d">Draws</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="col_l" checked>
+                                    <label class="form-check-label" for="col_l">Losses</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="col_pts" checked>
+                                    <label class="form-check-label" for="col_pts">Points</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="col_gf" checked>
+                                    <label class="form-check-label" for="col_gf">Goals For</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="col_ga" checked>
+                                    <label class="form-check-label" for="col_ga">Goals Against</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="col_gd" checked>
+                                    <label class="form-check-label" for="col_gd">Goal Difference</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="col_form" checked>
+                                    <label class="form-check-label" for="col_form">Recent Form</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Highlighting Zones -->
+                    <div class="mb-4">
+                        <h6 class="mb-3">
+                            <i class="ph ph-paint-brush me-2"></i>Highlight Zones
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Champions League Positions</label>
+                                <input type="number" class="form-control" id="cl_spots" value="4" min="0" max="10">
+                                <small class="text-muted">Highlight top N teams (green)</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Europa League Positions</label>
+                                <input type="number" class="form-control" id="el_spots" value="2" min="0" max="10">
+                                <small class="text-muted">Highlight next N teams (blue)</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Relegation Positions</label>
+                                <input type="number" class="form-control" id="rel_spots" value="3" min="0" max="10">
+                                <small class="text-muted">Highlight bottom N teams (red)</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Playoff Positions</label>
+                                <input type="number" class="form-control" id="playoff_spots" value="0" min="0" max="10">
+                                <small class="text-muted">Highlight teams in playoff zone (orange)</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Display Options -->
+                    <div class="mb-4">
+                        <h6 class="mb-3">
+                            <i class="ph ph-sliders me-2"></i>Display Options
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="show_team_logos" checked>
+                                    <label class="form-check-label" for="show_team_logos">Show Team Logos</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="color_code_stats" checked>
+                                    <label class="form-check-label" for="color_code_stats">Color-code Statistics</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="show_position_badges" checked>
+                                    <label class="form-check-label" for="show_position_badges">Show Position Badges (Top 3)</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="compact_mode">
+                                    <label class="form-check-label" for="compact_mode">Compact Mode</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="show_zone_legend" checked>
+                                    <label class="form-check-label" for="show_zone_legend">Show Zone Legend</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="auto_sort" checked>
+                                    <label class="form-check-label" for="auto_sort">Auto-sort by Points</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Points System -->
+                    <div class="mb-4">
+                        <h6 class="mb-3">
+                            <i class="ph ph-calculator me-2"></i>Points System
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Points per Win</label>
+                                <input type="number" class="form-control" id="pts_win" value="3" min="1" max="10">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Points per Draw</label>
+                                <input type="number" class="form-control" id="pts_draw" value="1" min="0" max="5">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Points per Loss</label>
+                                <input type="number" class="form-control" id="pts_loss" value="0" min="0" max="3">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Preview -->
+                    <div class="alert alert-info d-flex align-items-center">
+                        <i class="ph ph-info me-2"></i>
+                        <div>
+                            <strong>Preview:</strong> Changes will be applied to the standings table. This configuration is saved in your browser.
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-outline-secondary" onclick="resetDisplayConfig()">
+                    <i class="ph ph-arrow-counter-clockwise"></i> Reset to Default
+                </button>
+                <button type="button" class="btn btn-primary" onclick="saveDisplayConfig()">
+                    <i class="ph ph-floppy-disk"></i> Save Configuration
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Import Standings Modal -->
 <div class="modal fade" id="importStandingsModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -365,6 +575,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize modals
     initializeModals();
+
+    // Load and apply display configuration
+    loadDisplayConfig();
+    applyDisplayConfig();
 });
 
 function setupAutoCalculation() {
@@ -558,6 +772,256 @@ function showToast(message, type) {
     toast.addEventListener('hidden.bs.toast', () => {
         toast.remove();
     });
+}
+
+// Display Configuration Functions
+function getDefaultDisplayConfig() {
+    return {
+        columns: {
+            position: true,
+            team: true,
+            gp: true,
+            w: true,
+            d: true,
+            l: true,
+            pts: true,
+            gf: true,
+            ga: true,
+            gd: true,
+            form: true
+        },
+        zones: {
+            cl_spots: 4,
+            el_spots: 2,
+            rel_spots: 3,
+            playoff_spots: 0
+        },
+        options: {
+            show_team_logos: true,
+            color_code_stats: true,
+            show_position_badges: true,
+            compact_mode: false,
+            show_zone_legend: true,
+            auto_sort: true
+        },
+        points: {
+            win: 3,
+            draw: 1,
+            loss: 0
+        }
+    };
+}
+
+function loadDisplayConfig() {
+    const saved = localStorage.getItem('standings_display_config');
+    const config = saved ? JSON.parse(saved) : getDefaultDisplayConfig();
+
+    // Load column visibility
+    Object.keys(config.columns).forEach(col => {
+        const checkbox = document.getElementById(`col_${col}`);
+        if (checkbox && !checkbox.disabled) {
+            checkbox.checked = config.columns[col];
+        }
+    });
+
+    // Load zones
+    Object.keys(config.zones).forEach(zone => {
+        const input = document.getElementById(zone);
+        if (input) input.value = config.zones[zone];
+    });
+
+    // Load options
+    Object.keys(config.options).forEach(opt => {
+        const checkbox = document.getElementById(opt);
+        if (checkbox) checkbox.checked = config.options[opt];
+    });
+
+    // Load points
+    document.getElementById('pts_win').value = config.points.win;
+    document.getElementById('pts_draw').value = config.points.draw;
+    document.getElementById('pts_loss').value = config.points.loss;
+}
+
+function saveDisplayConfig() {
+    const config = {
+        columns: {
+            position: document.getElementById('col_position').checked,
+            team: document.getElementById('col_team').checked,
+            gp: document.getElementById('col_gp').checked,
+            w: document.getElementById('col_w').checked,
+            d: document.getElementById('col_d').checked,
+            l: document.getElementById('col_l').checked,
+            pts: document.getElementById('col_pts').checked,
+            gf: document.getElementById('col_gf').checked,
+            ga: document.getElementById('col_ga').checked,
+            gd: document.getElementById('col_gd').checked,
+            form: document.getElementById('col_form').checked
+        },
+        zones: {
+            cl_spots: parseInt(document.getElementById('cl_spots').value),
+            el_spots: parseInt(document.getElementById('el_spots').value),
+            rel_spots: parseInt(document.getElementById('rel_spots').value),
+            playoff_spots: parseInt(document.getElementById('playoff_spots').value)
+        },
+        options: {
+            show_team_logos: document.getElementById('show_team_logos').checked,
+            color_code_stats: document.getElementById('color_code_stats').checked,
+            show_position_badges: document.getElementById('show_position_badges').checked,
+            compact_mode: document.getElementById('compact_mode').checked,
+            show_zone_legend: document.getElementById('show_zone_legend').checked,
+            auto_sort: document.getElementById('auto_sort').checked
+        },
+        points: {
+            win: parseInt(document.getElementById('pts_win').value),
+            draw: parseInt(document.getElementById('pts_draw').value),
+            loss: parseInt(document.getElementById('pts_loss').value)
+        }
+    };
+
+    localStorage.setItem('standings_display_config', JSON.stringify(config));
+
+    showSuccessToast('Display configuration saved!');
+    bootstrap.Modal.getInstance(document.getElementById('configureDisplayModal')).hide();
+
+    // Apply the configuration
+    applyDisplayConfig();
+}
+
+function resetDisplayConfig() {
+    if (confirm('Reset all display settings to default?')) {
+        localStorage.removeItem('standings_display_config');
+        loadDisplayConfig();
+        showSuccessToast('Configuration reset to defaults');
+    }
+}
+
+function applyDisplayConfig() {
+    const saved = localStorage.getItem('standings_display_config');
+    if (!saved) return;
+
+    const config = JSON.parse(saved);
+    const table = document.getElementById('standings-table');
+    if (!table) return;
+
+    // Get column indices (0-based, accounting for position and team being first)
+    const columnMap = {
+        gp: 2,
+        w: 3,
+        d: 4,
+        l: 5,
+        pts: 6,
+        gf: 7,
+        ga: 8,
+        gd: 9,
+        form: 10
+    };
+
+    // Hide/show columns
+    Object.keys(columnMap).forEach(col => {
+        const index = columnMap[col];
+        const visible = config.columns[col];
+
+        // Hide/show header
+        const headers = table.querySelectorAll('thead th');
+        if (headers[index]) {
+            headers[index].style.display = visible ? '' : 'none';
+        }
+
+        // Hide/show cells
+        const rows = table.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells[index]) {
+                cells[index].style.display = visible ? '' : 'none';
+            }
+        });
+    });
+
+    // Apply highlighting zones
+    const rows = table.querySelectorAll('tbody tr');
+    const totalRows = rows.length;
+
+    rows.forEach((row, index) => {
+        // Remove existing zone classes
+        row.classList.remove('table-success', 'table-info', 'table-warning', 'table-danger');
+
+        const position = index + 1;
+
+        // Champions League zone (green)
+        if (position <= config.zones.cl_spots) {
+            row.classList.add('table-success');
+        }
+        // Europa League zone (blue)
+        else if (position <= config.zones.cl_spots + config.zones.el_spots) {
+            row.classList.add('table-info');
+        }
+        // Playoff zone (orange)
+        else if (config.zones.playoff_spots > 0 &&
+                 position > totalRows - config.zones.rel_spots - config.zones.playoff_spots &&
+                 position <= totalRows - config.zones.rel_spots) {
+            row.classList.add('table-warning');
+        }
+        // Relegation zone (red)
+        else if (position > totalRows - config.zones.rel_spots) {
+            row.classList.add('table-danger');
+        }
+    });
+
+    // Apply compact mode
+    if (config.options.compact_mode) {
+        table.classList.add('table-sm');
+    } else {
+        table.classList.remove('table-sm');
+    }
+
+    // Show/hide position badges
+    if (!config.options.show_position_badges) {
+        const badges = table.querySelectorAll('.badge.bg-success');
+        badges.forEach(badge => {
+            badge.classList.remove('badge', 'bg-success');
+            badge.innerHTML = badge.textContent;
+        });
+    }
+
+    // Add zone legend if enabled
+    if (config.options.show_zone_legend) {
+        addZoneLegend(config.zones);
+    }
+}
+
+function addZoneLegend(zones) {
+    // Remove existing legend
+    const existingLegend = document.getElementById('zone-legend');
+    if (existingLegend) existingLegend.remove();
+
+    // Create legend
+    const legend = document.createElement('div');
+    legend.id = 'zone-legend';
+    legend.className = 'alert alert-light mt-3';
+    legend.innerHTML = '<strong>Zone Legend:</strong> ';
+
+    const legendItems = [];
+
+    if (zones.cl_spots > 0) {
+        legendItems.push('<span class="badge bg-success me-2">Champions League Qualification</span>');
+    }
+    if (zones.el_spots > 0) {
+        legendItems.push('<span class="badge bg-info me-2">Europa League Qualification</span>');
+    }
+    if (zones.playoff_spots > 0) {
+        legendItems.push('<span class="badge bg-warning text-dark me-2">Playoff Zone</span>');
+    }
+    if (zones.rel_spots > 0) {
+        legendItems.push('<span class="badge bg-danger me-2">Relegation Zone</span>');
+    }
+
+    legend.innerHTML += legendItems.join('');
+
+    // Insert after standings table
+    const tableCard = document.querySelector('.card-body .table-responsive').closest('.card');
+    if (tableCard) {
+        tableCard.insertAdjacentElement('afterend', legend);
+    }
 }
 </script>
 {% endblock %}

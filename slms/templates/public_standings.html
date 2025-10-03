@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}Standings - {{ super() }}{% endblock %}
+
+{% block content %}
+<!-- Include Live Ticker -->
+{% include 'components/live_ticker.html' %}
+
+<div class="page-header mb-4">
+    <h1 class="display-5 fw-semibold">League Standings</h1>
+    <p class="lead text-muted">Track team performance across all divisions and seasons</p>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form id="standings-filters" class="row g-3">
+            <div class="col-md-4">
+                <label for="season-filter" class="form-label">Season</label>
+                <select id="season-filter" name="season_id" class="form-select">
+                    <option value="">All Seasons</option>
+                    {% for season in seasons %}
+                        <option value="{{ season.id }}" {% if season.id == selected_season_id %}selected{% endif %}>
+                            {{ season.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="division-filter" class="form-label">Division</label>
+                <select id="division-filter" name="division" class="form-select">
+                    <option value="">All Divisions</option>
+                    {% for division in divisions %}
+                        <option value="{{ division }}" {% if division == selected_division %}selected{% endif %}>
+                            {{ division }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="ph ph-funnel"></i> Apply Filters
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Standings Table -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        {% if standings and standings|length > 0 %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 standings-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-center" style="width: 60px;">Pos</th>
+                            <th>Team</th>
+                            <th class="text-center">GP</th>
+                            <th class="text-center">W</th>
+                            <th class="text-center">L</th>
+                            <th class="text-center">T</th>
+                            <th class="text-center">Pts</th>
+                            <th class="text-center">GF</th>
+                            <th class="text-center">GA</th>
+                            <th class="text-center">GD</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for standing in standings %}
+                            <tr class="standing-row" onclick="window.location.href='{{ url_for('public.team_profile', team_id=standing.team_id) }}'">
+                                <td class="text-center fw-bold position-cell">
+                                    {{ standing.position }}
+                                </td>
+                                <td class="team-cell">
+                                    <div class="d-flex align-items-center gap-2">
+                                        {% if standing.team and standing.team.logo_url %}
+                                            <img src="{{ standing.team.logo_url }}" alt="{{ standing.team.name }}" class="team-logo">
+                                        {% else %}
+                                            <div class="team-logo-placeholder">
+                                                {{ standing.team.name[:2] if standing.team else 'TM' }}
+                                            </div>
+                                        {% endif %}
+                                        <span class="fw-semibold">{{ standing.team.name if standing.team else 'Unknown' }}</span>
+                                    </div>
+                                </td>
+                                <td class="text-center">{{ standing.games_played or 0 }}</td>
+                                <td class="text-center text-success fw-semibold">{{ standing.wins or 0 }}</td>
+                                <td class="text-center text-danger">{{ standing.losses or 0 }}</td>
+                                <td class="text-center text-muted">{{ standing.ties or 0 }}</td>
+                                <td class="text-center fw-bold text-primary">{{ standing.points or 0 }}</td>
+                                <td class="text-center">{{ standing.goals_for or 0 }}</td>
+                                <td class="text-center">{{ standing.goals_against or 0 }}</td>
+                                <td class="text-center {% if standing.goal_difference > 0 %}text-success{% elif standing.goal_difference < 0 %}text-danger{% endif %}">
+                                    {% if standing.goal_difference > 0 %}+{% endif %}{{ standing.goal_difference or 0 }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state py-5">
+                <i class="ph ph-trophy display-1 text-muted"></i>
+                <h5 class="mt-3">No Standings Available</h5>
+                <p class="text-muted">Standings will appear once games have been played.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Legend -->
+<div class="card mt-4 border-0 bg-light">
+    <div class="card-body">
+        <h6 class="mb-3">Legend</h6>
+        <div class="row g-3 small">
+            <div class="col-md-2">
+                <strong>Pos:</strong> Position
+            </div>
+            <div class="col-md-2">
+                <strong>GP:</strong> Games Played
+            </div>
+            <div class="col-md-2">
+                <strong>W:</strong> Wins
+            </div>
+            <div class="col-md-2">
+                <strong>L:</strong> Losses
+            </div>
+            <div class="col-md-2">
+                <strong>T:</strong> Ties
+            </div>
+            <div class="col-md-2">
+                <strong>Pts:</strong> Points
+            </div>
+            <div class="col-md-2">
+                <strong>GF:</strong> Goals For
+            </div>
+            <div class="col-md-2">
+                <strong>GA:</strong> Goals Against
+            </div>
+            <div class="col-md-2">
+                <strong>GD:</strong> Goal Difference
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.standings-table {
+    font-size: 0.95rem;
+}
+
+.standings-table thead th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    padding: 1rem 0.75rem;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.standings-table tbody td {
+    padding: 1rem 0.75rem;
+    vertical-align: middle;
+}
+
+.standing-row {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.standing-row:hover {
+    background-color: rgba(13, 110, 253, 0.05);
+}
+
+.position-cell {
+    font-size: 1.1rem;
+    color: #495057;
+}
+
+.team-logo {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+.team-logo-placeholder {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.team-cell {
+    min-width: 200px;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+}
+</style>
+
+<script>
+document.getElementById('standings-filters').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const params = new URLSearchParams();
+
+    for (let [key, value] of formData.entries()) {
+        if (value) {
+            params.append(key, value);
+        }
+    }
+
+    window.location.href = '{{ url_for("public.standings") }}?' + params.toString();
+});
+</script>
+{% endblock %}

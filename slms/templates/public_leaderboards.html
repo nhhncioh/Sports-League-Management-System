@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block title %}Stat Leaders - {{ super() }}{% endblock %}
+
+{% block content %}
+<!-- Include Live Ticker -->
+{% include 'components/live_ticker.html' %}
+
+<div class="page-header mb-4">
+    <h1 class="display-5 fw-semibold">Statistical Leaders</h1>
+    <p class="lead text-muted">Top performers across all categories</p>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form id="leaderboard-filters" class="row g-3">
+            <div class="col-md-4">
+                <label for="season-filter" class="form-label">Season</label>
+                <select id="season-filter" name="season_id" class="form-select">
+                    <option value="">All Seasons</option>
+                    {% for season in seasons %}
+                        <option value="{{ season.id }}" {% if season.id == selected_season_id %}selected{% endif %}>
+                            {{ season.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="stat-type-filter" class="form-label">Stat Category</label>
+                <select id="stat-type-filter" name="stat_type" class="form-select">
+                    <option value="points" {% if stat_type == 'points' %}selected{% endif %}>Points</option>
+                    <option value="goals" {% if stat_type == 'goals' %}selected{% endif %}>Goals</option>
+                    <option value="assists" {% if stat_type == 'assists' %}selected{% endif %}>Assists</option>
+                    <option value="rebounds" {% if stat_type == 'rebounds' %}selected{% endif %}>Rebounds</option>
+                    <option value="steals" {% if stat_type == 'steals' %}selected{% endif %}>Steals</option>
+                    <option value="blocks" {% if stat_type == 'blocks' %}selected{% endif %}>Blocks</option>
+                </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="ph ph-funnel"></i> Apply Filters
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Stat Category Tabs -->
+<div class="mb-4">
+    <div class="stat-tabs">
+        <button class="stat-tab {% if stat_type == 'points' or not stat_type %}active{% endif %}"
+                onclick="filterByStatType('points')">
+            <i class="ph ph-trophy"></i>
+            <span>Points</span>
+        </button>
+        <button class="stat-tab {% if stat_type == 'goals' %}active{% endif %}"
+                onclick="filterByStatType('goals')">
+            <i class="ph ph-soccer-ball"></i>
+            <span>Goals</span>
+        </button>
+        <button class="stat-tab {% if stat_type == 'assists' %}active{% endif %}"
+                onclick="filterByStatType('assists')">
+            <i class="ph ph-users"></i>
+            <span>Assists</span>
+        </button>
+        <button class="stat-tab {% if stat_type == 'rebounds' %}active{% endif %}"
+                onclick="filterByStatType('rebounds')">
+            <i class="ph ph-basketball"></i>
+            <span>Rebounds</span>
+        </button>
+        <button class="stat-tab {% if stat_type == 'steals' %}active{% endif %}"
+                onclick="filterByStatType('steals')">
+            <i class="ph ph-hand-grabbing"></i>
+            <span>Steals</span>
+        </button>
+        <button class="stat-tab {% if stat_type == 'blocks' %}active{% endif %}"
+                onclick="filterByStatType('blocks')">
+            <i class="ph ph-shield"></i>
+            <span>Blocks</span>
+        </button>
+    </div>
+</div>
+
+<!-- Leaderboard Cards -->
+<div class="row g-4">
+    {% if leaders and leaders|length > 0 %}
+        {% for leader in leaders %}
+            <div class="col-md-6 col-lg-4">
+                <div class="leader-card" onclick="window.location.href='{{ url_for('public.player_profile', player_id=leader.player_id) }}'">
+                    <div class="leader-rank">
+                        {% if loop.index == 1 %}
+                            <i class="ph-fill ph-medal text-warning"></i>
+                        {% elif loop.index == 2 %}
+                            <i class="ph-fill ph-medal" style="color: silver;"></i>
+                        {% elif loop.index == 3 %}
+                            <i class="ph-fill ph-medal" style="color: #cd7f32;"></i>
+                        {% else %}
+                            {{ loop.index }}
+                        {% endif %}
+                    </div>
+                    <div class="leader-info">
+                        <h5 class="leader-name">{{ leader.player_name }}</h5>
+                        <p class="leader-team text-muted mb-0">
+                            {% if leader.team_name %}
+                                {{ leader.team_name }}
+                            {% else %}
+                                Free Agent
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="leader-stat">
+                        <div class="stat-value">{{ leader.stat_value }}</div>
+                        <div class="stat-label">{{ stat_type|upper if stat_type else 'PTS' }}</div>
+                    </div>
+                    <div class="leader-games">
+                        <small class="text-muted">{{ leader.games_played }} GP</small>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="col-12">
+            <div class="empty-state py-5">
+                <i class="ph ph-chart-line display-1 text-muted"></i>
+                <h5 class="mt-3">No Statistics Available</h5>
+                <p class="text-muted">Statistics will appear once games have been played and stats recorded.</p>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.stat-tabs {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    background: #f8f9fa;
+    padding: 0.5rem;
+    border-radius: 12px;
+}
+
+.stat-tab {
+    flex: 1;
+    min-width: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.75rem 1rem;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    color: #6c757d;
+}
+
+.stat-tab:hover {
+    background: white;
+    color: #0d6efd;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.stat-tab.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.stat-tab i {
+    font-size: 1.5rem;
+}
+
+.leader-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.leader-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    border-color: #667eea;
+}
+
+.leader-rank {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #495057;
+    text-align: center;
+}
+
+.leader-rank i {
+    font-size: 2rem;
+}
+
+.leader-info {
+    text-align: center;
+}
+
+.leader-name {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    color: #212529;
+}
+
+.leader-team {
+    font-size: 0.875rem;
+}
+
+.leader-stat {
+    text-align: center;
+    padding: 1rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 8px;
+    color: white;
+}
+
+.stat-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 0.25rem;
+    opacity: 0.9;
+}
+
+.leader-games {
+    text-align: center;
+}
+
+.empty-state {
+    text-align: center;
+    background: white;
+    border-radius: 12px;
+    padding: 3rem 1rem;
+}
+</style>
+
+<script>
+function filterByStatType(statType) {
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set('stat_type', statType);
+    window.location.href = '{{ url_for("public.leaderboards") }}?' + urlParams.toString();
+}
+
+document.getElementById('leaderboard-filters').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const params = new URLSearchParams();
+
+    for (let [key, value] of formData.entries()) {
+        if (value) {
+            params.append(key, value);
+        }
+    }
+
+    window.location.href = '{{ url_for("public.leaderboards") }}?' + params.toString();
+});
+</script>
+{% endblock %}
