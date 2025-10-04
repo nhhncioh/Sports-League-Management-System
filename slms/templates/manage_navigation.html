@@ -484,8 +484,8 @@ function deleteTickerItem(id, name) {
     border: 1px solid #dee2e6;
     border-radius: 0.5rem;
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-    width: 400px;
-    max-height: 500px;
+    width: 600px;
+    max-height: 600px;
     display: none;
 }
 
@@ -495,17 +495,71 @@ function deleteTickerItem(id, name) {
     font-weight: 600;
     background: #f8f9fa;
     border-radius: 0.5rem 0.5rem 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.icon-picker-search {
+    flex: 1;
+    margin-left: 1rem;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+}
+
+.icon-picker-categories {
+    display: flex;
+    gap: 0.25rem;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid #dee2e6;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+
+.icon-category-btn {
+    padding: 0.375rem 0.75rem;
+    border: 1px solid #dee2e6;
+    background: white;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+}
+
+.icon-category-btn:hover {
+    background: #f8f9fa;
+}
+
+.icon-category-btn.active {
+    background: #0d6efd;
+    color: white;
+    border-color: #0d6efd;
 }
 
 .icon-picker-body {
-    padding: 0.5rem;
+    padding: 0.75rem;
     max-height: 450px;
     overflow-y: auto;
 }
 
+.icon-category-section {
+    margin-bottom: 1.5rem;
+}
+
+.icon-category-title {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #495057;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.25rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
 .icon-picker-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 0.5rem;
 }
 
@@ -526,6 +580,7 @@ function deleteTickerItem(id, name) {
     background: #f8f9fa;
     border-color: #0d6efd;
     transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .icon-picker-option i {
@@ -534,10 +589,14 @@ function deleteTickerItem(id, name) {
 }
 
 .icon-picker-option span {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     color: #6c757d;
     text-align: center;
     line-height: 1.2;
+}
+
+.icon-picker-option.hidden {
+    display: none;
 }
 </style>
 {% endblock %}
@@ -570,28 +629,116 @@ function deleteTickerItem(id, name) {
         const wrapper = document.createElement('div');
         wrapper.className = 'icon-picker-popover';
 
+        // Header with search
         const header = document.createElement('div');
         header.className = 'icon-picker-header';
-        header.textContent = 'Choose an Icon';
+        header.innerHTML = `
+            <span>Choose an Icon</span>
+            <input type="text" class="icon-picker-search" placeholder="Search icons...">
+        `;
 
+        // Category filter buttons
+        const categoriesDiv = document.createElement('div');
+        categoriesDiv.className = 'icon-picker-categories';
+
+        const allBtn = document.createElement('button');
+        allBtn.type = 'button';
+        allBtn.className = 'icon-category-btn active';
+        allBtn.textContent = 'All';
+        allBtn.dataset.category = 'all';
+        categoriesDiv.appendChild(allBtn);
+
+        Object.keys(iconChoices).forEach(category => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'icon-category-btn';
+            btn.textContent = category;
+            btn.dataset.category = category;
+            categoriesDiv.appendChild(btn);
+        });
+
+        // Body with categorized icons
         const body = document.createElement('div');
         body.className = 'icon-picker-body';
 
-        const grid = document.createElement('div');
-        grid.className = 'icon-picker-grid';
-        iconChoices.forEach(({ value, label }) => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'icon-picker-option';
-            btn.dataset.iconValue = value;
-            btn.innerHTML = `<i class="${value}"></i><span>${label}</span>`;
-            grid.appendChild(btn);
+        Object.entries(iconChoices).forEach(([category, icons]) => {
+            const section = document.createElement('div');
+            section.className = 'icon-category-section';
+            section.dataset.category = category;
+
+            const title = document.createElement('div');
+            title.className = 'icon-category-title';
+            title.textContent = category;
+
+            const grid = document.createElement('div');
+            grid.className = 'icon-picker-grid';
+
+            icons.forEach(({ value, label }) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'icon-picker-option';
+                btn.dataset.iconValue = value;
+                btn.dataset.iconLabel = label.toLowerCase();
+                btn.dataset.iconCategory = category;
+                btn.innerHTML = `<i class="${value}"></i><span>${label}</span>`;
+                grid.appendChild(btn);
+            });
+
+            section.appendChild(title);
+            section.appendChild(grid);
+            body.appendChild(section);
         });
 
-        body.appendChild(grid);
         wrapper.appendChild(header);
+        wrapper.appendChild(categoriesDiv);
         wrapper.appendChild(body);
         document.body.appendChild(wrapper);
+
+        // Search functionality
+        const searchInput = wrapper.querySelector('.icon-picker-search');
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const allIcons = wrapper.querySelectorAll('.icon-picker-option');
+
+            allIcons.forEach(icon => {
+                const label = icon.dataset.iconLabel;
+                const value = icon.dataset.iconValue.toLowerCase();
+                const matches = label.includes(query) || value.includes(query);
+                icon.classList.toggle('hidden', !matches);
+            });
+
+            // Hide empty category sections
+            wrapper.querySelectorAll('.icon-category-section').forEach(section => {
+                const visibleIcons = section.querySelectorAll('.icon-picker-option:not(.hidden)');
+                section.style.display = visibleIcons.length > 0 ? 'block' : 'none';
+            });
+        });
+
+        // Category filtering
+        wrapper.querySelectorAll('.icon-category-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                wrapper.querySelectorAll('.icon-category-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                const category = btn.dataset.category;
+                const sections = wrapper.querySelectorAll('.icon-category-section');
+
+                if (category === 'all') {
+                    sections.forEach(s => s.style.display = 'block');
+                } else {
+                    sections.forEach(s => {
+                        s.style.display = s.dataset.category === category ? 'block' : 'none';
+                    });
+                }
+
+                // Clear search when changing category
+                searchInput.value = '';
+                wrapper.querySelectorAll('.icon-picker-option').forEach(icon => {
+                    icon.classList.remove('hidden');
+                });
+            });
+        });
+
         return wrapper;
     };
 
@@ -601,9 +748,43 @@ function deleteTickerItem(id, name) {
         }
         iconPopoverTarget = button.getAttribute('data-target-input');
         const rect = button.getBoundingClientRect();
+
+        // Show popover temporarily to get dimensions
         iconPopover.style.display = 'block';
-        iconPopover.style.top = `${window.scrollY + rect.bottom + 6}px`;
-        iconPopover.style.left = `${window.scrollX + rect.left}px`;
+        iconPopover.style.visibility = 'hidden';
+
+        const popoverWidth = iconPopover.offsetWidth;
+        const popoverHeight = iconPopover.offsetHeight;
+
+        // Calculate position
+        let top = window.scrollY + rect.bottom + 6;
+        let left = window.scrollX + rect.left;
+
+        // Adjust horizontal position if it goes off-screen
+        const rightEdge = left + popoverWidth;
+        if (rightEdge > window.innerWidth) {
+            left = window.innerWidth - popoverWidth - 10;
+        }
+        if (left < 10) {
+            left = 10;
+        }
+
+        // Adjust vertical position if it goes off-screen
+        const bottomEdge = top - window.scrollY + popoverHeight;
+        if (bottomEdge > window.innerHeight) {
+            // Try to position above the button instead
+            const topPosition = window.scrollY + rect.top - popoverHeight - 6;
+            if (topPosition > window.scrollY) {
+                top = topPosition;
+            } else {
+                // Keep below but adjust to fit
+                top = window.scrollY + window.innerHeight - popoverHeight - 10;
+            }
+        }
+
+        iconPopover.style.top = `${top}px`;
+        iconPopover.style.left = `${left}px`;
+        iconPopover.style.visibility = 'visible';
     };
 
     const closeIconPopover = () => {

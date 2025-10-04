@@ -71,71 +71,269 @@ def _default_homepage_config():
 
 AVERAGE_MATCH_REVENUE_USD = 7500  # fallback estimate when transaction data is unavailable
 
-ICON_PICKER_CHOICES = [
-    {"value": "ph ph-football", "label": "Football"},
-    {"value": "ph ph-soccer-ball", "label": "Soccer"},
-    {"value": "ph ph-basketball", "label": "Basketball"},
-    {"value": "ph ph-baseball", "label": "Baseball"},
-    {"value": "ph ph-tennis-ball", "label": "Tennis"},
-    {"value": "ph ph-volleyball", "label": "Volleyball"},
-    {"value": "ph ph-golf", "label": "Golf"},
-    {"value": "ph ph-cricket", "label": "Cricket"},
-    {"value": "ph ph-hockey", "label": "Hockey"},
-    {"value": "ph ph-boxing-glove", "label": "Boxing"},
-    {"value": "ph ph-bowling-ball", "label": "Bowling"},
-    {"value": "ph ph-court-basketball", "label": "Court"},
-    {"value": "ph ph-tennis-racket", "label": "Racket"},
-    {"value": "ph ph-trophy", "label": "Trophy"},
-    {"value": "ph ph-medal", "label": "Medal"},
-    {"value": "ph ph-flag", "label": "Flag"},
-    {"value": "ph ph-crown", "label": "Crown"},
-    {"value": "ph ph-shield", "label": "Shield"},
-    {"value": "ph ph-speedometer", "label": "Dashboard"},
-    {"value": "ph ph-clipboard", "label": "Clipboard"},
-    {"value": "ph ph-calendar-dots", "label": "Schedule"},
-    {"value": "ph ph-clock", "label": "Time"},
-    {"value": "ph ph-chart-line", "label": "Stats"},
-    {"value": "ph ph-chart-bar", "label": "Charts"},
-    {"value": "ph ph-ranking", "label": "Rankings"},
-    {"value": "ph ph-house", "label": "Home"},
-    {"value": "ph ph-squares-four", "label": "Dashboard"},
-    {"value": "ph ph-dots-nine", "label": "Grid"},
-    {"value": "ph ph-compass", "label": "Navigate"},
-    {"value": "ph ph-map-pin", "label": "Location"},
-    {"value": "ph ph-info", "label": "Info"},
-    {"value": "ph ph-question", "label": "Help"},
-    {"value": "ph ph-gear-six", "label": "Settings"},
-    {"value": "ph ph-bell", "label": "Alerts"},
-    {"value": "ph ph-envelope", "label": "Messages"},
-    {"value": "ph ph-user", "label": "User"},
-    {"value": "ph ph-users-three", "label": "Team"},
-    {"value": "ph ph-identification-badge", "label": "Badge"},
-    {"value": "ph ph-handshake", "label": "Partners"},
-    {"value": "ph ph-user-circle", "label": "Profile"},
-    {"value": "ph ph-address-book", "label": "Contacts"},
-    {"value": "ph ph-building-office", "label": "Office"},
-    {"value": "ph ph-bank", "label": "Finance"},
-    {"value": "ph ph-coins", "label": "Fees"},
-    {"value": "ph ph-credit-card", "label": "Payment"},
-    {"value": "ph ph-receipt", "label": "Receipt"},
-    {"value": "ph ph-invoice", "label": "Invoice"},
-    {"value": "ph ph-facebook-logo", "label": "Facebook"},
-    {"value": "ph ph-instagram-logo", "label": "Instagram"},
-    {"value": "ph ph-x-logo", "label": "X/Twitter"},
-    {"value": "ph ph-youtube-logo", "label": "YouTube"},
-    {"value": "ph ph-tiktok-logo", "label": "TikTok"},
-    {"value": "ph ph-phone", "label": "Phone"},
-    {"value": "ph ph-star", "label": "Star"},
-    {"value": "ph ph-lightning", "label": "Lightning"},
-    {"value": "ph ph-fire", "label": "Fire"},
-    {"value": "ph ph-heart", "label": "Heart"},
-    {"value": "ph ph-thumbs-up", "label": "Like"},
-    {"value": "ph ph-download", "label": "Download"},
-    {"value": "ph ph-upload", "label": "Upload"},
-    {"value": "ph ph-link", "label": "Link"},
-    {"value": "ph ph-globe", "label": "Web"},
-    {"value": "ph ph-archive", "label": "Archive"},
-]
+ICON_PICKER_CHOICES = {
+    "Sports": [
+        {"value": "ph ph-football", "label": "Football"},
+        {"value": "ph ph-soccer-ball", "label": "Soccer"},
+        {"value": "ph ph-basketball", "label": "Basketball"},
+        {"value": "ph ph-baseball", "label": "Baseball"},
+        {"value": "ph ph-tennis-ball", "label": "Tennis"},
+        {"value": "ph ph-volleyball", "label": "Volleyball"},
+        {"value": "ph ph-golf", "label": "Golf"},
+        {"value": "ph ph-cricket", "label": "Cricket"},
+        {"value": "ph ph-hockey", "label": "Hockey"},
+        {"value": "ph ph-boxing-glove", "label": "Boxing"},
+        {"value": "ph ph-bowling-ball", "label": "Bowling"},
+        {"value": "ph ph-court-basketball", "label": "Court"},
+        {"value": "ph ph-tennis-racket", "label": "Racket"},
+        {"value": "ph ph-medal", "label": "Medal"},
+        {"value": "ph ph-trophy", "label": "Trophy"},
+        {"value": "ph ph-flag-banner", "label": "Flag Banner"},
+        {"value": "ph ph-whistle", "label": "Whistle"},
+        {"value": "ph ph-skateboard", "label": "Skateboard"},
+        {"value": "ph ph-bicycle", "label": "Bicycle"},
+        {"value": "ph ph-target", "label": "Target"},
+    ],
+    "Navigation": [
+        {"value": "ph ph-house", "label": "Home"},
+        {"value": "ph ph-squares-four", "label": "Dashboard"},
+        {"value": "ph ph-dots-nine", "label": "Grid"},
+        {"value": "ph ph-compass", "label": "Compass"},
+        {"value": "ph ph-map-pin", "label": "Location"},
+        {"value": "ph ph-map-trifold", "label": "Map"},
+        {"value": "ph ph-navigation-arrow", "label": "Navigate"},
+        {"value": "ph ph-signpost", "label": "Signpost"},
+        {"value": "ph ph-arrow-right", "label": "Arrow Right"},
+        {"value": "ph ph-arrow-left", "label": "Arrow Left"},
+        {"value": "ph ph-caret-right", "label": "Caret Right"},
+        {"value": "ph ph-list", "label": "List"},
+        {"value": "ph ph-list-bullets", "label": "List Bullets"},
+        {"value": "ph ph-sidebar", "label": "Sidebar"},
+    ],
+    "Charts & Analytics": [
+        {"value": "ph ph-chart-line", "label": "Line Chart"},
+        {"value": "ph ph-chart-bar", "label": "Bar Chart"},
+        {"value": "ph ph-chart-pie", "label": "Pie Chart"},
+        {"value": "ph ph-chart-donut", "label": "Donut Chart"},
+        {"value": "ph ph-chart-line-up", "label": "Chart Up"},
+        {"value": "ph ph-chart-line-down", "label": "Chart Down"},
+        {"value": "ph ph-trend-up", "label": "Trend Up"},
+        {"value": "ph ph-trend-down", "label": "Trend Down"},
+        {"value": "ph ph-ranking", "label": "Rankings"},
+        {"value": "ph ph-speedometer", "label": "Speedometer"},
+        {"value": "ph ph-gauge", "label": "Gauge"},
+        {"value": "ph ph-graph", "label": "Graph"},
+        {"value": "ph ph-presentation-chart", "label": "Presentation"},
+    ],
+    "Schedule & Time": [
+        {"value": "ph ph-calendar", "label": "Calendar"},
+        {"value": "ph ph-calendar-dots", "label": "Calendar Dots"},
+        {"value": "ph ph-calendar-check", "label": "Calendar Check"},
+        {"value": "ph ph-calendar-x", "label": "Calendar Cancel"},
+        {"value": "ph ph-calendar-plus", "label": "Calendar Add"},
+        {"value": "ph ph-clock", "label": "Clock"},
+        {"value": "ph ph-clock-countdown", "label": "Countdown"},
+        {"value": "ph ph-timer", "label": "Timer"},
+        {"value": "ph ph-hourglass", "label": "Hourglass"},
+        {"value": "ph ph-alarm", "label": "Alarm"},
+    ],
+    "People & Users": [
+        {"value": "ph ph-user", "label": "User"},
+        {"value": "ph ph-user-circle", "label": "User Circle"},
+        {"value": "ph ph-user-circle-plus", "label": "Add User"},
+        {"value": "ph ph-users", "label": "Users"},
+        {"value": "ph ph-users-three", "label": "Team"},
+        {"value": "ph ph-users-four", "label": "Group"},
+        {"value": "ph ph-identification-badge", "label": "Badge"},
+        {"value": "ph ph-identification-card", "label": "ID Card"},
+        {"value": "ph ph-student", "label": "Student"},
+        {"value": "ph ph-address-book", "label": "Contacts"},
+        {"value": "ph ph-handshake", "label": "Handshake"},
+        {"value": "ph ph-user-focus", "label": "User Focus"},
+        {"value": "ph ph-user-gear", "label": "User Settings"},
+    ],
+    "Communication": [
+        {"value": "ph ph-envelope", "label": "Email"},
+        {"value": "ph ph-envelope-open", "label": "Email Open"},
+        {"value": "ph ph-chat", "label": "Chat"},
+        {"value": "ph ph-chats", "label": "Chats"},
+        {"value": "ph ph-chat-circle", "label": "Chat Circle"},
+        {"value": "ph ph-phone", "label": "Phone"},
+        {"value": "ph ph-phone-call", "label": "Phone Call"},
+        {"value": "ph ph-megaphone", "label": "Megaphone"},
+        {"value": "ph ph-bell", "label": "Notifications"},
+        {"value": "ph ph-bell-ringing", "label": "Bell Ringing"},
+        {"value": "ph ph-paper-plane", "label": "Send"},
+        {"value": "ph ph-paper-plane-tilt", "label": "Send Tilt"},
+        {"value": "ph ph-speakerphone", "label": "Announcement"},
+        {"value": "ph ph-broadcast", "label": "Broadcast"},
+    ],
+    "Finance": [
+        {"value": "ph ph-currency-dollar", "label": "Dollar"},
+        {"value": "ph ph-currency-euro", "label": "Euro"},
+        {"value": "ph ph-currency-gbp", "label": "Pound"},
+        {"value": "ph ph-money", "label": "Money"},
+        {"value": "ph ph-coins", "label": "Coins"},
+        {"value": "ph ph-credit-card", "label": "Credit Card"},
+        {"value": "ph ph-bank", "label": "Bank"},
+        {"value": "ph ph-receipt", "label": "Receipt"},
+        {"value": "ph ph-invoice", "label": "Invoice"},
+        {"value": "ph ph-wallet", "label": "Wallet"},
+        {"value": "ph ph-piggy-bank", "label": "Savings"},
+        {"value": "ph ph-hand-coins", "label": "Payment"},
+        {"value": "ph ph-coin", "label": "Coin"},
+    ],
+    "Business": [
+        {"value": "ph ph-building", "label": "Building"},
+        {"value": "ph ph-building-office", "label": "Office"},
+        {"value": "ph ph-storefront", "label": "Store"},
+        {"value": "ph ph-briefcase", "label": "Briefcase"},
+        {"value": "ph ph-suitcase", "label": "Suitcase"},
+        {"value": "ph ph-clipboard", "label": "Clipboard"},
+        {"value": "ph ph-clipboard-text", "label": "Clipboard Text"},
+        {"value": "ph ph-note", "label": "Note"},
+        {"value": "ph ph-notepad", "label": "Notepad"},
+        {"value": "ph ph-files", "label": "Files"},
+        {"value": "ph ph-folder", "label": "Folder"},
+        {"value": "ph ph-folder-open", "label": "Folder Open"},
+    ],
+    "Settings & Tools": [
+        {"value": "ph ph-gear", "label": "Settings"},
+        {"value": "ph ph-gear-six", "label": "Settings Alt"},
+        {"value": "ph ph-wrench", "label": "Wrench"},
+        {"value": "ph ph-sliders", "label": "Sliders"},
+        {"value": "ph ph-faders", "label": "Faders"},
+        {"value": "ph ph-toggles", "label": "Toggles"},
+        {"value": "ph ph-toolbox", "label": "Toolbox"},
+        {"value": "ph ph-hammer", "label": "Hammer"},
+        {"value": "ph ph-screwdriver", "label": "Screwdriver"},
+        {"value": "ph ph-nut", "label": "Nut"},
+    ],
+    "Media & Content": [
+        {"value": "ph ph-image", "label": "Image"},
+        {"value": "ph ph-images", "label": "Images"},
+        {"value": "ph ph-video", "label": "Video"},
+        {"value": "ph ph-video-camera", "label": "Camera"},
+        {"value": "ph ph-camera", "label": "Photo"},
+        {"value": "ph ph-film-strip", "label": "Film"},
+        {"value": "ph ph-microphone", "label": "Microphone"},
+        {"value": "ph ph-music-notes", "label": "Music"},
+        {"value": "ph ph-play", "label": "Play"},
+        {"value": "ph ph-pause", "label": "Pause"},
+        {"value": "ph ph-file", "label": "File"},
+        {"value": "ph ph-file-text", "label": "Document"},
+        {"value": "ph ph-article", "label": "Article"},
+        {"value": "ph ph-newspaper", "label": "News"},
+    ],
+    "Actions": [
+        {"value": "ph ph-plus", "label": "Add"},
+        {"value": "ph ph-plus-circle", "label": "Add Circle"},
+        {"value": "ph ph-minus", "label": "Subtract"},
+        {"value": "ph ph-x", "label": "Close"},
+        {"value": "ph ph-x-circle", "label": "Close Circle"},
+        {"value": "ph ph-check", "label": "Check"},
+        {"value": "ph ph-check-circle", "label": "Check Circle"},
+        {"value": "ph ph-pencil", "label": "Edit"},
+        {"value": "ph ph-pencil-simple", "label": "Edit Simple"},
+        {"value": "ph ph-trash", "label": "Delete"},
+        {"value": "ph ph-download", "label": "Download"},
+        {"value": "ph ph-upload", "label": "Upload"},
+        {"value": "ph ph-copy", "label": "Copy"},
+        {"value": "ph ph-share", "label": "Share"},
+        {"value": "ph ph-export", "label": "Export"},
+        {"value": "ph ph-magnifying-glass", "label": "Search"},
+        {"value": "ph ph-funnel", "label": "Filter"},
+        {"value": "ph ph-arrows-clockwise", "label": "Refresh"},
+        {"value": "ph ph-arrow-clockwise", "label": "Reload"},
+    ],
+    "Status & Symbols": [
+        {"value": "ph ph-info", "label": "Info"},
+        {"value": "ph ph-question", "label": "Help"},
+        {"value": "ph ph-warning", "label": "Warning"},
+        {"value": "ph ph-warning-circle", "label": "Warning Circle"},
+        {"value": "ph ph-shield", "label": "Shield"},
+        {"value": "ph ph-shield-check", "label": "Shield Check"},
+        {"value": "ph ph-shield-warning", "label": "Shield Warning"},
+        {"value": "ph ph-lock", "label": "Lock"},
+        {"value": "ph ph-lock-open", "label": "Unlock"},
+        {"value": "ph ph-key", "label": "Key"},
+        {"value": "ph ph-star", "label": "Star"},
+        {"value": "ph ph-heart", "label": "Heart"},
+        {"value": "ph ph-thumbs-up", "label": "Like"},
+        {"value": "ph ph-thumbs-down", "label": "Dislike"},
+        {"value": "ph ph-flag", "label": "Flag"},
+        {"value": "ph ph-crown", "label": "Crown"},
+        {"value": "ph ph-fire", "label": "Fire"},
+        {"value": "ph ph-lightning", "label": "Lightning"},
+        {"value": "ph ph-sparkle", "label": "Sparkle"},
+    ],
+    "Technology": [
+        {"value": "ph ph-desktop", "label": "Desktop"},
+        {"value": "ph ph-laptop", "label": "Laptop"},
+        {"value": "ph ph-device-mobile", "label": "Mobile"},
+        {"value": "ph ph-devices", "label": "Devices"},
+        {"value": "ph ph-globe", "label": "Globe"},
+        {"value": "ph ph-globe-hemisphere-west", "label": "Globe West"},
+        {"value": "ph ph-link", "label": "Link"},
+        {"value": "ph ph-link-simple", "label": "Link Simple"},
+        {"value": "ph ph-wifi-high", "label": "WiFi"},
+        {"value": "ph ph-bluetooth", "label": "Bluetooth"},
+        {"value": "ph ph-database", "label": "Database"},
+        {"value": "ph ph-cloud", "label": "Cloud"},
+        {"value": "ph ph-hard-drive", "label": "Hard Drive"},
+        {"value": "ph ph-cpu", "label": "CPU"},
+        {"value": "ph ph-code", "label": "Code"},
+        {"value": "ph ph-terminal", "label": "Terminal"},
+        {"value": "ph ph-bug", "label": "Bug"},
+    ],
+    "Social Media": [
+        {"value": "ph ph-facebook-logo", "label": "Facebook"},
+        {"value": "ph ph-instagram-logo", "label": "Instagram"},
+        {"value": "ph ph-x-logo", "label": "X/Twitter"},
+        {"value": "ph ph-youtube-logo", "label": "YouTube"},
+        {"value": "ph ph-tiktok-logo", "label": "TikTok"},
+        {"value": "ph ph-linkedin-logo", "label": "LinkedIn"},
+        {"value": "ph ph-discord-logo", "label": "Discord"},
+        {"value": "ph ph-twitch-logo", "label": "Twitch"},
+        {"value": "ph ph-snapchat-logo", "label": "Snapchat"},
+        {"value": "ph ph-reddit-logo", "label": "Reddit"},
+        {"value": "ph ph-pinterest-logo", "label": "Pinterest"},
+        {"value": "ph ph-whatsapp-logo", "label": "WhatsApp"},
+    ],
+    "Education": [
+        {"value": "ph ph-book", "label": "Book"},
+        {"value": "ph ph-book-open", "label": "Book Open"},
+        {"value": "ph ph-books", "label": "Books"},
+        {"value": "ph ph-graduation-cap", "label": "Graduation"},
+        {"value": "ph ph-chalkboard", "label": "Chalkboard"},
+        {"value": "ph ph-pencil-line", "label": "Pencil"},
+        {"value": "ph ph-exam", "label": "Exam"},
+        {"value": "ph ph-certificate", "label": "Certificate"},
+        {"value": "ph ph-backpack", "label": "Backpack"},
+    ],
+    "Miscellaneous": [
+        {"value": "ph ph-gift", "label": "Gift"},
+        {"value": "ph ph-ticket", "label": "Ticket"},
+        {"value": "ph ph-ticket-star", "label": "Ticket Star"},
+        {"value": "ph ph-shopping-cart", "label": "Cart"},
+        {"value": "ph ph-shopping-bag", "label": "Shopping"},
+        {"value": "ph ph-tag", "label": "Tag"},
+        {"value": "ph ph-archive", "label": "Archive"},
+        {"value": "ph ph-package", "label": "Package"},
+        {"value": "ph ph-cube", "label": "Cube"},
+        {"value": "ph ph-lifebuoy", "label": "Support"},
+        {"value": "ph ph-pizza", "label": "Pizza"},
+        {"value": "ph ph-coffee", "label": "Coffee"},
+        {"value": "ph ph-hamburger", "label": "Food"},
+        {"value": "ph ph-anchor", "label": "Anchor"},
+        {"value": "ph ph-palette", "label": "Palette"},
+        {"value": "ph ph-paint-brush", "label": "Brush"},
+        {"value": "ph ph-scissors", "label": "Scissors"},
+        {"value": "ph ph-rocket", "label": "Rocket"},
+        {"value": "ph ph-airplane", "label": "Airplane"},
+        {"value": "ph ph-car", "label": "Car"},
+    ],
+}
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -1224,127 +1422,79 @@ def admin_dashboard():
         insights = None
     return render_template('admin.html', insights=insights)
 
-@admin_bp.route('/manage_stadiums', methods=['GET', 'POST'])
+@admin_bp.route('/manage_venues', methods=['GET', 'POST'])
 @admin_required
-def manage_stadiums():
+def manage_venues():
     db = get_db()
     cur = db.cursor()
 
     if request.method == 'POST':
-        action = (request.form.get('action') or 'publish').strip().lower()
-        version_label = (request.form.get('version_label') or '').strip() or None
-        author_id = getattr(current_user, 'id', None) if current_user.is_authenticated else None
-
-        if action == 'discard_preview':
-            discard_site_theme_preview()
-            session.pop('theme_preview_active', None)
-            flash('Preview discarded.', 'info')
-            payload_theme = copy.deepcopy(theme)
-        payload = {
-            'site_title': site_title,
-            'brand_image_url': brand_image_url,
-            'primary_color': primary_color,
-            'favicon_url': favicon_url,
-            'league_tagline': league_tagline,
-            'contact_email': contact_email,
-            'social_links': social_links,
-            'feature_flags': feature_flags,
-            'theme': payload_theme,
-            'nav_layout': settings.get('nav_layout'),
-            'navigation_links_raw': settings.get('navigation_links_raw'),
-        }
-
-        if action == 'save_preview':
-            try:
-                save_site_theme_preview(payload, author_id, version_label)
-                session['theme_preview_active'] = True
-                flash('Preview saved. Activate preview to review, then publish when ready.', 'success')
-            except Exception as exc:
-                flash('Failed to save preview: ' + str(exc), 'error')
-            return redirect(url_for('admin.site_settings'))
-
-        if action in {'publish', 'save'}:
-            try:
-                apply_site_payload(payload)
-            except Exception as exc:
-                flash('Failed to publish theme: ' + str(exc), 'error')
-                return redirect(url_for('admin.site_settings'))
-
-            publish_site_theme(payload, author_id, version_label)
-            session.pop('theme_preview_active', None)
-            flash('Site theme published live.', 'success')
-            return redirect(url_for('admin.site_settings'))
-
-        flash('Unknown action requested.', 'error')
-        return redirect(url_for('admin.site_settings'))
-
-        if action == 'activate_preview':
-            preview = theme_preview_record or get_site_theme_preview()
-            if preview:
-                session['theme_preview_active'] = True
-                flash('Preview mode enabled for this session.', 'success')
-            else:
-                flash('There is no saved preview to activate.', 'warning')
-            return redirect(url_for('admin.site_settings'))
-
-        if action == 'deactivate_preview':
-            session.pop('theme_preview_active', None)
-            flash('Preview mode disabled. Showing published theme.', 'info')
-            return redirect(url_for('admin.site_settings'))
-
-        if action == 'restore_version':
-            version_id_raw = request.form.get('version_id')
-            try:
-                version_id = int(version_id_raw) if version_id_raw else None
-            except (TypeError, ValueError):
-                version_id = None
-            if not version_id:
-                flash('Invalid version identifier.', 'error')
-                return redirect(url_for('admin.site_settings'))
-            version = get_site_theme_version(version_id)
-            if not version:
-                flash('Version not found.', 'error')
-                return redirect(url_for('admin.site_settings'))
-            payload = version.get('payload') or {}
-            try:
-                apply_site_payload(payload)
-                publish_site_theme(payload, author_id, version_label or (version.get('label') or f'Restore #{version_id}'))
-                session.pop('theme_preview_active', None)
-                flash('Theme restored from history and published live.', 'success')
-            except Exception as exc:
-                flash('Failed to restore theme: ' + str(exc), 'error')
-            return redirect(url_for('admin.site_settings'))
-
-        # For preview save/publish actions we continue to collect form data
         try:
-            stadium_id = request.form.get('stadium_id')
-            name = request.form['name']
-            location = request.form['location']
-            capacity = request.form['capacity']
+            venue_id = request.form.get('venue_id')
+            name = request.form.get('name', '').strip()
+            location = request.form.get('location', '').strip()
+            address = request.form.get('address', '').strip()
+            city = request.form.get('city', '').strip()
+            state = request.form.get('state', '').strip()
+            zip_code = request.form.get('zip_code', '').strip()
+            country = request.form.get('country', 'USA').strip()
+            capacity = request.form.get('capacity')
+            phone = request.form.get('phone', '').strip()
+            website = request.form.get('website', '').strip()
+            description = request.form.get('description', '').strip()
+            latitude = request.form.get('latitude', '').strip()
+            longitude = request.form.get('longitude', '').strip()
+            amenities = request.form.get('amenities', '').strip()
+
+            # Convert empty strings to None for numeric fields
+            capacity = int(capacity) if capacity else None
+            latitude = float(latitude) if latitude else None
+            longitude = float(longitude) if longitude else None
 
             if 'add' in request.form:
-                cur.execute('INSERT INTO stadiums (name, location, capacity) VALUES (%s, %s, %s)', 
-                            (name, location, capacity))
-                flash('Stadium added successfully', 'success')
-            elif 'edit' in request.form and stadium_id:
-                cur.execute('UPDATE stadiums SET name = %s, location = %s, capacity = %s WHERE stadium_id = %s', 
-                            (name, location, capacity, stadium_id))
-                flash('Stadium updated successfully', 'success')
-            elif 'delete' in request.form and stadium_id:
-                cur.execute('DELETE FROM stadiums WHERE stadium_id = %s', (stadium_id,))
-                flash('Stadium deleted successfully', 'success')
+                cur.execute('''
+                    INSERT INTO stadiums (name, location, address, city, state, zip_code, country,
+                                         capacity, phone, website, description, latitude, longitude, amenities)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ''', (name, location, address, city, state, zip_code, country, capacity,
+                      phone, website, description, latitude, longitude, amenities))
+                flash('Venue added successfully', 'success')
+            elif 'edit' in request.form and venue_id:
+                cur.execute('''
+                    UPDATE stadiums
+                    SET name = %s, location = %s, address = %s, city = %s, state = %s,
+                        zip_code = %s, country = %s, capacity = %s, phone = %s, website = %s,
+                        description = %s, latitude = %s, longitude = %s, amenities = %s
+                    WHERE stadium_id = %s
+                ''', (name, location, address, city, state, zip_code, country, capacity,
+                      phone, website, description, latitude, longitude, amenities, venue_id))
+                flash('Venue updated successfully', 'success')
+            elif 'delete' in request.form and venue_id:
+                cur.execute('DELETE FROM stadiums WHERE stadium_id = %s', (venue_id,))
+                flash('Venue deleted successfully', 'success')
             db.commit()
         except Exception as e:
             db.rollback()
             flash('An error occurred: ' + str(e), 'error')
         finally:
             cur.close()
-        return redirect(url_for('admin.manage_stadiums'))
+        return redirect(url_for('admin.manage_venues'))
 
-    cur.execute('SELECT stadium_id, name, location, capacity FROM stadiums')
-    stadiums = cur.fetchall()
+    cur.execute('''
+        SELECT stadium_id, name, location, address, city, state, zip_code, country,
+               capacity, phone, website, description, latitude, longitude, amenities
+        FROM stadiums ORDER BY name
+    ''')
+    venues = [list(row) for row in cur.fetchall()]
     cur.close()
-    return render_template('manage_stadiums.html', stadiums=stadiums)
+    return render_template('manage_venues.html', venues=venues)
+
+
+# Legacy route redirect
+@admin_bp.route('/manage_stadiums', methods=['GET', 'POST'])
+@admin_required
+def manage_stadiums():
+    return redirect(url_for('admin.manage_venues'))
 
 @admin_bp.route('/manage_leagues', methods=['GET', 'POST'])
 @admin_required
@@ -1907,8 +2057,8 @@ def manage_league_homepage():
 @admin_bp.route('/manage_navigation', methods=['GET', 'POST'])
 @admin_required
 def manage_navigation():
+    from sqlalchemy import text
     org = getattr(g, 'org', None)
-    db = get_db()
 
     # Handle ticker actions
     if request.method == 'POST':
@@ -1933,7 +2083,6 @@ def manage_navigation():
                     except:
                         start_time = datetime.now()
 
-                from sqlalchemy import text
                 db.session.execute(text("""
                     INSERT INTO ticker_items
                     (league_id, home_name, away_name, home_score, away_score, status, venue, link_url, start_time, sort_key)
@@ -1960,7 +2109,6 @@ def manage_navigation():
         elif action == 'delete_ticker_item':
             try:
                 item_id = request.form.get('ticker_item_id')
-                from sqlalchemy import text
                 db.session.execute(text("DELETE FROM ticker_items WHERE id = :id"), {'id': item_id})
                 db.session.commit()
                 flash('Ticker item deleted successfully', 'success')
@@ -1974,7 +2122,6 @@ def manage_navigation():
                 league_id = request.form.get('league_id')
                 enabled = request.form.get('enabled') == 'on'
 
-                from sqlalchemy import text
                 # Check if settings exist
                 result = db.session.execute(text("SELECT id FROM ticker_settings WHERE league_id = :league_id"), {'league_id': league_id})
                 existing = result.fetchone()
@@ -2000,7 +2147,6 @@ def manage_navigation():
 
         elif action == 'sync_recent_matches':
             try:
-                from sqlalchemy import text
                 days_back = int(request.form.get('days_back', 7))
                 selected_league_id = request.form.get('sync_league_id')
 
@@ -2009,35 +2155,33 @@ def manage_navigation():
                     query = text("""
                         SELECT m.match_id, m.league_id, t1.name as home_team, t2.name as away_team,
                                COALESCE(m.home_score, 0) as home_score, COALESCE(m.away_score, 0) as away_score,
-                               m.status, m.venue, m.utc_date, l.league_name
+                               m.status, m.venue, m.utc_date, l.name as league_name
                         FROM matches m
                         JOIN teams t1 ON m.home_team_id = t1.team_id
                         JOIN teams t2 ON m.away_team_id = t2.team_id
                         JOIN leagues l ON m.league_id = l.league_id
-                        WHERE l.org_id = :org_id
-                        AND m.league_id = :league_id
+                        WHERE m.league_id = :league_id
                         AND m.utc_date >= NOW() - INTERVAL ':days days'
                         AND m.status IN ('FINISHED', 'FINAL', 'LIVE')
                         ORDER BY m.utc_date DESC
                         LIMIT 20
                     """)
-                    result = db.session.execute(query, {'org_id': str(org.id), 'league_id': selected_league_id, 'days': days_back})
+                    result = db.session.execute(query, {'league_id': selected_league_id, 'days': days_back})
                 else:
                     query = text("""
                         SELECT m.match_id, m.league_id, t1.name as home_team, t2.name as away_team,
                                COALESCE(m.home_score, 0) as home_score, COALESCE(m.away_score, 0) as away_score,
-                               m.status, m.venue, m.utc_date, l.league_name
+                               m.status, m.venue, m.utc_date, l.name as league_name
                         FROM matches m
                         JOIN teams t1 ON m.home_team_id = t1.team_id
                         JOIN teams t2 ON m.away_team_id = t2.team_id
                         JOIN leagues l ON m.league_id = l.league_id
-                        WHERE l.org_id = :org_id
-                        AND m.utc_date >= NOW() - INTERVAL ':days days'
+                        WHERE m.utc_date >= NOW() - INTERVAL ':days days'
                         AND m.status IN ('FINISHED', 'FINAL', 'LIVE')
                         ORDER BY m.utc_date DESC
                         LIMIT 20
                     """)
-                    result = db.session.execute(query, {'org_id': str(org.id), 'days': days_back})
+                    result = db.session.execute(query, {'days': days_back})
 
                 matches = result.fetchall()
                 synced_count = 0
@@ -2146,8 +2290,8 @@ def manage_navigation():
                 theme['components'] = components
 
                 # Save theme back to database
-                db = get_db()
-                cur = db.cursor()
+                sql_db = get_db()
+                cur = sql_db.cursor()
                 theme_json = json.dumps(theme)
                 timestamp = datetime.now(timezone.utc)
                 cur.execute('SELECT id FROM site_settings ORDER BY id ASC LIMIT 1')
@@ -2157,7 +2301,7 @@ def manage_navigation():
                         "UPDATE site_settings SET theme_config_json = %s, updated_at = %s WHERE id = %s",
                         (theme_json, timestamp, row[0])
                     )
-                db.commit()
+                sql_db.commit()
                 cur.close()
                 invalidate_site_settings_cache()
 
@@ -2178,44 +2322,38 @@ def manage_navigation():
     ]
 
     # Load ticker data
-    from sqlalchemy import text
     leagues = []
     ticker_items = []
     ticker_settings = {}
 
-    if org:
-        # Get all leagues for this org
-        result = db.session.execute(text("""
-            SELECT league_id, league_name, sport
-            FROM leagues
-            WHERE org_id = :org_id
-            ORDER BY league_name
-        """), {'org_id': str(org.id)})
-        leagues = [{'league_id': str(row[0]), 'league_name': row[1], 'sport': row[2]} for row in result.fetchall()]
+    # Get all leagues (no org filter as leagues table doesn't have org_id)
+    result = db.session.execute(text("""
+        SELECT league_id, name, sport
+        FROM leagues
+        ORDER BY name
+    """))
+    leagues = [{'league_id': str(row[0]), 'league_name': row[1], 'sport': row[2]} for row in result.fetchall()]
 
-        # Get all ticker items
-        result = db.session.execute(text("""
-            SELECT ti.id, ti.league_id, ti.home_name, ti.away_name, ti.home_score, ti.away_score,
-                   ti.status, ti.venue, ti.link_url, ti.created_at, l.league_name
-            FROM ticker_items ti
-            LEFT JOIN leagues l ON ti.league_id = l.league_id
-            WHERE l.org_id = :org_id
-            ORDER BY ti.sort_key DESC
-            LIMIT 50
-        """), {'org_id': str(org.id)})
-        ticker_items = [{'id': row[0], 'league_id': str(row[1]), 'home_name': row[2], 'away_name': row[3],
-                        'home_score': row[4], 'away_score': row[5], 'status': row[6], 'venue': row[7],
-                        'link_url': row[8], 'created_at': row[9], 'league_name': row[10]}
-                       for row in result.fetchall()]
+    # Get all ticker items
+    result = db.session.execute(text("""
+        SELECT ti.id, ti.league_id, ti.home_name, ti.away_name, ti.home_score, ti.away_score,
+               ti.status, ti.venue, ti.link_url, ti.created_at, l.name
+        FROM ticker_items ti
+        LEFT JOIN leagues l ON ti.league_id::text = l.league_id::text
+        ORDER BY ti.sort_key DESC
+        LIMIT 50
+    """))
+    ticker_items = [{'id': row[0], 'league_id': str(row[1]), 'home_name': row[2], 'away_name': row[3],
+                    'home_score': row[4], 'away_score': row[5], 'status': row[6], 'venue': row[7],
+                    'link_url': row[8], 'created_at': row[9], 'league_name': row[10]}
+                   for row in result.fetchall()]
 
-        # Get ticker settings for each league
-        result = db.session.execute(text("""
-            SELECT ts.league_id, ts.enabled
-            FROM ticker_settings ts
-            JOIN leagues l ON ts.league_id = l.league_id
-            WHERE l.org_id = :org_id
-        """), {'org_id': str(org.id)})
-        ticker_settings = {str(row[0]): {'enabled': row[1]} for row in result.fetchall()}
+    # Get ticker settings for each league
+    result = db.session.execute(text("""
+        SELECT ts.league_id, ts.enabled
+        FROM ticker_settings ts
+    """))
+    ticker_settings = {str(row[0]): {'enabled': row[1]} for row in result.fetchall()}
 
     return render_template(
         'manage_navigation.html',
