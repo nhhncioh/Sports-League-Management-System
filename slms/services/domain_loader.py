@@ -109,7 +109,10 @@ def get_org_hero_config(org):
     }
 
     # Load from org settings if available
-    # This could be extended to load from a JSON field in the org model
+    if org and org.hero_config:
+        # Merge custom config with defaults to ensure all required fields exist
+        for key, value in org.hero_config.items():
+            default_hero[key] = value
 
     return default_hero
 
@@ -167,7 +170,9 @@ def get_org_modules(org):
     ]
 
     # Load custom modules from org settings
-    # This could be extended to load from a database table
+    if org and org.modules_config:
+        # If org has custom modules, use those instead of defaults
+        return org.modules_config.get('modules', default_modules)
 
     return default_modules
 

@@ -242,16 +242,29 @@
         color: {{ palette.danger or '#dc3545' }};
     }
     .sidebar-panel {
-        background: {{ nav_background }};
-        color: {{ palette.nav_text or '#ffffff' }};
+        {% if nav_style == 'glass' %}
+        background: rgba(15, 23, 42, 0.85) !important;
+        backdrop-filter: blur({{ components.navbar_blur or '12px' }}) !important;
+        -webkit-backdrop-filter: blur({{ components.navbar_blur or '12px' }}) !important;
+        {% elif nav_style == 'gradient' %}
+        background: linear-gradient(135deg, {{ gradient_start }} 0%, {{ gradient_end }} 100%) !important;
+        {% elif nav_style == 'minimal' %}
+        background: #ffffff !important;
+        border-right: 1px solid rgba(15, 23, 42, 0.08) !important;
+        {% else %}
+        background: {{ nav_background }} !important;
+        {% endif %}
+        color: {% if nav_style == 'minimal' %}#0f172a{% else %}{{ palette.nav_text or '#ffffff' }}{% endif %} !important;
+        width: 200px;
+        padding: 1rem;
     }
     .sidebar-panel .sidebar-link {
-        color: rgba(255, 255, 255, 0.88);
+        color: {% if nav_style == 'minimal' %}rgba(15, 23, 42, 0.88){% else %}rgba(255, 255, 255, 0.88){% endif %};
     }
     .sidebar-panel .sidebar-link:hover,
     .sidebar-panel .sidebar-link:focus {
-        color: #fff;
-        background: rgba(255, 255, 255, 0.12);
+        color: {% if nav_style == 'minimal' %}#0f172a{% else %}#fff{% endif %};
+        background: {% if nav_style == 'minimal' %}rgba(15, 23, 42, 0.05){% else %}rgba(255, 255, 255, 0.12){% endif %};
     }
     .density-compact .container,
     .density-compact .main-content,
@@ -302,7 +315,7 @@
 {% set has_role_fn = current_user.has_role if is_authenticated and current_user.has_role is not none else None %}
 {% set user_is_admin = has_role_fn('ADMIN', 'OWNER') if has_role_fn is not none else False %}
 {% macro themed_icon(name, extra_classes='') -%}
-    <i class="{{ site_icon_class }} {{ name }} {{ extra_classes }}"></i>
+    <i class="{{ site_icon_class }} {{ name }} {{ extra_classes }}" aria-hidden="true"></i>
 {%- endmacro %}
 {% macro render_nav_items(items, item_class='nav-item', link_class='nav-link', icon_gap='me-1') -%}
     {%- for item in items %}
@@ -311,10 +324,18 @@
               or (audience == 'auth' and is_authenticated)
               or (audience == 'guest' and not is_authenticated)
               or (audience == 'admin' and user_is_admin) %}
+            {%- set is_disabled = item.broken or item.disabled %}
+            {%- set is_active = item.current or item.active %}
+            {%- set aria_label = item.aria_label %}
             <li class="{{ item_class }}">
-                <a class="{{ link_class }}{% if item.broken %} disabled{% endif %}" href="{{ item.href if not item.broken else '#' }}" {% if item.open_in_new %}target="_blank" rel="noopener"{% endif %}>
+                <a class="{{ link_class }}{% if is_disabled %} disabled{% endif %}"
+                   href="{{ item.href if not is_disabled else '#' }}"
+                   {% if item.open_in_new %}target="_blank" rel="noopener noreferrer"{% endif %}
+                   {% if is_active %}aria-current="page"{% endif %}
+                   {% if is_disabled %}aria-disabled="true" tabindex="-1"{% endif %}
+                   {% if aria_label %}aria-label="{{ aria_label }}"{% endif %}>
                     {% if item.icon %}{% set icon_name = item.icon.split(' ')|last %}{{ themed_icon(icon_name, icon_gap ~ ' theme-icon') }}{% endif %}
-                    {{ item.label }}
+                    <span class="nav-label">{{ item.label }}</span>
                     {% if item.broken %}<span class="visually-hidden">(link unavailable)</span>{% endif %}
                 </a>
             </li>
@@ -324,7 +345,7 @@
 {% macro render_flash_messages() -%}
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-            <div class="flash-stack mb-4">
+            <div class="flash-stack mb-4" role="status" aria-live="polite" aria-atomic="true">
                 {% for category, message in messages %}
                     <div class="alert alert-modern alert-{{ 'danger' if category == 'error' else category }} d-flex align-items-center" role="alert">
                         <div class="flex-grow-1">{{ message }}</div>
@@ -445,6 +466,7 @@
 {% endmacro %}
 
 <body class="app-shell d-flex flex-column min-vh-100 bg-surface text-body{% if nav_layout == 'sidebar' %} layout-sidebar{% endif %}{% if components.use_gradients %} theme-gradients{% endif %} nav-style-{{ nav_style }} button-style-{{ button_style }} density-{{ components.layout_density or 'comfortable' }}{% if components.section_dividers %} has-section-dividers{% endif %}{% if feature_flags.enable_dark_mode %} has-dark-toggle{% endif %}">
+    <a class="skip-link visually-hidden-focusable" href="#main-content">Skip to main content</a>
     {% if nav_layout == 'sidebar' %}
     <div class="sidebar-wrapper d-flex flex-column flex-lg-row flex-grow-1">
         <aside class="sidebar-panel d-none d-lg-flex flex-column">
@@ -458,7 +480,7 @@
                     <span class="fw-semibold">{{ g.org.name if g.org else site_title }}</span>
                 </a>
             </div>
-            <nav class="sidebar-menu flex-grow-1">
+            <nav class="sidebar-menu flex-grow-1" role="navigation" aria-label="Primary navigation">
                 <ul class="nav flex-column gap-1">
                     {{ render_nav_items(nav_links, item_class='nav-item', link_class='nav-link sidebar-link', icon_gap='me-3') }}
                 </ul>
@@ -477,7 +499,7 @@
         </aside>
         <div class="sidebar-main flex-grow-1 d-flex flex-column">
             {% set nav_skin_mobile = 'navbar-dark' if nav_style != 'minimal' else 'navbar-light' %}
-            <nav class="navbar navbar-expand-lg app-navbar d-lg-none {{ nav_skin_mobile }}">
+            <nav class="navbar navbar-expand-lg app-navbar d-lg-none {{ nav_skin_mobile }}" role="navigation" aria-label="Primary navigation">
                 <div class="container">
                     <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('public.landing') }}">
                         {% if g.org and g.org.logo_url %}
@@ -487,7 +509,7 @@
                         {% endif %}
                         <span class="fw-semibold">{{ g.org.name if g.org else site_title }}</span>
                     </a>
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mobileSidebarNav">
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mobileSidebarNav" aria-controls="mobileSidebarNav" aria-expanded="false" aria-label="Toggle navigation">
                         <span class="navbar-toggler-icon"></span>
                     </button>
                     <div class="collapse navbar-collapse" id="mobileSidebarNav">
@@ -508,22 +530,20 @@
                     </div>
                 </div>
             </nav>
-            <div class="main-content flex-grow-1">
+            <main id="main-content" class="main-content flex-grow-1" role="main" tabindex="-1">
                 <div class="container py-5">
                     {{ render_flash_messages() }}
                     {{ body_content|safe }}
                 </div>
-            </div>
-            <footer class="footer-modern mt-auto">
-                <div class="container">
-                    {{ render_global_footer(site_footer, site_cta_slots, feature_flags, (site_social_links or {}), theme.get('social_labels', {}), g.org.name if g.org else site_title, theme.get('hero_tagline') or theme.get('brand_message') or '') }}
-                </div>
+            </main>
+            <footer class="footer-modern mt-auto" role="contentinfo">
+                {{ render_global_footer(site_footer, site_cta_slots, feature_flags, (site_social_links or {}), theme.get('social_labels', {}), g.org.name if g.org else site_title, theme.get('hero_tagline') or theme.get('brand_message') or '') }}
             </footer>
         </div>
     </div>
     {% else %}
     {% set nav_skin_main = 'navbar-dark' if nav_style != 'minimal' else 'navbar-light' %}
-    <nav class="navbar navbar-expand-lg app-navbar {{ nav_skin_main }}">
+    <nav class="navbar navbar-expand-lg app-navbar {{ nav_skin_main }}" role="navigation" aria-label="Primary navigation">
         <div class="container">
             <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('public.landing') }}">
                 {% if g.org and g.org.logo_url %}
@@ -533,7 +553,7 @@
                 {% endif %}
                 <span class="fw-semibold">{{ g.org.name if g.org else site_title }}</span>
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
@@ -570,16 +590,14 @@
             </div>
         </div>
     </nav>
-    <div class="main-content flex-grow-1">
+    <main id="main-content" class="main-content flex-grow-1" role="main" tabindex="-1">
         <div class="container py-5">
             {{ render_flash_messages() }}
             {{ body_content|safe }}
         </div>
-    </div>
-    <footer class="footer-modern mt-auto">
-        <div class="container">
-            {{ render_global_footer(site_footer, site_cta_slots, feature_flags, (site_social_links or {}), theme.get('social_labels', {}), g.org.name if g.org else site_title, theme.get('hero_tagline') or theme.get('brand_message') or '') }}
-        </div>
+    </main>
+    <footer class="footer-modern mt-auto" role="contentinfo">
+        {{ render_global_footer(site_footer, site_cta_slots, feature_flags, (site_social_links or {}), theme.get('social_labels', {}), g.org.name if g.org else site_title, theme.get('hero_tagline') or theme.get('brand_message') or '') }}
     </footer>
     {% endif %}
 

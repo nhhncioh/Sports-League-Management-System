@@ -187,6 +187,8 @@ class Organization(TimestampedBase):
     favicon_url: Mapped[str | None] = mapped_column(String(512))
     banner_image_url: Mapped[str | None] = mapped_column(String(512))
     custom_css: Mapped[str | None] = mapped_column(Text)
+    hero_config: Mapped[dict | None] = mapped_column(JSONType)
+    modules_config: Mapped[dict | None] = mapped_column(JSONType)
 
     # Settings
     timezone: Mapped[str] = mapped_column(String(64), nullable=False, default='UTC')
@@ -415,7 +417,7 @@ class Season(TimestampedBase):
 
     # Lifecycle status
     status: Mapped[SeasonStatus] = mapped_column(
-        SqlEnum(SeasonStatus, name="season_status", native_enum=False),
+        SqlEnum(SeasonStatus, name="season_status", native_enum=False, values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=SeasonStatus.DRAFT,
     )

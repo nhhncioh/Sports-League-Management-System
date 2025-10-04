@@ -1,23 +1,37 @@
 {% extends "base.html" %}
-{% block title %}Navigation Builder{% endblock %}
+{% block title %}Navigation & Footer Builder{% endblock %}
 {% block content %}
 <div class="container py-4">
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
-            <h1 class="h3 mb-0">Navigation Builder</h1>
-            <p class="text-muted mb-0">Control the links that appear in the main navigation bar.</p>
+            <h1 class="h3 mb-0">Navigation & Footer Builder</h1>
+            <p class="text-muted mb-0">Control the links and layout for navigation and footer sections.</p>
         </div>
         <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-outline-secondary"><i class="ph ph-arrow-left"></i> Back to Admin</a>
     </div>
 
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-4" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="navigation-tab" data-bs-toggle="tab" data-bs-target="#navigation-content" type="button" role="tab">
+                <i class="ph ph-navigation-arrow me-2"></i>Navigation
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="footer-tab" data-bs-toggle="tab" data-bs-target="#footer-content" type="button" role="tab">
+                <i class="ph ph-rows me-2"></i>Footer
+            </button>
+        </li>
+    </ul>
 
-
-
-<form method="POST" action="{{ url_for('admin.manage_navigation') }}">
+    <div class="tab-content">
+        <!-- Navigation Tab -->
+        <div class="tab-pane fade show active" id="navigation-content" role="tabpanel">
+            <form method="POST" action="{{ url_for('admin.manage_navigation') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="card mb-4 shadow-sm border-0">
             <div class="card-body">
-                <div class="row g-3 align-items-center">
+                <div class="row g-3 align-items-end">
                     <div class="col-md-4">
                         <label for="nav_layout" class="form-label">Navigation Layout</label>
                         <select id="nav_layout" name="nav_layout" class="form-select">
@@ -28,12 +42,21 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-8">
-                        <div class="alert alert-light border d-flex align-items-start gap-3 mb-0">
-                            <i class="ph ph-lightbulb text-warning fs-4"></i>
-                            <div>
-                                <strong>Tip:</strong> choose <em>Sidebar Navigation</em> for busy dashboards. Links can target either full URLs (e.g. <code>/portal</code>) or Flask endpoints (e.g. <code>portal.index</code>).
-                            </div>
+                    <div class="col-md-4">
+                        <label for="nav_style" class="form-label">Navigation Style</label>
+                        <select id="nav_style" name="nav_style" class="form-select">
+                            {% for style in nav_styles %}
+                                <option value="{{ style }}" {% if style == nav_style %}selected{% endif %}>
+                                    {{ style.title() }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Glass, Gradient, Minimal, or Solid</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="alert alert-light border d-flex align-items-start gap-2 mb-0">
+                            <i class="ph ph-lightbulb text-warning"></i>
+                            <small><strong>Tip:</strong> Style applies to both layouts.</small>
                         </div>
                     </div>
                 </div>
@@ -108,7 +131,128 @@
             <button type="submit" class="btn btn-primary px-4">Save Navigation</button>
         </div>
     </form>
+        </div>
+
+        <!-- Footer Tab -->
+        <div class="tab-pane fade" id="footer-content" role="tabpanel">
+            <form method="POST" action="{{ url_for('admin.manage_footer') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white">
+                        <h2 class="h6 mb-1">Footer Configuration</h2>
+                        <p class="text-muted small mb-0">Design your site footer layout and content.</p>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="ph ph-info me-2"></i>
+                            Footer settings are managed through this interface. Changes will apply site-wide.
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <label for="footer_tagline" class="form-label">Footer Tagline</label>
+                                <input type="text" class="form-control" id="footer_tagline" name="footer_tagline" placeholder="Powered by your league">
+                                <div class="form-text">Appears in the footer area.</div>
+                            </div>
+                            <div class="col-md-12">
+                                <label for="footer_legal" class="form-label">Legal / Copyright Text</label>
+                                <textarea class="form-control" id="footer_legal" name="footer_legal" rows="2" placeholder="© {year} Your Organization. All rights reserved."></textarea>
+                                <div class="form-text">Use <code>{year}</code> for automatic year injection.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white">
+                        <h2 class="h6 mb-0">Footer Columns</h2>
+                        <p class="text-muted small mb-0">Add link columns to your footer (e.g., About, Resources, Contact).</p>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-light border">
+                            <i class="ph ph-lightbulb text-warning me-2"></i>
+                            Footer columns will be displayed in a responsive grid layout.
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="alert('Footer column management coming soon!')">
+                            <i class="ph ph-plus me-2"></i>Add Footer Column
+                        </button>
+                    </div>
+                </div>
+
+                <div class="text-end">
+                    <button type="submit" class="btn btn-primary px-4">Save Footer Settings</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.icon-picker-popover {
+    position: absolute;
+    z-index: 9999;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    width: 400px;
+    max-height: 500px;
+    display: none;
+}
+
+.icon-picker-header {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #dee2e6;
+    font-weight: 600;
+    background: #f8f9fa;
+    border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.icon-picker-body {
+    padding: 0.5rem;
+    max-height: 450px;
+    overflow-y: auto;
+}
+
+.icon-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+}
+
+.icon-picker-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.75rem 0.5rem;
+    border: 1px solid #dee2e6;
+    background: white;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.icon-picker-option:hover {
+    background: #f8f9fa;
+    border-color: #0d6efd;
+    transform: translateY(-2px);
+}
+
+.icon-picker-option i {
+    font-size: 1.5rem;
+    color: #495057;
+}
+
+.icon-picker-option span {
+    font-size: 0.7rem;
+    color: #6c757d;
+    text-align: center;
+    line-height: 1.2;
+}
+</style>
 {% endblock %}
 
 {% block extra_js %}

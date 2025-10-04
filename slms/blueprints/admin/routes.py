@@ -479,7 +479,7 @@ def _handle_add_in_person_payment(db):
                 request.form.get('card_last_four', '').strip() or None,
                 request.form.get('receipt_number', '').strip() or None,
                 request.form.get('notes', '').strip() or None,
-                1  # TODO: Replace with current_user.id when auth is implemented
+                current_user.id
             ))
 
             payment_id = cur.fetchone()[0]
@@ -493,7 +493,7 @@ def _handle_add_in_person_payment(db):
             """, (
                 league_id, 'in_person', amount_cents, payment_date,
                 f'{description} - {payer_name}', payment_id, 'in_person_payment',
-                payment_method, 'confirmed', 1
+                payment_method, 'confirmed', current_user.id
             ))
 
             db.commit()
@@ -1677,8 +1677,15 @@ def manage_navigation():
     current_links = nav_config.get('links', [])
     current_layout = nav_config.get('layout', 'top')
 
+    # Load current nav_style from theme settings
+    settings = _load_site_settings()
+    theme = settings.get('theme', {})
+    components = theme.get('components', {})
+    current_nav_style = components.get('nav_style', 'glass')
+
     if request.method == 'POST':
         submitted_layout = (request.form.get('nav_layout') or 'top').strip().lower()
+        submitted_nav_style = (request.form.get('nav_style') or 'glass').strip().lower()
         labels = request.form.getlist('nav_label[]')
         types = request.form.getlist('nav_type[]')
         values = request.form.getlist('nav_value[]')
@@ -1713,6 +1720,28 @@ def manage_navigation():
 
         try:
             _persist_navigation_settings(submitted_layout, nav_items)
+
+            # Also persist nav_style to theme settings
+            if submitted_nav_style in ['glass', 'gradient', 'minimal', 'solid']:
+                components['nav_style'] = submitted_nav_style
+                theme['components'] = components
+
+                # Save theme back to database
+                db = get_db()
+                cur = db.cursor()
+                theme_json = json.dumps(theme)
+                timestamp = datetime.now(timezone.utc)
+                cur.execute('SELECT id FROM site_settings ORDER BY id ASC LIMIT 1')
+                row = cur.fetchone()
+                if row:
+                    cur.execute(
+                        "UPDATE site_settings SET theme_config_json = %s, updated_at = %s WHERE id = %s",
+                        (theme_json, timestamp, row[0])
+                    )
+                db.commit()
+                cur.close()
+                invalidate_site_settings_cache()
+
             flash('Navigation settings updated.', 'success')
         except Exception as exc:
             flash('Failed to update navigation: ' + str(exc), 'error')
@@ -1733,6 +1762,8 @@ def manage_navigation():
         'manage_navigation.html',
         nav_links=links_for_form,
         nav_layout=current_layout,
+        nav_style=current_nav_style,
+        nav_styles=['glass', 'gradient', 'minimal', 'solid'],
         layout_choices=NAV_LAYOUT_CHOICES,
         audience_choices=NAV_AUDIENCE_CHOICES,
         icon_choices=ICON_PICKER_CHOICES,
@@ -1740,7 +1771,9 @@ def manage_navigation():
 
 
 @admin_bp.route('/manage_footer', methods=['GET', 'POST'])
+@login_required
 @admin_required
+@tenant_required
 def manage_footer():
     settings = _load_site_settings()
     theme_payload = copy.deepcopy(settings.get('theme', DEFAULT_THEME_CONFIG))
@@ -5910,9 +5943,13 @@ def save_branding():
         if 'custom_domain' in data and data['custom_domain']:
             org.custom_domain = data['custom_domain'].lower().strip()
 
-        # Save hero and modules to site settings
-        # For now, we'll store in a JSON field or separate table
-        # This is a placeholder - implement proper storage based on your schema
+        # Save hero configuration
+        if 'hero' in data:
+            org.hero_config = data['hero']
+
+        # Save modules configuration
+        if 'modules' in data:
+            org.modules_config = data['modules']
 
         db.session.commit()
 

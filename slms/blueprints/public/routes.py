@@ -3,7 +3,7 @@ from flask_login import current_user
 
 from slms.security import roles_required
 from slms.services.db import get_db
-from slms.models import MediaAsset, UserRole
+from slms.models import MediaAsset, UserRole, User
 import json
 from slms.extensions import bcrypt
 
@@ -764,46 +764,33 @@ def add_user():
 @public_bp.route('/profile', methods=['GET', 'POST'])
 @public_required
 def profile():
-    db = get_db()
-    cur = db.cursor()
-    user_id = session['user_id']
+    from slms.extensions import db as sqlalchemy_db
+
+    user = current_user
 
     if request.method == 'POST':
-        username = request.form['username']
-        email = request.form['email']
-        password = request.form['password']
-
-        # Check if the username already exists
-        cur.execute(
-            'SELECT * FROM users WHERE username = %s AND user_id != %s',
-            (username, user_id))
-        existing_user = cur.fetchone()
-        if existing_user:
-            flash('Username already taken', 'error')
-            return redirect(url_for('public.profile'))
+        email = request.form.get('email')
+        password = request.form.get('password')
 
         # Check if the email already exists
-        cur.execute('SELECT * FROM users WHERE email = %s AND user_id != %s',
-                    (email, user_id))
-        existing_email = cur.fetchone()
-        if existing_email:
-            flash('Email already registered', 'error')
-            return redirect(url_for('public.profile'))
+        if email and email != user.email:
+            existing_email = User.query.filter(
+                User.email == email,
+                User.id != user.id,
+                User.org_id == user.org_id
+            ).first()
+            if existing_email:
+                flash('Email already registered', 'error')
+                return redirect(url_for('public.profile'))
+            user.email = email
 
-        # Hash the password if it is updated
-        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        # Update password if provided
+        if password:
+            user.set_password(password)
 
-        cur.execute(
-            'UPDATE users SET username = %s, email = %s, password = %s WHERE user_id = %s',
-            (username, email, hashed_password, user_id))
-        db.commit()
+        sqlalchemy_db.session.commit()
         flash('Profile updated successfully', 'success')
         return redirect(url_for('public.profile'))
-
-    cur.execute('SELECT username, email FROM users WHERE user_id = %s',
-                (user_id, ))
-    user = cur.fetchone()
-    cur.close()
 
     return render_template('profile.html', user=user)
 

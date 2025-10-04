@@ -1,71 +1,75 @@
-{% extends "layout.html" %}
+{% extends "base.html" %}
 
 {% block title %}League Management{% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h2>League & Season Management</h2>
-            <p class="text-muted">Create and manage your leagues and seasons</p>
-        </div>
-        <div class="col-md-4 text-end">
-            <button class="btn btn-primary" onclick="showCreateLeagueModal()">
-                <i class="bi bi-plus-lg"></i> Create League
-            </button>
-        </div>
+<div class="page-header mb-4" aria-labelledby="leagueManagementHeading">
+    <div>
+        <h1 class="page-title h2 mb-1" id="leagueManagementHeading">League &amp; Season Management</h1>
+        <p class="page-subtitle text-muted mb-0">Create and manage your leagues and seasons</p>
     </div>
+    <div class="page-actions">
+        <button class="btn btn-primary d-inline-flex align-items-center gap-2" type="button" onclick="showCreateLeagueModal()" aria-haspopup="dialog" aria-controls="createLeagueModal">
+            <i class="ph ph-plus" aria-hidden="true"></i>
+            <span>Create League</span>
+        </button>
+    </div>
+</div>
 
-    <!-- Filter Controls -->
-    <div class="card mb-4">
+<div class="d-grid gap-4">
+    <section class="card mb-0" role="region" aria-labelledby="leagueFiltersHeading">
         <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label">League Status</label>
-                    <select class="form-select" id="leagueStatusFilter" onchange="loadLeagues()">
-                        <option value="">All Active</option>
-                        <option value="draft">Draft</option>
-                        <option value="active">Active</option>
-                        <option value="archived">Archived</option>
-                    </select>
+            <div class="d-flex flex-column gap-3">
+                <div>
+                    <h2 id="leagueFiltersHeading" class="h5 mb-1">Filters</h2>
+                    <p class="text-muted small mb-0">Narrow results by lifecycle status or include archived leagues.</p>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label">Include Archived</label>
-                    <div class="form-check form-switch mt-2">
-                        <input class="form-check-input" type="checkbox" id="includeArchivedFilter" onchange="loadLeagues()">
-                        <label class="form-check-label" for="includeArchivedFilter">Show archived</label>
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4 col-lg-3">
+                        <label class="form-label" for="leagueStatusFilter">League status</label>
+                        <select class="form-select" id="leagueStatusFilter" onchange="loadLeagues()" aria-controls="leaguesContainer">
+                            <option value="">All Active</option>
+                            <option value="draft">Draft</option>
+                            <option value="active">Active</option>
+                            <option value="archived">Archived</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 col-lg-3">
+                        <div class="form-check form-switch mt-2 pt-1">
+                            <input class="form-check-input" type="checkbox" id="includeArchivedFilter" onchange="loadLeagues()" aria-controls="leaguesContainer">
+                            <label class="form-check-label" for="includeArchivedFilter">Show archived</label>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+    </section>
 
-    <!-- Leagues List -->
-    <div id="leaguesContainer">
+    <section id="leaguesContainer" class="d-grid gap-3" role="region" aria-live="polite" aria-busy="true" aria-labelledby="leagueManagementHeading">
         <div class="text-center py-5">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
+            <div class="spinner-border text-primary" role="status" aria-live="assertive">
+                <span class="visually-hidden">Loading leagues...</span>
             </div>
         </div>
-    </div>
+    </section>
 </div>
 
 <!-- Create League Modal -->
-<div class="modal fade" id="createLeagueModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+<div class="modal fade" id="createLeagueModal" tabindex="-1" aria-labelledby="createLeagueModalLabel" aria-modal="true" role="dialog">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Create New League</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h2 class="modal-title h5 mb-0" id="createLeagueModalLabel">Create New League</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form id="createLeagueForm">
                     <div class="mb-3">
-                        <label class="form-label">League Name *</label>
+                        <label class="form-label" for="leagueName">League Name *</label>
                         <input type="text" class="form-control" id="leagueName" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Sport *</label>
+                        <label class="form-label" for="leagueSport">Sport *</label>
                         <select class="form-select" id="leagueSport" required>
                             <option value="">Select sport...</option>
                             <option value="basketball">Basketball</option>
@@ -76,11 +80,11 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Description</label>
+                        <label class="form-label" for="leagueDescription">Description</label>
                         <textarea class="form-control" id="leagueDescription" rows="3"></textarea>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Timezone</label>
+                        <label class="form-label" for="leagueTimezone">Timezone</label>
                         <select class="form-select" id="leagueTimezone">
                             <option value="UTC">UTC</option>
                             <option value="America/New_York">Eastern Time</option>
@@ -102,22 +106,22 @@
 </div>
 
 <!-- Edit League Modal -->
-<div class="modal fade" id="editLeagueModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+<div class="modal fade" id="editLeagueModal" tabindex="-1" aria-labelledby="editLeagueModalLabel" aria-modal="true" role="dialog">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Edit League</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h2 class="modal-title h5 mb-0" id="editLeagueModalLabel">Edit League</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form id="editLeagueForm">
                     <input type="hidden" id="editLeagueId">
                     <div class="mb-3">
-                        <label class="form-label">League Name *</label>
+                        <label class="form-label" for="editLeagueName">League Name *</label>
                         <input type="text" class="form-control" id="editLeagueName" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Sport *</label>
+                        <label class="form-label" for="editLeagueSport">Sport *</label>
                         <select class="form-select" id="editLeagueSport" required>
                             <option value="basketball">Basketball</option>
                             <option value="soccer">Soccer</option>
@@ -127,11 +131,11 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Description</label>
+                        <label class="form-label" for="editLeagueDescription">Description</label>
                         <textarea class="form-control" id="editLeagueDescription" rows="3"></textarea>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Timezone</label>
+                        <label class="form-label" for="editLeagueTimezone">Timezone</label>
                         <select class="form-select" id="editLeagueTimezone">
                             <option value="UTC">UTC</option>
                             <option value="America/New_York">Eastern Time</option>
@@ -153,52 +157,52 @@
 </div>
 
 <!-- Create Season Modal -->
-<div class="modal fade" id="createSeasonModal" tabindex="-1">
-    <div class="modal-dialog modal-xl">
+<div class="modal fade" id="createSeasonModal" tabindex="-1" aria-labelledby="createSeasonModalLabel" aria-modal="true" role="dialog">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Create New Season</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h2 class="modal-title h5 mb-0" id="createSeasonModalLabel">Create New Season</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form id="createSeasonForm">
                     <input type="hidden" id="seasonLeagueId">
 
                     <!-- Basic Info Tab -->
-                    <ul class="nav nav-tabs mb-3" role="tablist">
-                        <li class="nav-item">
-                            <a class="nav-link active" data-bs-toggle="tab" href="#basicTab">Basic Info</a>
+                    <ul class="nav nav-tabs mb-3" id="seasonTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="season-tab-basic" data-bs-toggle="tab" data-bs-target="#basicTab" type="button" role="tab" aria-controls="basicTab" aria-selected="true">Basic Info</button>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" data-bs-toggle="tab" href="#rulesTab">Rules & Settings</a>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="season-tab-rules" data-bs-toggle="tab" data-bs-target="#rulesTab" type="button" role="tab" aria-controls="rulesTab" aria-selected="false">Rules &amp; Settings</button>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" data-bs-toggle="tab" href="#registrationTab">Registration</a>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="season-tab-registration" data-bs-toggle="tab" data-bs-target="#registrationTab" type="button" role="tab" aria-controls="registrationTab" aria-selected="false">Registration</button>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" data-bs-toggle="tab" href="#offSeasonTab">Off-Season</a>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="season-tab-offseason" data-bs-toggle="tab" data-bs-target="#offSeasonTab" type="button" role="tab" aria-controls="offSeasonTab" aria-selected="false">Off-Season</button>
                         </li>
                     </ul>
 
-                    <div class="tab-content">
+                    <div class="tab-content" id="seasonTabContent">
                         <!-- Basic Info -->
-                        <div class="tab-pane fade show active" id="basicTab">
+                        <div class="tab-pane fade show active" id="basicTab" role="tabpanel" aria-labelledby="season-tab-basic" tabindex="0">
                             <div class="mb-3">
-                                <label class="form-label">Season Name *</label>
+                                <label class="form-label" for="seasonName">Season Name *</label>
                                 <input type="text" class="form-control" id="seasonName" required>
                             </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Start Date</label>
+                                    <label class="form-label" for="seasonStartDate">Start Date</label>
                                     <input type="date" class="form-control" id="seasonStartDate">
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">End Date</label>
+                                    <label class="form-label" for="seasonEndDate">End Date</label>
                                     <input type="date" class="form-control" id="seasonEndDate">
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Timezone (leave empty to use league timezone)</label>
+                                <label class="form-label" for="seasonTimezone">Timezone (leave empty to use league timezone)</label>
                                 <select class="form-select" id="seasonTimezone">
                                     <option value="">Use League Timezone</option>
                                     <option value="UTC">UTC</option>
@@ -211,52 +215,52 @@
                                 </select>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Default Game Length (minutes)</label>
+                                <label class="form-label" for="seasonGameLength">Default Game Length (minutes)</label>
                                 <input type="number" class="form-control" id="seasonGameLength" min="1">
                             </div>
                         </div>
 
                         <!-- Rules & Settings -->
-                        <div class="tab-pane fade" id="rulesTab">
+                        <div class="tab-pane fade" id="rulesTab" role="tabpanel" aria-labelledby="season-tab-rules" tabindex="0">
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Overtime Enabled</label>
+                                    <label class="form-label" for="rulesOvertimeEnabled">Overtime Enabled</label>
                                     <select class="form-select" id="rulesOvertimeEnabled">
                                         <option value="false">No</option>
                                         <option value="true">Yes</option>
                                     </select>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Overtime Length (minutes)</label>
+                                    <label class="form-label" for="rulesOvertimeLength">Overtime Length (minutes)</label>
                                     <input type="number" class="form-control" id="rulesOvertimeLength" min="1">
                                 </div>
                             </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Ties Allowed</label>
+                                    <label class="form-label" for="rulesTiesAllowed">Ties Allowed</label>
                                     <select class="form-select" id="rulesTiesAllowed">
                                         <option value="true">Yes</option>
                                         <option value="false">No</option>
                                     </select>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Max Players Per Team</label>
+                                    <label class="form-label" for="rulesMaxPlayers">Max Players Per Team</label>
                                     <input type="number" class="form-control" id="rulesMaxPlayers" min="1">
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Point System (JSON)</label>
-                                <textarea class="form-control font-monospace" id="rulesPointSystem" rows="3" placeholder='{"win": 3, "tie": 1, "loss": 0}'></textarea>
-                                <small class="text-muted">Example: {"win": 3, "tie": 1, "loss": 0}</small>
+                                <label class="form-label" for="rulesPointSystem">Point System (JSON)</label>
+                                <textarea class="form-control font-monospace" id="rulesPointSystem" rows="3" placeholder='{"win": 3, "tie": 1, "loss": 0}' aria-describedby="rulesPointSystemHelp"></textarea>
+                                <small class="text-muted" id="rulesPointSystemHelp">Example: {"win": 3, "tie": 1, "loss": 0}</small>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Custom Rules Description</label>
+                                <label class="form-label" for="rulesCustom">Custom Rules Description</label>
                                 <textarea class="form-control" id="rulesCustom" rows="3"></textarea>
                             </div>
                         </div>
 
                         <!-- Registration -->
-                        <div class="tab-pane fade" id="registrationTab">
+                        <div class="tab-pane fade" id="registrationTab" role="tabpanel" aria-labelledby="season-tab-registration" tabindex="0">
                             <div class="mb-3">
                                 <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" id="seasonRegistrationOpen">
@@ -264,7 +268,7 @@
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Registration Mode</label>
+                                <label class="form-label" for="seasonRegistrationMode">Registration Mode</label>
                                 <select class="form-select" id="seasonRegistrationMode">
                                     <option value="">Not Set</option>
                                     <option value="team_based">Team Based</option>
@@ -272,17 +276,17 @@
                                 </select>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Registration Deadline</label>
+                                <label class="form-label" for="seasonRegistrationDeadline">Registration Deadline</label>
                                 <input type="datetime-local" class="form-control" id="seasonRegistrationDeadline">
                             </div>
                             <div class="row">
                                 <div class="col-md-8 mb-3">
-                                    <label class="form-label">Registration Fee (in cents)</label>
-                                    <input type="number" class="form-control" id="seasonFeeCents" min="0">
-                                    <small class="text-muted">Example: 5000 = $50.00</small>
+                                <label class="form-label" for="seasonFeeCents">Registration Fee (in cents)</label>
+                                <input type="number" class="form-control" id="seasonFeeCents" min="0" aria-describedby="seasonFeeHelp">
+                                <small class="text-muted" id="seasonFeeHelp">Example: 5000 = $50.00</small>
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label class="form-label">Currency</label>
+                                    <label class="form-label" for="seasonCurrency">Currency</label>
                                     <select class="form-select" id="seasonCurrency">
                                         <option value="CAD">CAD</option>
                                         <option value="USD">USD</option>
@@ -292,19 +296,19 @@
                         </div>
 
                         <!-- Off-Season -->
-                        <div class="tab-pane fade" id="offSeasonTab">
+                        <div class="tab-pane fade" id="offSeasonTab" role="tabpanel" aria-labelledby="season-tab-offseason" tabindex="0">
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Off-Season Start Date</label>
+                                    <label class="form-label" for="seasonOffSeasonStart">Off-Season Start Date</label>
                                     <input type="date" class="form-control" id="seasonOffSeasonStart">
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Off-Season End Date</label>
+                                    <label class="form-label" for="seasonOffSeasonEnd">Off-Season End Date</label>
                                     <input type="date" class="form-control" id="seasonOffSeasonEnd">
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Off-Season Message</label>
+                                <label class="form-label" for="seasonOffSeasonMessage">Off-Season Message</label>
                                 <textarea class="form-control" id="seasonOffSeasonMessage" rows="3" placeholder="This season is currently in off-season..."></textarea>
                             </div>
                         </div>
@@ -321,11 +325,16 @@
 
 <style>
 .league-card {
-    transition: all 0.2s;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .league-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    box-shadow: 0 6px 18px var(--slms-shadow-color, rgba(15, 23, 42, 0.12));
+}
+.league-card .btn-group .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
 }
 .status-badge {
     font-size: 0.75rem;
@@ -335,10 +344,24 @@
     border-left: 3px solid transparent;
     padding-left: 0.75rem;
     margin-bottom: 0.5rem;
+    border-radius: 0.5rem;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 .season-item.active {
-    border-left-color: #0d6efd;
-    background-color: #f8f9fa;
+    border-left-color: var(--slms-primary, #0d6efd);
+    background-color: var(--slms-bg-soft, #f8f9fa);
+}
+.season-item:focus-within {
+    outline: 2px solid var(--slms-accent, #f97316);
+    outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+    .league-card .btn-group {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        justify-content: flex-end;
+    }
 }
 </style>
 
@@ -353,6 +376,18 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadLeagues() {
     const statusFilter = document.getElementById('leagueStatusFilter').value;
     const includeArchived = document.getElementById('includeArchivedFilter').checked;
+    const container = document.getElementById('leaguesContainer');
+
+    if (container) {
+        container.setAttribute('aria-busy', 'true');
+        container.innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status" aria-live="assertive">
+                    <span class="visually-hidden">Loading leagues...</span>
+                </div>
+            </div>
+        `;
+    }
 
     let url = '/league-management/api/leagues?';
     if (statusFilter) url += `status=${statusFilter}&`;
@@ -365,19 +400,27 @@ async function loadLeagues() {
         renderLeagues(leagues);
     } catch (error) {
         console.error('Error loading leagues:', error);
-        document.getElementById('leaguesContainer').innerHTML = `
+        if (container) {
+            container.setAttribute('aria-busy', 'false');
+            container.innerHTML = `
             <div class="alert alert-danger">Error loading leagues. Please try again.</div>
         `;
+        }
     }
 }
 
 function renderLeagues(leagues) {
     const container = document.getElementById('leaguesContainer');
+    if (!container) {
+        return;
+    }
+
+    container.setAttribute('aria-busy', 'false');
 
     if (leagues.length === 0) {
         container.innerHTML = `
             <div class="text-center py-5">
-                <i class="bi bi-trophy" style="font-size: 4rem; color: #ccc;"></i>
+                <i class="ph ph-trophy" style="font-size: 4rem; color: #ccc;" aria-hidden="true"></i>
                 <p class="mt-3 text-muted">No leagues found. Create your first league to get started!</p>
             </div>
         `;
@@ -396,16 +439,16 @@ function renderLeagues(leagues) {
                         </h4>
                         ${league.description ? `<p class="text-muted mb-2">${league.description}</p>` : ''}
                         <small class="text-muted">
-                            <i class="bi bi-clock"></i> ${league.timezone}
+                            <i class="ph ph-clock" aria-hidden="true"></i> ${league.timezone}
                             | Created ${new Date(league.created_at).toLocaleDateString()}
                         </small>
                     </div>
                     <div class="btn-group">
                         <button class="btn btn-sm btn-outline-primary" onclick="showCreateSeasonModal('${league.id}')">
-                            <i class="bi bi-plus-lg"></i> Add Season
+                            <i class="ph ph-plus" aria-hidden="true"></i> Add Season
                         </button>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="editLeague('${league.id}')">
-                            <i class="bi bi-pencil"></i>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="editLeague('${league.id}')" aria-label="Edit league">
+                            <i class="ph ph-pencil-line" aria-hidden="true"></i>
                         </button>
                         ${getLeagueActions(league)}
                     </div>
@@ -438,22 +481,22 @@ function getLeagueActions(league) {
     if (league.status === 'draft') {
         return `
             <button class="btn btn-sm btn-success" onclick="activateLeague('${league.id}')">
-                <i class="bi bi-check-lg"></i> Activate
+                <i class="ph ph-check-circle" aria-hidden="true"></i> Activate
             </button>
-            <button class="btn btn-sm btn-danger" onclick="deleteLeague('${league.id}')">
-                <i class="bi bi-trash"></i>
+            <button class="btn btn-sm btn-danger" onclick="deleteLeague('${league.id}')" aria-label="Delete league">
+                <i class="ph ph-trash" aria-hidden="true"></i>
             </button>
         `;
     } else if (league.status === 'active') {
         return `
             <button class="btn btn-sm btn-warning" onclick="archiveLeague('${league.id}')">
-                <i class="bi bi-archive"></i> Archive
+                <i class="ph ph-archive" aria-hidden="true"></i> Archive
             </button>
         `;
     } else if (league.status === 'archived') {
         return `
             <button class="btn btn-sm btn-info" onclick="restoreLeague('${league.id}')">
-                <i class="bi bi-arrow-counterclockwise"></i> Restore
+                <i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i> Restore
             </button>
         `;
     }
@@ -508,8 +551,8 @@ function renderSeasons(leagueId, seasons) {
 function getSeasonActions(season) {
     let actions = '';
     if (season.status === 'draft') {
-        actions += `<button class="btn btn-sm btn-success" onclick="activateSeason('${season.id}')"><i class="bi bi-play"></i></button>`;
-        actions += `<button class="btn btn-sm btn-danger" onclick="deleteSeason('${season.id}')"><i class="bi bi-trash"></i></button>`;
+        actions += `<button class="btn btn-sm btn-success" onclick="activateSeason('${season.id}')" aria-label="Activate season"><i class="ph ph-play" aria-hidden="true"></i></button>`;
+        actions += `<button class="btn btn-sm btn-danger" onclick="deleteSeason('${season.id}')" aria-label="Delete season"><i class="ph ph-trash" aria-hidden="true"></i></button>`;
     } else if (season.status === 'active') {
         actions += `<button class="btn btn-sm btn-warning" onclick="setOffSeason('${season.id}')">Off-Season</button>`;
         actions += `<button class="btn btn-sm btn-info" onclick="completeSeason('${season.id}')">Complete</button>`;
@@ -525,8 +568,16 @@ function getSeasonActions(season) {
 
 // League CRUD operations
 function showCreateLeagueModal() {
-    document.getElementById('createLeagueForm').reset();
-    new bootstrap.Modal(document.getElementById('createLeagueModal')).show();
+    const form = document.getElementById('createLeagueForm');
+    form.reset();
+    const modalEl = document.getElementById('createLeagueModal');
+    const previouslyFocused = document.activeElement;
+    modalEl.addEventListener('shown.bs.modal', () => document.getElementById('leagueName').focus(), { once: true });
+    if (previouslyFocused) {
+        modalEl.addEventListener('hidden.bs.modal', () => previouslyFocused.focus(), { once: true });
+    }
+    const modalInstance = new bootstrap.Modal(modalEl);
+    modalInstance.show();
 }
 
 async function createLeague() {
@@ -558,6 +609,7 @@ async function createLeague() {
 }
 
 async function editLeague(leagueId) {
+    const previouslyFocused = document.activeElement;
     try {
         const response = await fetch(`/league-management/api/leagues/${leagueId}`);
         const league = await response.json();
@@ -568,7 +620,13 @@ async function editLeague(leagueId) {
         document.getElementById('editLeagueDescription').value = league.description || '';
         document.getElementById('editLeagueTimezone').value = league.timezone;
 
-        new bootstrap.Modal(document.getElementById('editLeagueModal')).show();
+        const modalEl = document.getElementById('editLeagueModal');
+        modalEl.addEventListener('shown.bs.modal', () => document.getElementById('editLeagueName').focus(), { once: true });
+        if (previouslyFocused) {
+            modalEl.addEventListener('hidden.bs.modal', () => previouslyFocused.focus(), { once: true });
+        }
+        const modalInstance = new bootstrap.Modal(modalEl);
+        modalInstance.show();
     } catch (error) {
         console.error('Error:', error);
     }
@@ -641,7 +699,14 @@ async function deleteLeague(leagueId) {
 function showCreateSeasonModal(leagueId) {
     document.getElementById('createSeasonForm').reset();
     document.getElementById('seasonLeagueId').value = leagueId;
-    new bootstrap.Modal(document.getElementById('createSeasonModal')).show();
+    const modalEl = document.getElementById('createSeasonModal');
+    const previouslyFocused = document.activeElement;
+    modalEl.addEventListener('shown.bs.modal', () => document.getElementById('seasonName').focus(), { once: true });
+    if (previouslyFocused) {
+        modalEl.addEventListener('hidden.bs.modal', () => previouslyFocused.focus(), { once: true });
+    }
+    const modalInstance = new bootstrap.Modal(modalEl);
+    modalInstance.show();
 }
 
 async function createSeason() {

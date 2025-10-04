@@ -1,186 +1,204 @@
-{% extends "layout.html" %}
+﻿{% extends "base.html" %}
 
 {% block title %}Live Game Console{% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4">
-    <div class="row mb-3">
-        <div class="col-md-8">
-            <h2>Live Game Console</h2>
-            <p class="text-muted">{{ game.home_team.name if game.home_team else 'TBD' }} vs {{ game.away_team.name if game.away_team else 'TBD' }}</p>
-        </div>
-        <div class="col-md-4 text-end">
-            <span class="badge bg-{{ 'success' if game.status.value == 'in_progress' else 'secondary' }} fs-6">
-                {{ game.status.value.upper().replace('_', ' ') }}
-            </span>
-        </div>
+{% set status_value = game.status.value %}
+{% set status_color_map = {
+    'scheduled': 'secondary',
+    'in_progress': 'success',
+    'halftime': 'warning',
+    'overtime': 'info',
+    'final': 'dark'
+} %}
+{% set status_badge_color = status_color_map.get(status_value, 'secondary') %}
+{% set status_label = status_value.replace('_', ' ').title() %}
+{% set home_label = game.home_team.name if game.home_team else 'Home' %}
+{% set away_label = game.away_team.name if game.away_team else 'Away' %}
+
+<div class="page-header mb-4" aria-labelledby="liveConsoleHeading">
+    <div>
+        <h1 class="page-title h2 mb-1" id="liveConsoleHeading">Live Game Console</h1>
+        <p class="page-subtitle text-muted mb-0">{{ game.home_team.name if game.home_team else 'TBD' }} vs {{ game.away_team.name if game.away_team else 'TBD' }}</p>
     </div>
+    <div class="page-actions">
+        <span class="badge bg-{{ status_badge_color }} text-uppercase" id="gameStatusBadge" aria-live="polite">{{ status_label }}</span>
+    </div>
+</div>
 
-    <div class="row">
+<div class="row g-4">
         <!-- Scoreboard -->
-        <div class="col-lg-4 mb-4">
-            <div class="card">
+        <div class="col-lg-4">
+            <section class="card h-100" role="region" aria-labelledby="scoreboardHeading">
                 <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="bi bi-clipboard-data"></i> Scoreboard</h5>
+                    <h2 class="h5 mb-0 d-flex align-items-center gap-2" id="scoreboardHeading">
+                        <i class="ph ph-clipboard-text" aria-hidden="true"></i>
+                        Scoreboard
+                    </h2>
                 </div>
-                <div class="card-body">
-                    <div class="row text-center mb-3">
+                <div class="card-body d-grid gap-3">
+                    <div class="row text-center" aria-live="polite" aria-atomic="true">
                         <div class="col-5">
-                            <h6 class="text-muted">{{ game.home_team.name if game.home_team else 'HOME' }}</h6>
-                            <h1 class="display-3 fw-bold text-primary" id="homeScore">{{ game.home_score }}</h1>
+                            <p class="text-muted text-uppercase small mb-1">{{ home_label }}</p>
+                            <p class="display-4 fw-bold text-primary mb-0" id="homeScore" aria-label="{{ home_label }} score">{{ game.home_score }}</p>
                         </div>
-                        <div class="col-2 d-flex align-items-center justify-content-center">
-                            <h3>-</h3>
+                        <div class="col-2 d-flex align-items-center justify-content-center" aria-hidden="true">
+                            <span class="fs-2">-</span>
                         </div>
                         <div class="col-5">
-                            <h6 class="text-muted">{{ game.away_team.name if game.away_team else 'AWAY' }}</h6>
-                            <h1 class="display-3 fw-bold text-danger" id="awayScore">{{ game.away_score }}</h1>
+                            <p class="text-muted text-uppercase small mb-1">{{ away_label }}</p>
+                            <p class="display-4 fw-bold text-danger mb-0" id="awayScore" aria-label="{{ away_label }} score">{{ game.away_score }}</p>
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Home Score</label>
-                        <input type="number" class="form-control" id="inputHomeScore" value="{{ game.home_score }}" min="0">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Away Score</label>
-                        <input type="number" class="form-control" id="inputAwayScore" value="{{ game.away_score }}" min="0">
-                    </div>
-                    <button class="btn btn-primary w-100" onclick="updateScore()">
-                        <i class="bi bi-check-lg"></i> Update Score
-                    </button>
+                    <form class="d-grid gap-3" aria-labelledby="scoreboardHeading" onsubmit="event.preventDefault(); updateScore();">
+                        <div>
+                            <label class="form-label" for="inputHomeScore">{{ home_label }} Score</label>
+                            <input type="number" class="form-control" id="inputHomeScore" value="{{ game.home_score }}" min="0" inputmode="numeric">
+                        </div>
+                        <div>
+                            <label class="form-label" for="inputAwayScore">{{ away_label }} Score</label>
+                            <input type="number" class="form-control" id="inputAwayScore" value="{{ game.away_score }}" min="0" inputmode="numeric">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 d-inline-flex justify-content-center align-items-center gap-2">
+                            <i class="ph ph-check-circle" aria-hidden="true"></i>
+                            <span>Update Score</span>
+                        </button>
+                    </form>
 
-                    <hr>
+                    <hr class="my-2">
 
-                    <div class="d-grid gap-2">
+                    <div class="d-grid gap-2" role="group" aria-label="Game state controls">
                         {% if game.status.value == 'scheduled' %}
-                        <button class="btn btn-success" onclick="startGame()">
-                            <i class="bi bi-play-fill"></i> Start Game
+                        <button type="button" class="btn btn-success" onclick="startGame()">
+                            <i class="ph ph-play" aria-hidden="true"></i> Start Game
                         </button>
                         {% elif game.status.value == 'in_progress' %}
-                        <button class="btn btn-warning" onclick="setHalftime()">
-                            <i class="bi bi-pause-fill"></i> Halftime
+                        <button type="button" class="btn btn-warning" onclick="setHalftime()">
+                            <i class="ph ph-pause" aria-hidden="true"></i> Halftime
                         </button>
-                        <button class="btn btn-info" onclick="startOvertime()">
-                            <i class="bi bi-clock-history"></i> Start Overtime
+                        <button type="button" class="btn btn-info" onclick="startOvertime()">
+                            <i class="ph ph-clock-counter-clockwise" aria-hidden="true"></i> Start Overtime
                         </button>
-                        <button class="btn btn-danger" onclick="endGame()">
-                            <i class="bi bi-stop-fill"></i> End Game
+                        <button type="button" class="btn btn-danger" onclick="endGame()">
+                            <i class="ph ph-stop" aria-hidden="true"></i> End Game
                         </button>
                         {% elif game.status.value == 'halftime' %}
-                        <button class="btn btn-success" onclick="resumeGame()">
-                            <i class="bi bi-play-fill"></i> Resume Game
+                        <button type="button" class="btn btn-success" onclick="resumeGame()">
+                            <i class="ph ph-play" aria-hidden="true"></i> Resume Game
                         </button>
                         {% elif game.status.value == 'overtime' %}
-                        <button class="btn btn-danger" onclick="endGame()">
-                            <i class="bi bi-stop-fill"></i> End Game
+                        <button type="button" class="btn btn-danger" onclick="endGame()">
+                            <i class="ph ph-stop" aria-hidden="true"></i> End Game
                         </button>
                         {% elif game.status.value == 'final' and not game.is_reconciled %}
-                        <button class="btn btn-success" onclick="reconcileGame()">
-                            <i class="bi bi-check-circle"></i> Reconcile Game
+                        <button type="button" class="btn btn-success" onclick="reconcileGame()">
+                            <i class="ph ph-check-circle" aria-hidden="true"></i> Reconcile Game
                         </button>
                         {% endif %}
                     </div>
 
                     {% if game.went_to_overtime %}
-                    <div class="alert alert-info mt-3">
-                        <i class="bi bi-info-circle"></i> Overtime ({{ game.overtime_periods }} period{{ 's' if game.overtime_periods > 1 else '' }})
+                    <div class="alert alert-info mt-2 d-flex align-items-center gap-2" role="status">
+                        <i class="ph ph-info" aria-hidden="true"></i>
+                        <span>Overtime ({{ game.overtime_periods }} period{{ 's' if game.overtime_periods > 1 else '' }})</span>
                     </div>
                     {% endif %}
 
                     {% if game.is_reconciled %}
-                    <div class="alert alert-success mt-3">
-                        <i class="bi bi-check-circle"></i> Game Reconciled
+                    <div class="alert alert-success mt-2 d-flex align-items-center gap-2" role="status">
+                        <i class="ph ph-check-circle" aria-hidden="true"></i>
+                        <span>Game Reconciled</span>
                     </div>
                     {% endif %}
                 </div>
-            </div>
+            </section>
         </div>
 
         <!-- Events & Actions -->
         <div class="col-lg-8">
-            <ul class="nav nav-tabs mb-3" role="tablist">
-                <li class="nav-item">
-                    <a class="nav-link active" data-bs-toggle="tab" href="#eventsTab">Events</a>
+            <ul class="nav nav-tabs mb-3" id="consoleTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="console-tab-events" data-bs-toggle="tab" data-bs-target="#eventsTab" type="button" role="tab" aria-controls="eventsTab" aria-selected="true">Events</button>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="tab" href="#penaltiesTab">Penalties</a>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="console-tab-penalties" data-bs-toggle="tab" data-bs-target="#penaltiesTab" type="button" role="tab" aria-controls="penaltiesTab" aria-selected="false">Penalties</button>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="tab" href="#statsTab">Player Stats</a>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="console-tab-stats" data-bs-toggle="tab" data-bs-target="#statsTab" type="button" role="tab" aria-controls="statsTab" aria-selected="false">Player Stats</button>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="tab" href="#historyTab">Score History</a>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="console-tab-history" data-bs-toggle="tab" data-bs-target="#historyTab" type="button" role="tab" aria-controls="historyTab" aria-selected="false">Score History</button>
                 </li>
             </ul>
 
-            <div class="tab-content">
+            <div class="tab-content" id="consoleTabContent">
                 <!-- Events Tab -->
-                <div class="tab-pane fade show active" id="eventsTab">
+                <div class="tab-pane fade show active" id="eventsTab" role="tabpanel" aria-labelledby="console-tab-events" tabindex="0">
                     <div class="card">
                         <div class="card-header">
                             <div class="d-flex justify-content-between align-items-center">
-                                <h6 class="mb-0">Game Events</h6>
-                                <button class="btn btn-sm btn-primary" onclick="showAddEventModal()">
-                                    <i class="bi bi-plus"></i> Add Event
+                                <h2 class="h6 mb-0">Game Events</h2>
+                                <button class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1" onclick="showAddEventModal()">
+                                    <i class="ph ph-plus" aria-hidden="true"></i> Add Event
                                 </button>
                             </div>
                         </div>
                         <div class="card-body">
-                            <div id="eventsContainer">
-                                <p class="text-muted">Loading events...</p>
+                            <div id="eventsContainer" role="log" aria-live="polite" aria-busy="true" aria-label="Game events stream">
+                                <p class="text-muted mb-0">Loading events...</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Penalties Tab -->
-                <div class="tab-pane fade" id="penaltiesTab">
+                <div class="tab-pane fade" id="penaltiesTab" role="tabpanel" aria-labelledby="console-tab-penalties" tabindex="0">
                     <div class="card">
                         <div class="card-header">
                             <div class="d-flex justify-content-between align-items-center">
-                                <h6 class="mb-0">Penalties</h6>
-                                <button class="btn btn-sm btn-primary" onclick="showAddPenaltyModal()">
-                                    <i class="bi bi-plus"></i> Add Penalty
+                                <h2 class="h6 mb-0">Penalties</h2>
+                                <button class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1" onclick="showAddPenaltyModal()">
+                                    <i class="ph ph-plus" aria-hidden="true"></i> Add Penalty
                                 </button>
                             </div>
                         </div>
                         <div class="card-body">
-                            <div id="penaltiesContainer">
-                                <p class="text-muted">Loading penalties...</p>
+                            <div id="penaltiesContainer" role="log" aria-live="polite" aria-busy="true" aria-label="Penalty log">
+                                <p class="text-muted mb-0">Loading penalties...</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Stats Tab -->
-                <div class="tab-pane fade" id="statsTab">
+                <div class="tab-pane fade" id="statsTab" role="tabpanel" aria-labelledby="console-tab-stats" tabindex="0">
                     <div class="card">
                         <div class="card-header">
                             <div class="d-flex justify-content-between align-items-center">
-                                <h6 class="mb-0">Player Statistics</h6>
-                                <button class="btn btn-sm btn-primary" onclick="showAddStatModal()">
-                                    <i class="bi bi-plus"></i> Add Stat
+                                <h2 class="h6 mb-0">Player Statistics</h2>
+                                <button class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1" onclick="showAddStatModal()">
+                                    <i class="ph ph-plus" aria-hidden="true"></i> Add Stat
                                 </button>
                             </div>
                         </div>
                         <div class="card-body">
-                            <div id="statsContainer">
-                                <p class="text-muted">Loading stats...</p>
+                            <div id="statsContainer" role="region" aria-live="polite" aria-busy="true" aria-label="Player statistics">
+                                <p class="text-muted mb-0">Loading stats...</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- History Tab -->
-                <div class="tab-pane fade" id="historyTab">
+                <div class="tab-pane fade" id="historyTab" role="tabpanel" aria-labelledby="console-tab-history" tabindex="0">
                     <div class="card">
                         <div class="card-header">
-                            <h6 class="mb-0">Score Update History</h6>
+                            <h2 class="h6 mb-0">Score Update History</h2>
                         </div>
                         <div class="card-body">
-                            <div id="historyContainer">
-                                <p class="text-muted">Loading history...</p>
+                            <div id="historyContainer" role="log" aria-live="polite" aria-busy="true" aria-label="Score update history">
+                                <p class="text-muted mb-0">Loading history...</p>
                             </div>
                         </div>
                     </div>
@@ -191,17 +209,17 @@
 </div>
 
 <!-- Add Event Modal -->
-<div class="modal fade" id="addEventModal" tabindex="-1">
-    <div class="modal-dialog">
+<div class="modal fade" id="addEventModal" tabindex="-1" aria-labelledby="addEventModalLabel" aria-modal="true" role="dialog">
+    <div class="modal-dialog modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Add Game Event</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h2 class="modal-title h5 mb-0" id="addEventModalLabel">Add Game Event</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form id="addEventForm">
                     <div class="mb-3">
-                        <label class="form-label">Event Type</label>
+                        <label class="form-label" for="eventType">Event Type</label>
                         <select class="form-select" id="eventType" required>
                             <option value="goal">Goal</option>
                             <option value="timeout">Timeout</option>
@@ -211,7 +229,7 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Description</label>
+                        <label class="form-label" for="eventDescription">Description</label>
                         <textarea class="form-control" id="eventDescription" rows="2"></textarea>
                     </div>
                 </form>
@@ -225,17 +243,17 @@
 </div>
 
 <!-- Add Penalty Modal -->
-<div class="modal fade" id="addPenaltyModal" tabindex="-1">
-    <div class="modal-dialog">
+<div class="modal fade" id="addPenaltyModal" tabindex="-1" aria-labelledby="addPenaltyModalLabel" aria-modal="true" role="dialog">
+    <div class="modal-dialog modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Add Penalty</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h2 class="modal-title h5 mb-0" id="addPenaltyModalLabel">Add Penalty</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form id="addPenaltyForm">
                     <div class="mb-3">
-                        <label class="form-label">Team</label>
+                        <label class="form-label" for="penaltyTeam">Team</label>
                         <select class="form-select" id="penaltyTeam" required>
                             {% if game.home_team %}
                             <option value="{{ game.home_team_id }}">{{ game.home_team.name }}</option>
@@ -246,7 +264,7 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Penalty Type</label>
+                        <label class="form-label" for="penaltyType">Penalty Type</label>
                         <select class="form-select" id="penaltyType" required>
                             <option value="personal_foul">Personal Foul</option>
                             <option value="technical_foul">Technical Foul</option>
@@ -257,7 +275,7 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Description</label>
+                        <label class="form-label" for="penaltyDescription">Description</label>
                         <textarea class="form-control" id="penaltyDescription" rows="2"></textarea>
                     </div>
                 </form>
@@ -369,102 +387,144 @@ async function reconcileGame() {
 }
 
 async function loadEvents() {
+    const container = document.getElementById('eventsContainer');
+    if (!container) return;
+    container.setAttribute('aria-busy', 'true');
+
     try {
         const response = await fetch(`/live-scoring/api/games/${gameId}/events`);
         const events = await response.json();
-        const container = document.getElementById('eventsContainer');
 
         if (events.length === 0) {
-            container.innerHTML = '<p class="text-muted">No events yet</p>';
-            return;
+            container.innerHTML = '<p class="text-muted mb-0">No events yet</p>';
+        } else {
+            const items = events.map(e => `
+                <li class="border-bottom pb-2 mb-2">
+                    <strong>${e.event_type.replace('_', ' ').toUpperCase()}</strong>
+                    ${e.description ? `<br><small class="text-muted">${e.description}</small>` : ''}
+                    <br><small class="text-muted">${new Date(e.created_at).toLocaleString()}</small>
+                </li>
+            `).join('');
+            container.innerHTML = `<ul class="list-unstyled mb-0">${items}</ul>`;
         }
-
-        container.innerHTML = events.map(e => `
-            <div class="border-bottom pb-2 mb-2">
-                <strong>${e.event_type.replace('_', ' ').toUpperCase()}</strong>
-                ${e.description ? `<br><small class="text-muted">${e.description}</small>` : ''}
-                <br><small class="text-muted">${new Date(e.created_at).toLocaleString()}</small>
-            </div>
-        `).join('');
     } catch (error) {
         console.error('Error loading events:', error);
+        container.innerHTML = '<p class="text-danger mb-0">Unable to load events.</p>';
+    } finally {
+        container.setAttribute('aria-busy', 'false');
     }
 }
 
 async function loadPenalties() {
+    const container = document.getElementById('penaltiesContainer');
+    if (!container) return;
+    container.setAttribute('aria-busy', 'true');
+
     try {
         const response = await fetch(`/live-scoring/api/games/${gameId}/penalties`);
         const penalties = await response.json();
-        const container = document.getElementById('penaltiesContainer');
 
         if (penalties.length === 0) {
-            container.innerHTML = '<p class="text-muted">No penalties yet</p>';
-            return;
+            container.innerHTML = '<p class="text-muted mb-0">No penalties yet</p>';
+        } else {
+            const items = penalties.map(p => `
+                <li class="border-bottom pb-2 mb-2">
+                    <strong>${p.penalty_type.replace('_', ' ').toUpperCase()}</strong>
+                    ${p.player_name ? `<br>${p.player_name}` : ''}
+                    ${p.description ? `<br><small class="text-muted">${p.description}</small>` : ''}
+                    ${p.resulted_in_ejection ? '<br><span class="badge bg-danger">Ejection</span>' : ''}
+                </li>
+            `).join('');
+            container.innerHTML = `<ul class="list-unstyled mb-0">${items}</ul>`;
         }
-
-        container.innerHTML = penalties.map(p => `
-            <div class="border-bottom pb-2 mb-2">
-                <strong>${p.penalty_type.replace('_', ' ').toUpperCase()}</strong>
-                ${p.player_name ? `<br>${p.player_name}` : ''}
-                ${p.description ? `<br><small class="text-muted">${p.description}</small>` : ''}
-                ${p.resulted_in_ejection ? '<br><span class="badge bg-danger">Ejection</span>' : ''}
-            </div>
-        `).join('');
     } catch (error) {
         console.error('Error loading penalties:', error);
+        container.innerHTML = '<p class="text-danger mb-0">Unable to load penalties.</p>';
+    } finally {
+        container.setAttribute('aria-busy', 'false');
     }
 }
 
 async function loadStats() {
+    const container = document.getElementById('statsContainer');
+    if (!container) return;
+    container.setAttribute('aria-busy', 'true');
+
     try {
         const response = await fetch(`/live-scoring/api/games/${gameId}/stats`);
         const stats = await response.json();
-        const container = document.getElementById('statsContainer');
 
         if (stats.length === 0) {
-            container.innerHTML = '<p class="text-muted">No stats yet</p>';
-            return;
+            container.innerHTML = '<p class="text-muted mb-0">No stats yet</p>';
+        } else {
+            const items = stats.map(s => `
+                <li class="border-bottom pb-2 mb-2">
+                    <strong>${s.player_name}</strong>: ${s.stat_type.replace('_', ' ')} = ${s.value}
+                </li>
+            `).join('');
+            container.innerHTML = `<ul class="list-unstyled mb-0">${items}</ul>`;
         }
-
-        container.innerHTML = stats.map(s => `
-            <div class="border-bottom pb-2 mb-2">
-                <strong>${s.player_name}</strong>: ${s.stat_type.replace('_', ' ')} = ${s.value}
-            </div>
-        `).join('');
     } catch (error) {
         console.error('Error loading stats:', error);
+        container.innerHTML = '<p class="text-danger mb-0">Unable to load stats.</p>';
+    } finally {
+        container.setAttribute('aria-busy', 'false');
     }
 }
 
 async function loadHistory() {
+    const container = document.getElementById('historyContainer');
+    if (!container) return;
+    container.setAttribute('aria-busy', 'true');
+
     try {
         const response = await fetch(`/live-scoring/api/games/${gameId}/score-history`);
         const history = await response.json();
-        const container = document.getElementById('historyContainer');
 
         if (history.length === 0) {
-            container.innerHTML = '<p class="text-muted">No score updates yet</p>';
-            return;
+            container.innerHTML = '<p class="text-muted mb-0">No score updates yet</p>';
+        } else {
+            const items = history.map(h => `
+                <li class="border-bottom pb-2 mb-2">
+                    <span class="d-block">
+                        <span class="fw-semibold">${h.previous_home_score}-${h.previous_away_score}</span>
+                        &rarr;
+                        <span class="fw-semibold">${h.new_home_score}-${h.new_away_score}</span>
+                    </span>
+                    <span class="badge bg-secondary">${h.update_type.replace('_', ' ')}</span>
+                    <br><small class="text-muted">${new Date(h.created_at).toLocaleString()}</small>
+                </li>
+            `).join('');
+            container.innerHTML = `<ul class="list-unstyled mb-0">${items}</ul>`;
         }
-
-        container.innerHTML = history.map(h => `
-            <div class="border-bottom pb-2 mb-2">
-                ${h.previous_home_score}-${h.previous_away_score} → ${h.new_home_score}-${h.new_away_score}
-                <span class="badge bg-secondary">${h.update_type}</span>
-                <br><small class="text-muted">${new Date(h.created_at).toLocaleString()}</small>
-            </div>
-        `).join('');
     } catch (error) {
         console.error('Error loading history:', error);
+        container.innerHTML = '<p class="text-danger mb-0">Unable to load history.</p>';
+    } finally {
+        container.setAttribute('aria-busy', 'false');
     }
 }
 
 function showAddEventModal() {
-    new bootstrap.Modal(document.getElementById('addEventModal')).show();
+    const modalEl = document.getElementById('addEventModal');
+    const previouslyFocused = document.activeElement;
+    modalEl.addEventListener('shown.bs.modal', () => document.getElementById('eventType').focus(), { once: true });
+    if (previouslyFocused) {
+        modalEl.addEventListener('hidden.bs.modal', () => previouslyFocused.focus(), { once: true });
+    }
+    const modalInstance = new bootstrap.Modal(modalEl);
+    modalInstance.show();
 }
 
 function showAddPenaltyModal() {
-    new bootstrap.Modal(document.getElementById('addPenaltyModal')).show();
+    const modalEl = document.getElementById('addPenaltyModal');
+    const previouslyFocused = document.activeElement;
+    modalEl.addEventListener('shown.bs.modal', () => document.getElementById('penaltyTeam').focus(), { once: true });
+    if (previouslyFocused) {
+        modalEl.addEventListener('hidden.bs.modal', () => previouslyFocused.focus(), { once: true });
+    }
+    const modalInstance = new bootstrap.Modal(modalEl);
+    modalInstance.show();
 }
 
 async function addEvent() {
@@ -507,3 +567,4 @@ async function addPenalty() {
 }
 </script>
 {% endblock %}
+
