@@ -9,6 +9,7 @@ class Config:
     SECRET_KEY = os.getenv('SECRET_KEY') or 'dev-secret-key-change-me'
     DATABASE_URL = os.getenv('DATABASE_URL')
     FOOTBALL_DATA_API_KEY = os.getenv('FOOTBALL_DATA_API_KEY')
+    OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
     SQLALCHEMY_DATABASE_URI = DATABASE_URL or 'sqlite:///slms.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SESSION_COOKIE_SECURE = True

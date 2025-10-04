@@ -52,7 +52,7 @@
     </div>
   {% else %}
 
-  <!-- Revenue Overview Cards -->
+  <!-- Financial Overview Cards -->
   <div class="row g-4 mb-4">
     <div class="col-xl-3 col-lg-6">
       <div class="card border-0 shadow-sm h-100">
@@ -72,12 +72,26 @@
       <div class="card border-0 shadow-sm h-100">
         <div class="card-body text-center">
           <div class="d-flex justify-content-center mb-3">
-            <div class="bg-primary bg-opacity-10 rounded-circle p-3">
-              <i class="ph ph-coins fs-1 text-primary"></i>
+            <div class="bg-danger bg-opacity-10 rounded-circle p-3">
+              <i class="ph ph-receipt fs-1 text-danger"></i>
             </div>
           </div>
-          <h3 class="card-title text-primary mb-2">{{ fee_revenue.display }}</h3>
-          <p class="text-muted mb-0">Registration Fees</p>
+          <h3 class="card-title text-danger mb-2">{{ total_expenses.display if total_expenses else '$0.00' }}</h3>
+          <p class="text-muted mb-0">Total Expenses</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body text-center">
+          <div class="d-flex justify-content-center mb-3">
+            <div class="{% if net_profit.is_positive %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10 rounded-circle p-3">
+              <i class="ph ph-{% if net_profit.is_positive %}trend-up{% else %}trend-down{% endif %} fs-1 {% if net_profit.is_positive %}text-success{% else %}text-danger{% endif %}"></i>
+            </div>
+          </div>
+          <h3 class="card-title {% if net_profit.is_positive %}text-success{% else %}text-danger{% endif %} mb-2">{{ net_profit.display if net_profit else '$0.00' }}</h3>
+          <p class="text-muted mb-0">Net Profit/Loss</p>
         </div>
       </div>
     </div>
@@ -91,21 +105,7 @@
             </div>
           </div>
           <h3 class="card-title text-info mb-2">{{ sponsor_revenue.display }}</h3>
-          <p class="text-muted mb-0">Sponsorship Revenue</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-xl-3 col-lg-6">
-      <div class="card border-0 shadow-sm h-100">
-        <div class="card-body text-center">
-          <div class="d-flex justify-content-center mb-3">
-            <div class="bg-warning bg-opacity-10 rounded-circle p-3">
-              <i class="ph ph-hand-coins fs-1 text-warning"></i>
-            </div>
-          </div>
-          <h3 class="card-title text-warning mb-2">{{ in_person_revenue.display }}</h3>
-          <p class="text-muted mb-0">In-Person Payments</p>
+          <p class="text-muted mb-0">Sponsor Revenue</p>
         </div>
       </div>
     </div>
@@ -135,6 +135,11 @@
             <li class="nav-item" role="presentation">
               <button class="nav-link" id="sponsors-tab" data-bs-toggle="pill" data-bs-target="#sponsors" type="button" role="tab">
                 <i class="ph ph-handshake me-1"></i>Sponsor Revenue
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="expenses-tab" data-bs-toggle="pill" data-bs-target="#expenses" type="button" role="tab">
+                <i class="ph ph-receipt me-1"></i>Expenses
               </button>
             </li>
             <li class="nav-item" role="presentation">
@@ -404,32 +409,305 @@
               </div>
             </div>
 
-            <!-- Reports Tab -->
-            <div class="tab-pane fade" id="reports" role="tabpanel">
-              <h4 class="mb-4">Financial Reports</h4>
+            <!-- Expenses Tab -->
+            <div class="tab-pane fade" id="expenses" role="tabpanel">
+              <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                  <h4 class="mb-0">League Expenses</h4>
+                  <p class="text-muted mb-0">Track spending and manage budgets</p>
+                </div>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
+                  <i class="ph ph-plus me-1"></i>Add Expense
+                </button>
+              </div>
 
-              <div class="row g-4">
-                <div class="col-md-6">
+              <!-- Expense Summary Cards -->
+              <div class="row g-3 mb-4">
+                <div class="col-md-4">
                   <div class="card border-0 bg-light">
                     <div class="card-body text-center">
-                      <i class="ph ph-chart-line fs-1 text-primary mb-3 d-block"></i>
-                      <h5>Revenue Trends</h5>
-                      <p class="text-muted">Track revenue growth over time</p>
-                      <button class="btn btn-outline-primary" disabled>
-                        <i class="ph ph-chart-line me-1"></i>Coming Soon
-                      </button>
+                      <div class="text-danger mb-2">
+                        <i class="ph ph-arrow-down fs-2"></i>
+                      </div>
+                      <h4 class="text-danger mb-1">{{ total_expenses.display }}</h4>
+                      <p class="text-muted mb-0 small">Total Expenses</p>
                     </div>
                   </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                   <div class="card border-0 bg-light">
                     <div class="card-body text-center">
-                      <i class="ph ph-export fs-1 text-success mb-3 d-block"></i>
-                      <h5>Export Reports</h5>
-                      <p class="text-muted">Download financial data for accounting</p>
-                      <button class="btn btn-outline-success" disabled>
-                        <i class="ph ph-export me-1"></i>Coming Soon
+                      <div class="text-success mb-2">
+                        <i class="ph ph-arrow-up fs-2"></i>
+                      </div>
+                      <h4 class="text-success mb-1">{{ total_revenue.display }}</h4>
+                      <p class="text-muted mb-0 small">Total Revenue</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="card border-0 bg-light">
+                    <div class="card-body text-center">
+                      <div class="{% if net_profit.is_positive %}text-success{% else %}text-danger{% endif %} mb-2">
+                        <i class="ph ph-{% if net_profit.is_positive %}trend-up{% else %}trend-down{% endif %} fs-2"></i>
+                      </div>
+                      <h4 class="{% if net_profit.is_positive %}text-success{% else %}text-danger{% endif %} mb-1">{{ net_profit.display }}</h4>
+                      <p class="text-muted mb-0 small">Net Profit/Loss</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- AI Budget Insights -->
+              <div class="card border-0 bg-gradient mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="card-body text-white">
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">
+                      <i class="ph ph-magic-wand me-2"></i>AI Financial Insights
+                    </h5>
+                    <button class="btn btn-light btn-sm" id="refresh-insights" onclick="loadBudgetInsights()">
+                      <i class="ph ph-arrows-clockwise me-1"></i>Refresh
+                    </button>
+                  </div>
+                  <div id="ai-insights-content">
+                    <div class="text-center py-3">
+                      <div class="spinner-border text-light" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                      </div>
+                      <p class="mt-2 mb-0">Analyzing your financial data...</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Expense Breakdown by Category -->
+              {% if expense_breakdown %}
+              <div class="card border-0 bg-light mb-4">
+                <div class="card-header bg-transparent border-bottom">
+                  <h5 class="card-title mb-0">
+                    <i class="ph ph-chart-pie-slice me-2"></i>Expense Breakdown by Category
+                  </h5>
+                </div>
+                <div class="card-body">
+                  <div class="row g-3">
+                    {% for category, data in expense_breakdown.items() %}
+                    <div class="col-md-6 col-lg-4">
+                      <div class="d-flex align-items-center">
+                        <div class="me-3">
+                          <div class="bg-danger bg-opacity-20 rounded p-2">
+                            <i class="ph ph-receipt text-danger"></i>
+                          </div>
+                        </div>
+                        <div class="flex-grow-1">
+                          <div class="fw-semibold">{{ category.title() }}</div>
+                          <div class="text-muted small">{{ data.count }} transactions</div>
+                        </div>
+                        <div class="text-end">
+                          <div class="fw-bold text-danger">${{ data.amount_display }}</div>
+                        </div>
+                      </div>
+                    </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+              {% endif %}
+
+              <!-- Recent Expenses Table -->
+              <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                  <h5 class="card-title mb-0">
+                    <i class="ph ph-list me-2"></i>Recent Expenses
+                  </h5>
+                </div>
+                <div class="card-body p-0">
+                  {% if expenses %}
+                    <div class="table-responsive">
+                      <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                          <tr>
+                            <th>Date</th>
+                            <th>Category</th>
+                            <th>Vendor</th>
+                            <th>Description</th>
+                            <th>Amount</th>
+                            <th>Tax Ded.</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {% for expense in expenses %}
+                          <tr>
+                            <td>{{ expense.date }}</td>
+                            <td>
+                              <span class="badge bg-secondary">{{ expense.category }}</span>
+                            </td>
+                            <td>{{ expense.vendor or '-' }}</td>
+                            <td>{{ expense.description[:50] }}{% if expense.description|length > 50 %}...{% endif %}</td>
+                            <td class="text-danger fw-semibold">${{ expense.amount_display }}</td>
+                            <td>
+                              {% if expense.tax_deductible %}
+                                <i class="ph ph-check-circle text-success"></i>
+                              {% else %}
+                                <i class="ph ph-x-circle text-muted"></i>
+                              {% endif %}
+                            </td>
+                            <td>
+                              <form method="POST" action="{{ url_for('admin.league_finance_hub') }}" class="d-inline" onsubmit="return confirm('Delete this expense?');">
+                                <input type="hidden" name="action" value="delete_expense">
+                                <input type="hidden" name="expense_id" value="{{ expense.expense_id }}">
+                                <input type="hidden" name="league_id" value="{{ selected_league_id }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                  <i class="ph ph-trash"></i>
+                                </button>
+                              </form>
+                            </td>
+                          </tr>
+                          {% endfor %}
+                        </tbody>
+                      </table>
+                    </div>
+                  {% else %}
+                    <div class="text-center py-5">
+                      <i class="ph ph-receipt fs-1 text-muted mb-3 d-block"></i>
+                      <p class="text-muted mb-3">No expenses recorded yet</p>
+                      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
+                        <i class="ph ph-plus me-1"></i>Add First Expense
                       </button>
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <!-- Reports Tab -->
+            <div class="tab-pane fade" id="reports" role="tabpanel">
+              <h4 class="mb-4">Financial Reports & Exports</h4>
+
+              <!-- P&L Summary -->
+              <div class="card border-0 bg-light mb-4">
+                <div class="card-header bg-transparent border-bottom">
+                  <h5 class="card-title mb-0">
+                    <i class="ph ph-chart-bar me-2"></i>Profit & Loss Summary
+                  </h5>
+                </div>
+                <div class="card-body">
+                  <div class="row text-center">
+                    <div class="col-md-4">
+                      <div class="p-3">
+                        <div class="text-success mb-2"><i class="ph ph-arrow-up fs-3"></i></div>
+                        <h4 class="text-success mb-1">{{ total_revenue.display }}</h4>
+                        <p class="text-muted mb-0 small">Total Revenue</p>
+                      </div>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="p-3">
+                        <div class="text-danger mb-2"><i class="ph ph-arrow-down fs-3"></i></div>
+                        <h4 class="text-danger mb-1">{{ total_expenses.display if total_expenses else '$0.00' }}</h4>
+                        <p class="text-muted mb-0 small">Total Expenses</p>
+                      </div>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="p-3">
+                        <div class="{% if net_profit.is_positive %}text-success{% else %}text-danger{% endif %} mb-2">
+                          <i class="ph ph-{% if net_profit.is_positive %}trending-up{% else %}trending-down{% endif %} fs-3"></i>
+                        </div>
+                        <h4 class="{% if net_profit.is_positive %}text-success{% else %}text-danger{% endif %} mb-1">{{ net_profit.display if net_profit else '$0.00' }}</h4>
+                        <p class="text-muted mb-0 small">Net {{ 'Profit' if net_profit.is_positive else 'Loss' }}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Export Options -->
+              <div class="row g-4">
+                <div class="col-md-6 col-lg-3">
+                  <div class="card border-0 bg-light h-100">
+                    <div class="card-body text-center">
+                      <i class="ph ph-file-csv fs-1 text-primary mb-3 d-block"></i>
+                      <h6>Export Expenses</h6>
+                      <p class="text-muted small mb-3">Download expense data as CSV</p>
+                      <a href="{{ url_for('admin.export_financial_data', export_type='csv_expenses', league_id=selected_league_id) }}" class="btn btn-sm btn-outline-primary w-100">
+                        <i class="ph ph-download me-1"></i>Download CSV
+                      </a>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                  <div class="card border-0 bg-light h-100">
+                    <div class="card-body text-center">
+                      <i class="ph ph-file-csv fs-1 text-success mb-3 d-block"></i>
+                      <h6>Export Revenue</h6>
+                      <p class="text-muted small mb-3">Download revenue data as CSV</p>
+                      <a href="{{ url_for('admin.export_financial_data', export_type='csv_revenue', league_id=selected_league_id) }}" class="btn btn-sm btn-outline-success w-100">
+                        <i class="ph ph-download me-1"></i>Download CSV
+                      </a>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                  <div class="card border-0 bg-light h-100">
+                    <div class="card-body text-center">
+                      <i class="ph ph-file-csv fs-1 text-info mb-3 d-block"></i>
+                      <h6>All Transactions</h6>
+                      <p class="text-muted small mb-3">Complete financial ledger</p>
+                      <a href="{{ url_for('admin.export_financial_data', export_type='csv_all', league_id=selected_league_id) }}" class="btn btn-sm btn-outline-info w-100">
+                        <i class="ph ph-download me-1"></i>Download CSV
+                      </a>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                  <div class="card border-0 bg-light h-100">
+                    <div class="card-body text-center">
+                      <i class="ph ph-file-text fs-1 text-warning mb-3 d-block"></i>
+                      <h6>P&L Report</h6>
+                      <p class="text-muted small mb-3">Profit & Loss statement</p>
+                      <a href="{{ url_for('admin.export_financial_data', export_type='report_pl', league_id=selected_league_id) }}" class="btn btn-sm btn-outline-warning w-100">
+                        <i class="ph ph-download me-1"></i>Download Report
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tax Documents Section -->
+              <div class="card border-0 bg-light mt-4">
+                <div class="card-header bg-transparent border-bottom">
+                  <h5 class="card-title mb-0">
+                    <i class="ph ph-file-doc me-2"></i>Tax Documents
+                  </h5>
+                </div>
+                <div class="card-body">
+                  <div class="alert alert-info mb-3">
+                    <i class="ph ph-info me-2"></i>
+                    <strong>Tax Season Ready:</strong> Generate year-end summaries and 1099 forms for contractors/vendors
+                  </div>
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <div class="d-flex align-items-center p-3 border rounded">
+                        <i class="ph ph-calendar fs-2 text-primary me-3"></i>
+                        <div class="flex-grow-1">
+                          <h6 class="mb-1">Year-End Summary</h6>
+                          <p class="text-muted mb-0 small">Annual revenue & expense report</p>
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary" disabled>
+                          <i class="ph ph-file-pdf me-1"></i>Coming Soon
+                        </button>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="d-flex align-items-center p-3 border rounded">
+                        <i class="ph ph-receipt fs-2 text-success me-3"></i>
+                        <div class="flex-grow-1">
+                          <h6 class="mb-1">1099 Forms</h6>
+                          <p class="text-muted mb-0 small">Vendor payment summaries</p>
+                        </div>
+                        <button class="btn btn-sm btn-outline-success" disabled>
+                          <i class="ph ph-file-pdf me-1"></i>Coming Soon
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -592,6 +870,119 @@
   </div>
 </div>
 
+<!-- Add Expense Modal -->
+<div class="modal fade" id="addExpenseModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="ph ph-plus me-2"></i>Record League Expense
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('admin.league_finance_hub') }}">
+        <input type="hidden" name="action" value="add_expense">
+        <input type="hidden" name="league_id" value="{{ selected_league_id }}">
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="expense_amount" class="form-label">Amount <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="text" class="form-control" id="expense_amount" name="amount" required placeholder="0.00">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label for="expense_date" class="form-label">Date <span class="text-danger">*</span></label>
+              <input type="date" class="form-control" id="expense_date" name="expense_date" value="{{ current_date }}" required>
+            </div>
+            <div class="col-md-6">
+              <label for="category" class="form-label">
+                Category <span class="text-danger">*</span>
+                <span id="ai-category-badge" class="badge bg-info ms-2" style="display: none;">
+                  <i class="ph ph-magic-wand"></i> AI Suggested
+                </span>
+              </label>
+              <select class="form-select" id="category" name="category" required>
+                <option value="">Choose...</option>
+                <option value="equipment">Equipment</option>
+                <option value="facilities">Facilities & Rent</option>
+                <option value="officials">Officials & Referees</option>
+                <option value="insurance">Insurance</option>
+                <option value="marketing">Marketing & Advertising</option>
+                <option value="admin">Administrative</option>
+                <option value="travel">Travel & Transportation</option>
+                <option value="uniforms">Uniforms & Apparel</option>
+                <option value="utilities">Utilities</option>
+                <option value="other">Other</option>
+              </select>
+              <small id="ai-category-confidence" class="text-muted" style="display: none;"></small>
+            </div>
+            <div class="col-md-6">
+              <label for="vendor_name" class="form-label">
+                Vendor/Payee
+                <span id="ai-vendor-badge" class="badge bg-info ms-2" style="display: none;">
+                  <i class="ph ph-magic-wand"></i> AI Suggested
+                </span>
+              </label>
+              <input type="text" class="form-control" id="vendor_name" name="vendor_name" placeholder="e.g., ABC Sports Supply">
+            </div>
+            <div class="col-12">
+              <label for="expense_description" class="form-label">
+                Description <span class="text-danger">*</span>
+                <button type="button" class="btn btn-sm btn-outline-info ms-2" id="ai-suggest-btn" disabled>
+                  <i class="ph ph-magic-wand me-1"></i>AI Assist
+                </button>
+              </label>
+              <input type="text" class="form-control" id="expense_description" name="description" required placeholder="e.g., Soccer balls for practice">
+              <div id="ai-loading" class="text-muted small mt-1" style="display: none;">
+                <i class="ph ph-spinner-gap ph-spin"></i> AI analyzing...
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label for="expense_payment_method" class="form-label">Payment Method</label>
+              <select class="form-select" id="expense_payment_method" name="payment_method">
+                <option value="">Choose...</option>
+                <option value="cash">Cash</option>
+                <option value="check">Check</option>
+                <option value="card">Credit/Debit Card</option>
+                <option value="bank_transfer">Bank Transfer</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label for="reference_number" class="form-label">Invoice/Check #</label>
+              <input type="text" class="form-control" id="reference_number" name="reference_number" placeholder="Optional">
+            </div>
+            <div class="col-md-6">
+              <label for="receipt_url" class="form-label">Receipt URL</label>
+              <input type="text" class="form-control" id="receipt_url" name="receipt_url" placeholder="Link to receipt/invoice">
+            </div>
+            <div class="col-md-6">
+              <div class="form-check mt-4">
+                <input class="form-check-input" type="checkbox" id="tax_deductible" name="tax_deductible" checked>
+                <label class="form-check-label" for="tax_deductible">
+                  Tax Deductible
+                </label>
+              </div>
+            </div>
+            <div class="col-12">
+              <label for="expense_notes" class="form-label">Notes</label>
+              <textarea class="form-control" id="expense_notes" name="notes" rows="2" placeholder="Optional additional details"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="ph ph-floppy-disk me-1"></i>Record Expense
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <script>
 // Show/hide payment method specific fields
 document.getElementById('payment_method').addEventListener('change', function() {
@@ -617,6 +1008,220 @@ setInterval(function() {
     const timestamp = now.toISOString().slice(0, 16).replace('T', ' ');
     document.getElementById('lastUpdated').textContent = timestamp;
 }, 60000); // Update every minute
+
+// AI-Powered Expense Categorization
+let aiSuggestDebounce = null;
+
+document.getElementById('expense_description').addEventListener('input', function() {
+    const description = this.value;
+    const aiSuggestBtn = document.getElementById('ai-suggest-btn');
+
+    if (description.length > 10) {
+        aiSuggestBtn.disabled = false;
+    } else {
+        aiSuggestBtn.disabled = true;
+    }
+
+    // Auto-suggest after 2 seconds of typing
+    clearTimeout(aiSuggestDebounce);
+    if (description.length > 15) {
+        aiSuggestDebounce = setTimeout(() => {
+            fetchAISuggestions(description);
+        }, 2000);
+    }
+});
+
+document.getElementById('ai-suggest-btn').addEventListener('click', function() {
+    const description = document.getElementById('expense_description').value;
+    if (description) {
+        fetchAISuggestions(description);
+    }
+});
+
+async function fetchAISuggestions(description) {
+    const vendor = document.getElementById('vendor_name').value;
+    const amount = parseFloat(document.getElementById('expense_amount').value);
+    const aiLoading = document.getElementById('ai-loading');
+    const categoryBadge = document.getElementById('ai-category-badge');
+    const vendorBadge = document.getElementById('ai-vendor-badge');
+    const confidenceText = document.getElementById('ai-category-confidence');
+
+    aiLoading.style.display = 'block';
+
+    try {
+        // Fetch category suggestion
+        const categoryResponse = await fetch('/api/ai/suggest_expense_category', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                description: description,
+                vendor: vendor || null,
+                amount: amount || null
+            })
+        });
+
+        if (categoryResponse.ok) {
+            const categoryData = await categoryResponse.json();
+            const categorySelect = document.getElementById('category');
+
+            // Set suggested category
+            if (categoryData.category && categoryData.confidence > 0.6) {
+                categorySelect.value = categoryData.category;
+                categoryBadge.style.display = 'inline-block';
+                confidenceText.textContent = `${(categoryData.confidence * 100).toFixed(0)}% confident: ${categoryData.reasoning}`;
+                confidenceText.style.display = 'block';
+            }
+        }
+
+        // Fetch vendor suggestion
+        const vendorResponse = await fetch('/api/ai/suggest_vendor', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                description: description
+            })
+        });
+
+        if (vendorResponse.ok) {
+            const vendorData = await vendorResponse.json();
+            const vendorInput = document.getElementById('vendor_name');
+
+            // Set suggested vendor if field is empty
+            if (vendorData.vendor && !vendorInput.value) {
+                vendorInput.value = vendorData.vendor;
+                vendorBadge.style.display = 'inline-block';
+            }
+        }
+
+    } catch (error) {
+        console.error('AI suggestion error:', error);
+    } finally {
+        aiLoading.style.display = 'none';
+    }
+}
+
+// Clear AI badges when user manually changes values
+document.getElementById('category').addEventListener('change', function() {
+    document.getElementById('ai-category-badge').style.display = 'none';
+    document.getElementById('ai-category-confidence').style.display = 'none';
+});
+
+document.getElementById('vendor_name').addEventListener('input', function() {
+    if (this.value !== this.defaultValue) {
+        document.getElementById('ai-vendor-badge').style.display = 'none';
+    }
+});
+
+// AI Budget Insights
+async function loadBudgetInsights() {
+    const leagueId = '{{ selected_league_id }}';
+    const insightsContent = document.getElementById('ai-insights-content');
+
+    if (!leagueId) return;
+
+    insightsContent.innerHTML = `
+        <div class="text-center py-3">
+            <div class="spinner-border text-light" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 mb-0">Analyzing your financial data...</p>
+        </div>
+    `;
+
+    try {
+        const response = await fetch(`/api/ai/budget_insights?league_id=${leagueId}`);
+        if (!response.ok) throw new Error('Failed to fetch insights');
+
+        const data = await response.json();
+
+        // Build insights HTML
+        let html = '';
+
+        // Overall health
+        const healthIcons = {
+            'excellent': 'check-circle',
+            'good': 'smiley',
+            'fair': 'warning',
+            'poor': 'x-circle'
+        };
+        const healthColors = {
+            'excellent': 'success',
+            'good': 'info',
+            'fair': 'warning',
+            'poor': 'danger'
+        };
+
+        html += `<div class="mb-3">
+            <h6><i class="ph ph-${healthIcons[data.overall_health] || 'info'}"></i> Financial Health: <span class="badge bg-${healthColors[data.overall_health] || 'secondary'}">${data.overall_health || 'Unknown'}</span></h6>
+        </div>`;
+
+        // Key Insights
+        if (data.key_insights && data.key_insights.length > 0) {
+            html += '<div class="mb-3"><h6><i class="ph ph-lightbulb me-2"></i>Key Insights</h6><ul class="mb-0">';
+            data.key_insights.forEach(insight => {
+                html += `<li>${insight}</li>`;
+            });
+            html += '</ul></div>';
+        }
+
+        // Recommendations
+        if (data.recommendations && data.recommendations.length > 0) {
+            html += '<div class="mb-3"><h6><i class="ph ph-list-checks me-2"></i>Recommendations</h6><ul class="mb-0">';
+            data.recommendations.forEach(rec => {
+                html += `<li>${rec}</li>`;
+            });
+            html += '</ul></div>';
+        }
+
+        // Warnings
+        if (data.warnings && data.warnings.length > 0) {
+            html += '<div class="mb-3"><h6><i class="ph ph-warning me-2"></i>Warnings</h6><ul class="mb-0 text-warning">';
+            data.warnings.forEach(warning => {
+                html += `<li>${warning}</li>`;
+            });
+            html += '</ul></div>';
+        }
+
+        // Expense Optimization
+        if (data.expense_optimization && data.expense_optimization.length > 0) {
+            html += '<div><h6><i class="ph ph-coins me-2"></i>Cost Savings Opportunities</h6><ul class="mb-0">';
+            data.expense_optimization.forEach(opt => {
+                html += `<li>${opt}</li>`;
+            });
+            html += '</ul></div>';
+        }
+
+        insightsContent.innerHTML = html;
+
+    } catch (error) {
+        console.error('Failed to load insights:', error);
+        insightsContent.innerHTML = `
+            <div class="alert alert-light border mb-0">
+                <h6 class="mb-2"><i class="ph ph-info me-2"></i>AI Insights Not Available</h6>
+                <p class="mb-2 small">AI insights will be available once you have financial data. Get started by:</p>
+                <ul class="small mb-2">
+                    <li>Adding expenses to track spending</li>
+                    <li>Recording revenue from fees and sponsorships</li>
+                    <li>Building your financial history</li>
+                </ul>
+                <p class="mb-0 small text-muted">Note: Make sure your OpenAI API key is configured in .env</p>
+            </div>
+        `;
+    }
+}
+
+// Load insights when expenses tab is shown
+document.getElementById('expenses-tab').addEventListener('shown.bs.tab', function() {
+    const insightsContent = document.getElementById('ai-insights-content');
+    // Only load if not already loaded
+    if (insightsContent && insightsContent.querySelector('.spinner-border')) {
+        loadBudgetInsights();
+    }
+});
 </script>
 
 <style>

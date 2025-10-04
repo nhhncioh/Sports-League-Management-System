@@ -19,4 +19,5 @@ openpyxl==3.*
 pandas==2.*
 pyotp==2.*
 qrcode[pil]==7.*
+openai==1.*
 

@@ -1,10 +1,12 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, g, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, g, jsonify, Response, make_response
 from datetime import datetime, date, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 import copy
 import json
 import random
 import re
+import csv
+import io
 from urllib.parse import urlparse
 
 from flask_login import current_user, login_required
@@ -35,6 +37,13 @@ from slms.services.site import (
     FOOTER_ALLOWED_STYLES,
     FOOTER_MAX_COLUMNS,
     FOOTER_MAX_LINKS_PER_COLUMN,
+)
+from slms.services.ai_finance import (
+    categorize_expense,
+    detect_expense_anomalies,
+    suggest_vendor_info,
+    generate_budget_insights,
+    search_expenses_natural_language
 )
 from slms.services.media_library import (
     create_media_asset,
@@ -243,6 +252,44 @@ def _ensure_finance_hub_tables(db_wrapper):
             )
         """)
 
+        # Expense tracking table
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS league_expenses (
+                expense_id SERIAL PRIMARY KEY,
+                league_id INTEGER NOT NULL REFERENCES leagues(league_id) ON DELETE CASCADE,
+                expense_date DATE NOT NULL DEFAULT CURRENT_DATE,
+                amount_cents INTEGER NOT NULL,
+                currency VARCHAR(3) NOT NULL DEFAULT 'USD',
+                category VARCHAR(100) NOT NULL, -- 'equipment', 'facilities', 'officials', 'insurance', 'marketing', 'admin', 'other'
+                vendor_name VARCHAR(255),
+                description TEXT NOT NULL,
+                payment_method VARCHAR(50), -- 'cash', 'check', 'card', 'bank_transfer', 'other'
+                reference_number VARCHAR(100), -- Invoice/check number
+                receipt_url TEXT, -- Link to receipt/invoice image
+                is_recurring BOOLEAN DEFAULT FALSE,
+                recurrence_period VARCHAR(50), -- 'monthly', 'quarterly', 'annually'
+                tax_deductible BOOLEAN DEFAULT TRUE,
+                notes TEXT,
+                created_by INTEGER REFERENCES users(user_id),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # Expense categories configuration
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS expense_categories (
+                category_id SERIAL PRIMARY KEY,
+                league_id INTEGER REFERENCES leagues(league_id) ON DELETE CASCADE,
+                category_name VARCHAR(100) NOT NULL,
+                category_type VARCHAR(50) DEFAULT 'operational', -- 'operational', 'capital', 'administrative'
+                budget_allocation_cents INTEGER DEFAULT 0,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(league_id, category_name)
+            )
+        """)
+
         # Square payment integration tracking (ready for future)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS square_payments (
@@ -275,6 +322,9 @@ def _ensure_finance_hub_tables(db_wrapper):
         cur.execute("CREATE INDEX IF NOT EXISTS idx_league_budgets_league_year ON league_budgets(league_id, budget_year)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_square_payments_league_id ON square_payments(league_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_square_payments_status ON square_payments(status)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_league_expenses_league_id ON league_expenses(league_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_league_expenses_date ON league_expenses(expense_date)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_league_expenses_category ON league_expenses(category)")
 
         db_wrapper.commit()
     except Exception:
@@ -316,7 +366,11 @@ def _get_comprehensive_finance_data(db, league_id_int):
     if not league_id_int:
         return {
             'total_revenue': {'amount': 0, 'display': '$0.00'},
+            'total_expenses': {'amount': 0, 'display': '$0.00'},
+            'net_profit': {'amount': 0, 'display': '$0.00', 'is_positive': True},
             'revenue_breakdown': {},
+            'expense_breakdown': {},
+            'expenses': [],
             'recent_transactions': [],
             'budget_vs_actual': [],
             'sponsor_revenue': {'amount': 0, 'display': '$0.00'},
@@ -421,12 +475,72 @@ def _get_comprehensive_finance_data(db, league_id_int):
         cur.execute('SELECT team_id, name FROM teams WHERE league_id = %s ORDER BY name', (league_id_int,))
         teams = [{'team_id': row[0], 'name': row[1]} for row in cur.fetchall()]
 
+        # Get expense data
+        cur.execute("""
+            SELECT expense_id, expense_date, amount_cents, category, vendor_name,
+                   description, payment_method, reference_number, tax_deductible
+            FROM league_expenses
+            WHERE league_id = %s
+            ORDER BY expense_date DESC
+            LIMIT 50
+        """, (league_id_int,))
+
+        expenses = []
+        total_expenses_cents = 0
+        for row in cur.fetchall():
+            expense_id, exp_date, amount_cents, category, vendor, desc, payment_method, ref_num, tax_ded = row
+            expenses.append({
+                'expense_id': expense_id,
+                'date': exp_date.strftime('%Y-%m-%d') if exp_date else '',
+                'amount_cents': amount_cents,
+                'amount_display': _format_cents_to_decimal(amount_cents),
+                'category': category,
+                'vendor': vendor or '',
+                'description': desc,
+                'payment_method': payment_method or '',
+                'reference_number': ref_num or '',
+                'tax_deductible': tax_ded
+            })
+            total_expenses_cents += amount_cents
+
+        # Get expense breakdown by category
+        cur.execute("""
+            SELECT category, COALESCE(SUM(amount_cents), 0) as total_cents, COUNT(*) as count
+            FROM league_expenses
+            WHERE league_id = %s
+            GROUP BY category
+            ORDER BY total_cents DESC
+        """, (league_id_int,))
+
+        expense_breakdown = {}
+        for row in cur.fetchall():
+            category, amount_cents, count = row
+            expense_breakdown[category] = {
+                'amount_cents': amount_cents,
+                'amount_display': _format_cents_to_decimal(amount_cents),
+                'count': count
+            }
+
+        # Calculate net profit/loss
+        net_profit_cents = total_revenue_cents - total_expenses_cents
+
         return {
             'total_revenue': {
                 'amount': total_revenue_cents,
                 'display': f'${_format_cents_to_decimal(total_revenue_cents)}'
             },
+            'total_expenses': {
+                'amount': total_expenses_cents,
+                'display': f'${_format_cents_to_decimal(total_expenses_cents)}'
+            },
+            'net_profit': {
+                'amount': net_profit_cents,
+                'display': f'${_format_cents_to_decimal(net_profit_cents)}',
+                'is_positive': net_profit_cents >= 0
+            },
             'revenue_breakdown': revenue_breakdown,
+            'expense_breakdown': expense_breakdown,
+            'expenses': expenses,
             'recent_transactions': recent_transactions,
             'sponsor_revenue': {
                 'amount': sponsor_revenue_cents,
@@ -535,6 +649,123 @@ def _handle_legacy_fee_actions(db):
     flash('Fee management integration in progress.', 'info')
     return redirect(url_for('admin.manage_league_fees',
                            league_id=request.form.get('league_id')))
+
+
+def _handle_add_expense(db):
+    """Handle adding a new expense with optional AI anomaly detection"""
+    try:
+        league_id = int(request.form.get('league_id'))
+        amount_cents = _parse_amount_to_cents(request.form.get('amount'))
+        category = request.form.get('category', '').strip()
+        description = request.form.get('description', '').strip()
+        expense_date = request.form.get('expense_date') or datetime.now().date()
+        vendor_name = request.form.get('vendor_name', '').strip() or None
+
+        if not amount_cents or amount_cents <= 0:
+            flash('Valid expense amount is required.', 'error')
+            return redirect(url_for('admin.league_finance_hub', league_id=league_id))
+
+        if not category or not description:
+            flash('Category and description are required.', 'error')
+            return redirect(url_for('admin.league_finance_hub', league_id=league_id))
+
+        cur = db.cursor()
+        try:
+            # Get historical expenses for anomaly detection
+            cur.execute("""
+                SELECT expense_date, amount_cents, category, vendor_name, description
+                FROM league_expenses
+                WHERE league_id = %s
+                ORDER BY expense_date DESC
+                LIMIT 50
+            """, (league_id,))
+
+            historical_expenses = []
+            for row in cur.fetchall():
+                exp_date, amt, cat, vendor, desc = row
+                historical_expenses.append({
+                    'date': exp_date.strftime('%Y-%m-%d') if exp_date else '',
+                    'amount_cents': amt,
+                    'category': cat,
+                    'vendor': vendor,
+                    'description': desc
+                })
+
+            # Check for anomalies using AI
+            new_expense_data = {
+                'amount_cents': amount_cents,
+                'category': category,
+                'description': description,
+                'vendor': vendor_name
+            }
+
+            anomaly_result = detect_expense_anomalies(historical_expenses, new_expense_data)
+
+            # Insert expense
+            cur.execute("""
+                INSERT INTO league_expenses
+                (league_id, expense_date, amount_cents, category, vendor_name,
+                 description, payment_method, reference_number, receipt_url,
+                 is_recurring, recurrence_period, tax_deductible, notes, created_by)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING expense_id
+            """, (
+                league_id, expense_date, amount_cents, category,
+                vendor_name,
+                description,
+                request.form.get('payment_method', '').strip() or None,
+                request.form.get('reference_number', '').strip() or None,
+                request.form.get('receipt_url', '').strip() or None,
+                request.form.get('is_recurring') == 'on',
+                request.form.get('recurrence_period', '').strip() or None,
+                request.form.get('tax_deductible', 'on') == 'on',
+                request.form.get('notes', '').strip() or None,
+                current_user.id
+            ))
+
+            db.commit()
+
+            # Show anomaly warning if detected
+            if anomaly_result.get('is_anomaly') and anomaly_result.get('anomaly_score', 0) > 0.7:
+                reasons = ', '.join(anomaly_result.get('reasons', []))
+                flash(f'⚠️ Anomaly detected: {reasons}', 'warning')
+
+            flash('Expense recorded successfully.', 'success')
+
+        except Exception as e:
+            db.rollback()
+            flash(f'Failed to record expense: {str(e)}', 'error')
+        finally:
+            cur.close()
+
+    except (ValueError, TypeError):
+        flash('Invalid expense data provided.', 'error')
+
+    return redirect(url_for('admin.league_finance_hub',
+                           league_id=request.form.get('league_id')))
+
+
+def _handle_delete_expense(db):
+    """Handle deleting an expense"""
+    try:
+        expense_id = int(request.form.get('expense_id'))
+        league_id = request.form.get('league_id')
+
+        cur = db.cursor()
+        try:
+            cur.execute('DELETE FROM league_expenses WHERE expense_id = %s', (expense_id,))
+            db.commit()
+            flash('Expense deleted successfully.', 'success')
+        except Exception as e:
+            db.rollback()
+            flash(f'Failed to delete expense: {str(e)}', 'error')
+        finally:
+            cur.close()
+
+    except (ValueError, TypeError):
+        flash('Invalid expense ID.', 'error')
+
+    return redirect(url_for('admin.league_finance_hub', league_id=league_id))
 
 
 def _ensure_league_rules_table(db_wrapper):
@@ -1848,6 +2079,10 @@ def league_finance_hub():
 
         if action == 'add_in_person_payment':
             return _handle_add_in_person_payment(db)
+        elif action == 'add_expense':
+            return _handle_add_expense(db)
+        elif action == 'delete_expense':
+            return _handle_delete_expense(db)
         elif action == 'update_budget':
             return _handle_update_budget(db)
         elif action == 'generate_revenue_entry':
@@ -1877,6 +2112,308 @@ def league_finance_hub():
                          current_datetime=datetime.now().strftime('%Y-%m-%d %H:%M'),
                          current_date=datetime.now().strftime('%Y-%m-%d'),
                          **finance_data)
+
+
+@admin_bp.route('/api/ai/suggest_expense_category', methods=['POST'])
+@admin_required
+def suggest_expense_category():
+    """AI-powered expense category suggestion"""
+    try:
+        data = request.get_json()
+        description = data.get('description', '')
+        vendor = data.get('vendor')
+        amount = data.get('amount')
+
+        if not description:
+            return jsonify({'error': 'Description required'}), 400
+
+        result = categorize_expense(description, vendor, amount)
+
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/ai/suggest_vendor', methods=['POST'])
+@admin_required
+def suggest_vendor():
+    """AI-powered vendor and category suggestions"""
+    try:
+        data = request.get_json()
+        description = data.get('description', '')
+
+        if not description:
+            return jsonify({'error': 'Description required'}), 400
+
+        result = suggest_vendor_info(description)
+
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/ai/budget_insights')
+@admin_required
+def get_budget_insights():
+    """Get AI-powered budget insights for a league"""
+    try:
+        league_id = request.args.get('league_id')
+        if not league_id:
+            return jsonify({'error': 'league_id required'}), 400
+
+        league_id_int = int(league_id)
+        db = get_db()
+        finance_data = _get_comprehensive_finance_data(db, league_id_int)
+
+        # Prepare data for AI
+        revenue_breakdown = {}
+        for rev_type, data in finance_data.get('revenue_breakdown', {}).items():
+            revenue_breakdown[rev_type] = {
+                'amount': data.get('amount_cents', 0) / 100.0,
+                'count': data.get('transaction_count', 0)
+            }
+
+        expense_breakdown = {}
+        for category, data in finance_data.get('expense_breakdown', {}).items():
+            expense_breakdown[category] = {
+                'amount': data.get('amount_cents', 0) / 100.0,
+                'count': data.get('count', 0)
+            }
+
+        total_revenue = finance_data.get('total_revenue', {}).get('amount', 0) / 100.0
+        total_expenses = finance_data.get('total_expenses', {}).get('amount', 0) / 100.0
+
+        insights = generate_budget_insights(revenue_breakdown, expense_breakdown,
+                                           total_revenue, total_expenses)
+
+        return jsonify(insights)
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/ai/search_expenses', methods=['POST'])
+@admin_required
+def search_expenses_ai():
+    """Search expenses using natural language"""
+    try:
+        data = request.get_json()
+        query = data.get('query', '')
+        league_id = data.get('league_id')
+
+        if not query or not league_id:
+            return jsonify({'error': 'query and league_id required'}), 400
+
+        league_id_int = int(league_id)
+        db = get_db()
+        finance_data = _get_comprehensive_finance_data(db, league_id_int)
+
+        expenses = finance_data.get('expenses', [])
+        matching_expenses = search_expenses_natural_language(query, expenses)
+
+        return jsonify({'results': matching_expenses, 'count': len(matching_expenses)})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/export_financial_data/<export_type>')
+@admin_required
+def export_financial_data(export_type):
+    """Export financial data as CSV or generate PDF reports"""
+    league_id = request.args.get('league_id')
+
+    if not league_id:
+        flash('Please select a league first.', 'error')
+        return redirect(url_for('admin.league_finance_hub'))
+
+    league_id_int = int(league_id)
+    db = get_db()
+    finance_data = _get_comprehensive_finance_data(db, league_id_int)
+
+    # Get league name
+    cur = db.cursor()
+    cur.execute('SELECT name FROM leagues WHERE league_id = %s', (league_id_int,))
+    league_row = cur.fetchone()
+    league_name = league_row[0] if league_row else f'League {league_id}'
+    cur.close()
+
+    if export_type == 'csv_expenses':
+        return _export_expenses_csv(finance_data, league_name)
+    elif export_type == 'csv_revenue':
+        return _export_revenue_csv(finance_data, league_name)
+    elif export_type == 'csv_all':
+        return _export_all_transactions_csv(finance_data, league_name, league_id_int, db)
+    elif export_type == 'report_pl':
+        return _generate_pl_report(finance_data, league_name)
+    else:
+        flash('Invalid export type.', 'error')
+        return redirect(url_for('admin.league_finance_hub', league_id=league_id))
+
+
+def _export_expenses_csv(finance_data, league_name):
+    """Export expenses to CSV"""
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Write header
+    writer.writerow(['Date', 'Category', 'Vendor', 'Description', 'Amount', 'Payment Method', 'Reference', 'Tax Deductible'])
+
+    # Write expense data
+    for expense in finance_data.get('expenses', []):
+        writer.writerow([
+            expense.get('date', ''),
+            expense.get('category', ''),
+            expense.get('vendor', ''),
+            expense.get('description', ''),
+            expense.get('amount_display', ''),
+            expense.get('payment_method', ''),
+            expense.get('reference_number', ''),
+            'Yes' if expense.get('tax_deductible') else 'No'
+        ])
+
+    # Create response
+    output.seek(0)
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={'Content-Disposition': f'attachment; filename={league_name}_expenses_{datetime.now().strftime("%Y%m%d")}.csv'}
+    )
+
+
+def _export_revenue_csv(finance_data, league_name):
+    """Export revenue to CSV"""
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Write header
+    writer.writerow(['Date', 'Type', 'Description', 'Amount', 'Payment Method'])
+
+    # Write revenue data
+    for transaction in finance_data.get('recent_transactions', []):
+        writer.writerow([
+            transaction.get('date', ''),
+            transaction.get('type', ''),
+            transaction.get('description', ''),
+            transaction.get('amount_display', ''),
+            transaction.get('payment_method', '')
+        ])
+
+    # Create response
+    output.seek(0)
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={'Content-Disposition': f'attachment; filename={league_name}_revenue_{datetime.now().strftime("%Y%m%d")}.csv'}
+    )
+
+
+def _export_all_transactions_csv(finance_data, league_name, league_id, db):
+    """Export all financial transactions to CSV"""
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Write header
+    writer.writerow(['Date', 'Type', 'Category', 'Description', 'Amount', 'Balance Impact'])
+
+    # Combine revenue and expenses
+    transactions = []
+
+    # Add revenue
+    for rev in finance_data.get('recent_transactions', []):
+        transactions.append({
+            'date': rev.get('date', ''),
+            'type': 'Revenue',
+            'category': rev.get('type', ''),
+            'description': rev.get('description', ''),
+            'amount': rev.get('amount_display', ''),
+            'impact': 'Income'
+        })
+
+    # Add expenses
+    for exp in finance_data.get('expenses', []):
+        transactions.append({
+            'date': exp.get('date', ''),
+            'type': 'Expense',
+            'category': exp.get('category', ''),
+            'description': exp.get('description', ''),
+            'amount': exp.get('amount_display', ''),
+            'impact': 'Expense'
+        })
+
+    # Sort by date
+    transactions.sort(key=lambda x: x.get('date', ''), reverse=True)
+
+    # Write transactions
+    for txn in transactions:
+        writer.writerow([
+            txn['date'],
+            txn['type'],
+            txn['category'],
+            txn['description'],
+            txn['amount'],
+            txn['impact']
+        ])
+
+    # Create response
+    output.seek(0)
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={'Content-Disposition': f'attachment; filename={league_name}_all_transactions_{datetime.now().strftime("%Y%m%d")}.csv'}
+    )
+
+
+def _generate_pl_report(finance_data, league_name):
+    """Generate a simple text-based P&L report"""
+    output = io.StringIO()
+
+    # Header
+    output.write(f"PROFIT & LOSS STATEMENT\n")
+    output.write(f"{league_name}\n")
+    output.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
+    output.write("=" * 60 + "\n\n")
+
+    # Revenue Section
+    output.write("REVENUE\n")
+    output.write("-" * 60 + "\n")
+    revenue_breakdown = finance_data.get('revenue_breakdown', {})
+    total_revenue = 0
+    for rev_type, data in revenue_breakdown.items():
+        amount_display = data.get('amount_display', '0.00')
+        output.write(f"  {rev_type.title():40s} ${amount_display:>15s}\n")
+        total_revenue = finance_data.get('total_revenue', {}).get('amount', 0)
+
+    output.write("-" * 60 + "\n")
+    output.write(f"  {'Total Revenue':40s} ${finance_data.get('total_revenue', {}).get('display', '$0.00')[1:]:>15s}\n\n")
+
+    # Expenses Section
+    output.write("EXPENSES\n")
+    output.write("-" * 60 + "\n")
+    expense_breakdown = finance_data.get('expense_breakdown', {})
+    for category, data in expense_breakdown.items():
+        amount_display = data.get('amount_display', '0.00')
+        output.write(f"  {category.title():40s} ${amount_display:>15s}\n")
+
+    output.write("-" * 60 + "\n")
+    output.write(f"  {'Total Expenses':40s} ${finance_data.get('total_expenses', {}).get('display', '$0.00')[1:]:>15s}\n\n")
+
+    # Net Profit/Loss
+    output.write("=" * 60 + "\n")
+    net_profit = finance_data.get('net_profit', {})
+    profit_loss_label = "NET PROFIT" if net_profit.get('is_positive') else "NET LOSS"
+    output.write(f"{profit_loss_label:40s} ${net_profit.get('display', '$0.00')[1:]:>15s}\n")
+    output.write("=" * 60 + "\n")
+
+    # Create response
+    output.seek(0)
+    return Response(
+        output.getvalue(),
+        mimetype='text/plain',
+        headers={'Content-Disposition': f'attachment; filename={league_name}_PL_Report_{datetime.now().strftime("%Y%m%d")}.txt'}
+    )
 
 
 @admin_bp.route('/manage_league_fees', methods=['GET', 'POST'])
