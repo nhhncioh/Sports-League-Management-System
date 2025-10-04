@@ -36,6 +36,11 @@
             </button>
         </li>
         <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#assets-tab">
+                <i class="ph ph-image me-2"></i>Brand Assets
+            </button>
+        </li>
+        <li class="nav-item">
             <button class="nav-link" data-bs-toggle="tab" data-bs-target="#domain-tab">
                 <i class="ph ph-globe me-2"></i>Custom Domain
             </button>
@@ -219,7 +224,7 @@
         <!-- Branding Tab -->
         <div class="tab-pane fade" id="branding-tab">
             <div class="row g-4">
-                <div class="col-lg-6">
+                <div class="col-lg-8">
                     <div class="card shadow-sm">
                         <div class="card-header">
                             <h5 class="mb-0"><i class="ph ph-palette me-2"></i>Brand Colors</h5>
@@ -246,30 +251,112 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <div class="col-lg-6">
+        <!-- Brand Assets Tab -->
+        <div class="tab-pane fade" id="assets-tab">
+            <div class="row g-4">
+                <div class="col-lg-12">
                     <div class="card shadow-sm">
                         <div class="card-header">
                             <h5 class="mb-0"><i class="ph ph-image me-2"></i>Brand Assets</h5>
                         </div>
                         <div class="card-body">
-                            <div class="mb-3">
-                                <label class="form-label">Organization Logo</label>
-                                <input type="url" class="form-control" id="brand_logo"
-                                       placeholder="https://example.com/logo.png"
-                                       value="{{ g.org.logo_url if g.org and g.org.logo_url else '' }}">
+                            <!-- Organization Logo -->
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold">Organization Logo</label>
+                                <div class="row g-3">
+                                    <div class="col-md-8">
+                                        <div class="upload-zone p-4 border rounded text-center" style="cursor: pointer; background: #f8f9fa;" onclick="document.getElementById('logoFileInput').click()">
+                                            <input type="file" id="logoFileInput" accept="image/*" style="display:none;" onchange="handleLogoUpload(this, 'brand_logo')">
+                                            <i class="ph ph-cloud-arrow-up fs-1 text-primary mb-2"></i>
+                                            <p class="mb-1 fw-semibold">Click to upload logo</p>
+                                            <small class="text-muted">PNG, JPG, SVG up to 5MB</small>
+                                        </div>
+                                        <div class="mt-2">
+                                            <small class="text-muted">Or enter URL:</small>
+                                            <input type="url" class="form-control form-control-sm mt-1" id="brand_logo"
+                                                   placeholder="https://example.com/logo.png"
+                                                   value="{{ g.org.logo_url if g.org and g.org.logo_url else '' }}">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="border rounded p-3 text-center" style="background: #fff;">
+                                            <small class="text-muted d-block mb-2">Preview</small>
+                                            <img id="logo_preview" src="{{ g.org.logo_url if g.org and g.org.logo_url else '' }}"
+                                                 style="max-width: 100%; max-height: 120px; {{ 'display: none;' if not (g.org and g.org.logo_url) else '' }}" alt="Logo preview">
+                                            <div id="logo_preview_placeholder" style="{{ 'display: none;' if (g.org and g.org.logo_url) else '' }}">
+                                                <i class="ph ph-image fs-1 text-muted"></i>
+                                                <p class="small text-muted mb-0">No logo</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Favicon</label>
-                                <input type="url" class="form-control" id="brand_favicon"
-                                       placeholder="https://example.com/favicon.ico"
-                                       value="{{ g.org.favicon_url if g.org and g.org.favicon_url else '' }}">
+
+                            <!-- Favicon -->
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold">Favicon</label>
+                                <div class="row g-3">
+                                    <div class="col-md-8">
+                                        <div class="upload-zone p-4 border rounded text-center" style="cursor: pointer; background: #f8f9fa;" onclick="document.getElementById('faviconFileInput').click()">
+                                            <input type="file" id="faviconFileInput" accept="image/*,.ico" style="display:none;" onchange="handleLogoUpload(this, 'brand_favicon')">
+                                            <i class="ph ph-cloud-arrow-up fs-1 text-primary mb-2"></i>
+                                            <p class="mb-1 fw-semibold">Click to upload favicon</p>
+                                            <small class="text-muted">ICO, PNG (16x16 or 32x32 recommended)</small>
+                                        </div>
+                                        <div class="mt-2">
+                                            <small class="text-muted">Or enter URL:</small>
+                                            <input type="url" class="form-control form-control-sm mt-1" id="brand_favicon"
+                                                   placeholder="https://example.com/favicon.ico"
+                                                   value="{{ g.org.favicon_url if g.org and g.org.favicon_url else '' }}">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="border rounded p-3 text-center" style="background: #fff;">
+                                            <small class="text-muted d-block mb-2">Preview</small>
+                                            <img id="favicon_preview" src="{{ g.org.favicon_url if g.org and g.org.favicon_url else '' }}"
+                                                 style="max-width: 48px; max-height: 48px; {{ 'display: none;' if not (g.org and g.org.favicon_url) else '' }}" alt="Favicon preview">
+                                            <div id="favicon_preview_placeholder" style="{{ 'display: none;' if (g.org and g.org.favicon_url) else '' }}">
+                                                <i class="ph ph-image fs-3 text-muted"></i>
+                                                <p class="small text-muted mb-0">No favicon</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
+
+                            <!-- Banner Image -->
                             <div class="mb-3">
-                                <label class="form-label">Banner Image</label>
-                                <input type="url" class="form-control" id="brand_banner"
-                                       placeholder="https://example.com/banner.jpg"
-                                       value="{{ g.org.banner_image_url if g.org and g.org.banner_image_url else '' }}">
+                                <label class="form-label fw-semibold">Banner Image</label>
+                                <div class="row g-3">
+                                    <div class="col-md-8">
+                                        <div class="upload-zone p-4 border rounded text-center" style="cursor: pointer; background: #f8f9fa;" onclick="document.getElementById('bannerFileInput').click()">
+                                            <input type="file" id="bannerFileInput" accept="image/*" style="display:none;" onchange="handleLogoUpload(this, 'brand_banner')">
+                                            <i class="ph ph-cloud-arrow-up fs-1 text-primary mb-2"></i>
+                                            <p class="mb-1 fw-semibold">Click to upload banner</p>
+                                            <small class="text-muted">PNG, JPG up to 5MB (1920x400 recommended)</small>
+                                        </div>
+                                        <div class="mt-2">
+                                            <small class="text-muted">Or enter URL:</small>
+                                            <input type="url" class="form-control form-control-sm mt-1" id="brand_banner"
+                                                   placeholder="https://example.com/banner.jpg"
+                                                   value="{{ g.org.banner_image_url if g.org and g.org.banner_image_url else '' }}">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="border rounded p-3 text-center" style="background: #fff;">
+                                            <small class="text-muted d-block mb-2">Preview</small>
+                                            <img id="banner_preview" src="{{ g.org.banner_image_url if g.org and g.org.banner_image_url else '' }}"
+                                                 style="max-width: 100%; max-height: 80px; {{ 'display: none;' if not (g.org and g.org.banner_image_url) else '' }}" alt="Banner preview">
+                                            <div id="banner_preview_placeholder" style="{{ 'display: none;' if (g.org and g.org.banner_image_url) else '' }}">
+                                                <i class="ph ph-image fs-1 text-muted"></i>
+                                                <p class="small text-muted mb-0">No banner</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -320,6 +407,91 @@
 </div>
 
 <script>
+// Handle file upload
+async function handleLogoUpload(input, targetInputId) {
+    const file = input.files[0];
+    if (!file) return;
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+        alert('File size must be less than 5MB');
+        input.value = '';
+        return;
+    }
+
+    // Show loading indicator
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('category', 'branding');
+
+    try {
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error('Upload failed');
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Update the URL input field
+            document.getElementById(targetInputId).value = data.url;
+
+            // Update preview
+            const previewId = targetInputId.replace('brand_', '') + '_preview';
+            const placeholderId = targetInputId.replace('brand_', '') + '_preview_placeholder';
+
+            const previewImg = document.getElementById(previewId);
+            const placeholder = document.getElementById(placeholderId);
+
+            previewImg.src = data.url;
+            previewImg.style.display = 'block';
+            placeholder.style.display = 'none';
+
+            // Show success message
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success alert-dismissible fade show mt-2';
+            alertDiv.innerHTML = `
+                <i class="ph ph-check-circle me-2"></i>File uploaded successfully!
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            input.parentElement.appendChild(alertDiv);
+            setTimeout(() => alertDiv.remove(), 3000);
+        } else {
+            throw new Error(data.error || 'Upload failed');
+        }
+    } catch (error) {
+        alert('Error uploading file: ' + error.message);
+        input.value = '';
+    }
+}
+
+// Update preview when URL input changes
+['brand_logo', 'brand_favicon', 'brand_banner'].forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+        input.addEventListener('input', function() {
+            const previewId = id.replace('brand_', '') + '_preview';
+            const placeholderId = id.replace('brand_', '') + '_preview_placeholder';
+
+            const previewImg = document.getElementById(previewId);
+            const placeholder = document.getElementById(placeholderId);
+
+            if (this.value) {
+                previewImg.src = this.value;
+                previewImg.style.display = 'block';
+                placeholder.style.display = 'none';
+            } else {
+                previewImg.style.display = 'none';
+                placeholder.style.display = 'block';
+            }
+        });
+    }
+});
+
 // Preview updates
 function updatePreview() {
     document.getElementById('preview_title').textContent =

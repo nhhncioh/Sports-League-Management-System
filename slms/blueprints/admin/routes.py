@@ -6113,6 +6113,112 @@ def manage_standings():
 def manage_users():
     org = getattr(g, 'org', None)
 
+    if request.method == 'POST':
+        action = request.form.get('action')
+
+        if action == 'invite':
+            # Invite new user
+            email = request.form.get('email', '').strip()
+            name = request.form.get('name', '').strip()
+            role_str = request.form.get('role', 'viewer').strip()
+
+            if not email:
+                flash('Email is required', 'error')
+                return redirect(url_for('admin.manage_users'))
+
+            # Check if user already exists
+            existing_user = User.query.filter_by(email=email).first()
+            if existing_user:
+                flash('User with this email already exists', 'error')
+                return redirect(url_for('admin.manage_users'))
+
+            # Map role string to UserRole enum
+            try:
+                role = UserRole(role_str)
+            except ValueError:
+                role = UserRole.VIEWER
+
+            # Create new user
+            new_user = User(
+                email=email,
+                name=name,
+                org_id=org.id if org else None,
+                role=role,
+                is_active=False  # User must activate via email
+            )
+
+            db.session.add(new_user)
+            db.session.commit()
+
+            # TODO: Send invitation email (implement email service)
+            flash(f'User invited successfully. Invitation email sent to {email}', 'success')
+            return redirect(url_for('admin.manage_users'))
+
+        elif action == 'update':
+            # Update existing user
+            user_id = request.form.get('user_id', '').strip()
+            role_str = request.form.get('role', 'viewer').strip()
+            is_active = request.form.get('is_active') == 'on'
+
+            if not user_id:
+                flash('User ID is required', 'error')
+                return redirect(url_for('admin.manage_users'))
+
+            # Find user
+            query = User.query
+            if org:
+                query = query.filter_by(org_id=org.id)
+            user = query.filter_by(id=user_id).first()
+
+            if not user:
+                flash('User not found', 'error')
+                return redirect(url_for('admin.manage_users'))
+
+            if user.role == UserRole.OWNER:
+                flash('Cannot modify owner role', 'error')
+                return redirect(url_for('admin.manage_users'))
+
+            # Map role string to UserRole enum
+            try:
+                role = UserRole(role_str)
+            except ValueError:
+                role = UserRole.VIEWER
+
+            user.role = role
+            user.is_active = is_active
+            db.session.commit()
+
+            flash('User updated successfully', 'success')
+            return redirect(url_for('admin.manage_users'))
+
+        elif action == 'delete':
+            # Delete user
+            user_id = request.form.get('user_id', '').strip()
+
+            if not user_id:
+                flash('User ID is required', 'error')
+                return redirect(url_for('admin.manage_users'))
+
+            # Find user
+            query = User.query
+            if org:
+                query = query.filter_by(org_id=org.id)
+            user = query.filter_by(id=user_id).first()
+
+            if not user:
+                flash('User not found', 'error')
+                return redirect(url_for('admin.manage_users'))
+
+            if user.role == UserRole.OWNER:
+                flash('Cannot delete owner', 'error')
+                return redirect(url_for('admin.manage_users'))
+
+            db.session.delete(user)
+            db.session.commit()
+
+            flash('User deleted successfully', 'success')
+            return redirect(url_for('admin.manage_users'))
+
     user_id_raw = (request.form.get('user_id') or '').strip() if request.method == 'POST' else ''
     is_admin = request.form.get('is_admin') == 'true' if request.method == 'POST' else False
 
@@ -6194,7 +6300,10 @@ def manage_users():
         {
             'id': orm_user.id,
             'email': orm_user.email,
+            'name': orm_user.name,
+            'role': orm_user.role.value if orm_user.role else 'viewer',
             'is_admin': orm_user.role in (UserRole.ADMIN, UserRole.OWNER),
+            'is_active': getattr(orm_user, 'is_active', True),
         }
         for orm_user in orm_users
     ]
@@ -6204,7 +6313,10 @@ def manage_users():
             {
                 'id': f'legacy:{legacy_id}',
                 'email': username,
+                'name': None,
+                'role': 'admin' if is_admin_flag else 'viewer',
                 'is_admin': bool(is_admin_flag),
+                'is_active': True,
             }
         )
 
@@ -6213,11 +6325,15 @@ def manage_users():
         current_email = getattr(current_user, 'email', None)
         if current_id and current_email:
             if current_id not in {row['id'] for row in user_rows}:
+                current_role = getattr(current_user, 'role', UserRole.VIEWER)
                 user_rows.append(
                     {
                         'id': current_id,
                         'email': current_email,
+                        'name': getattr(current_user, 'name', None),
+                        'role': current_role.value if hasattr(current_role, 'value') else 'viewer',
                         'is_admin': current_user.has_role(UserRole.OWNER, UserRole.ADMIN) if hasattr(current_user, 'has_role') else False,
+                        'is_active': getattr(current_user, 'is_active', True),
                     }
                 )
 
