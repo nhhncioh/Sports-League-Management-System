@@ -213,6 +213,42 @@
                         </div>
                     </div>
 
+                    <!-- AI Content Generation Section -->
+                    <div class="card bg-gradient mb-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <div class="card-body text-white">
+                            <h6 class="mb-3">
+                                <i class="ph ph-magic-wand me-2"></i>AI Article Generator
+                            </h6>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small">Quick Generate</label>
+                                    <div class="d-grid gap-2">
+                                        <button type="button" class="btn btn-light btn-sm" onclick="generateWeeklyRecap()">
+                                            <i class="ph ph-calendar me-1"></i>Weekly Match Recap
+                                        </button>
+                                        <button type="button" class="btn btn-light btn-sm" onclick="showCustomArticleModal()">
+                                            <i class="ph ph-article me-1"></i>Custom Topic Article
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="ai_league_select" class="form-label small">Select League</label>
+                                    <select class="form-select form-select-sm" id="ai_league_select">
+                                        <option value="">Choose league...</option>
+                                        {% for league in leagues %}
+                                        <option value="{{ league.id }}">{{ league.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <small class="text-white-50 d-block mt-1">AI will use recent matches from this league</small>
+                                </div>
+                            </div>
+                            <div id="ai-generation-status" class="mt-2" style="display: none;">
+                                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                <span class="small">Generating article...</span>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="mb-3">
                         <label for="summary" class="form-label">Summary</label>
                         <textarea class="form-control" id="summary" name="summary" rows="2" placeholder="Brief summary for previews and social sharing"></textarea>
@@ -353,6 +389,100 @@ document.getElementById('addNewsModal').addEventListener('show.bs.modal', functi
         this.querySelector('form').reset();
     }
 });
+
+// AI News Generation Functions
+async function generateWeeklyRecap() {
+    const leagueId = document.getElementById('ai_league_select').value;
+
+    if (!leagueId) {
+        alert('Please select a league first');
+        return;
+    }
+
+    const statusDiv = document.getElementById('ai-generation-status');
+    statusDiv.style.display = 'block';
+
+    try {
+        const response = await fetch('/api/ai/generate_news', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                topic: 'Weekly Match Recap',
+                include_recent_matches: true,
+                league_id: leagueId,
+                context: 'Write a comprehensive weekly recap highlighting all the matches that took place this week.'
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            document.getElementById('title').value = data.title;
+            document.getElementById('summary').value = data.summary;
+            document.getElementById('content').value = data.content;
+            document.getElementById('category').value = 'Results';
+
+            alert('✨ AI article generated successfully! Review and publish when ready.');
+        } else {
+            alert('Failed to generate article: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        alert('Error generating article: ' + error.message);
+    } finally {
+        statusDiv.style.display = 'none';
+    }
+}
+
+async function showCustomArticleModal() {
+    const topic = prompt('What topic would you like the article to cover?');
+
+    if (!topic) return;
+
+    const includeMatches = confirm('Would you like to include recent match data?');
+    const leagueId = document.getElementById('ai_league_select').value;
+
+    if (includeMatches && !leagueId) {
+        alert('Please select a league to include match data');
+        return;
+    }
+
+    const statusDiv = document.getElementById('ai-generation-status');
+    statusDiv.style.display = 'block';
+
+    try {
+        const response = await fetch('/api/ai/generate_news', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                topic: topic,
+                include_recent_matches: includeMatches,
+                league_id: includeMatches ? leagueId : null,
+                context: ''
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            document.getElementById('title').value = data.title;
+            document.getElementById('summary').value = data.summary;
+            document.getElementById('content').value = data.content;
+            document.getElementById('category').value = 'General';
+
+            alert('✨ AI article generated successfully! Review and edit as needed.');
+        } else {
+            alert('Failed to generate article: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        alert('Error generating article: ' + error.message);
+    } finally {
+        statusDiv.style.display = 'none';
+    }
+}
 
 // Delete modal functionality
 document.getElementById('deleteModal').addEventListener('show.bs.modal', function(event) {

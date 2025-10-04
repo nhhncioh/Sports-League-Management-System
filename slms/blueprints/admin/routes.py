@@ -43,7 +43,10 @@ from slms.services.ai_finance import (
     detect_expense_anomalies,
     suggest_vendor_info,
     generate_budget_insights,
-    search_expenses_natural_language
+    search_expenses_natural_language,
+    generate_news_article,
+    generate_match_recap,
+    generate_waiver
 )
 from slms.services.media_library import (
     create_media_asset,
@@ -1904,6 +1907,191 @@ def manage_league_homepage():
 @admin_bp.route('/manage_navigation', methods=['GET', 'POST'])
 @admin_required
 def manage_navigation():
+    org = getattr(g, 'org', None)
+    db = get_db()
+
+    # Handle ticker actions
+    if request.method == 'POST':
+        action = request.form.get('action')
+
+        if action == 'add_ticker_item':
+            try:
+                league_id = request.form.get('league_id')
+                home_name = request.form.get('home_name', '').strip()
+                away_name = request.form.get('away_name', '').strip()
+                home_score = int(request.form.get('home_score', 0))
+                away_score = int(request.form.get('away_score', 0))
+                status = request.form.get('status', 'FINAL')
+                venue = request.form.get('venue', '').strip()
+                link_url = request.form.get('link_url', '').strip()
+                start_time_str = request.form.get('start_time', '').strip()
+
+                start_time = None
+                if start_time_str:
+                    try:
+                        start_time = datetime.fromisoformat(start_time_str)
+                    except:
+                        start_time = datetime.now()
+
+                from sqlalchemy import text
+                db.session.execute(text("""
+                    INSERT INTO ticker_items
+                    (league_id, home_name, away_name, home_score, away_score, status, venue, link_url, start_time, sort_key)
+                    VALUES (:league_id, :home_name, :away_name, :home_score, :away_score, :status, :venue, :link_url, :start_time, :sort_key)
+                """), {
+                    'league_id': league_id,
+                    'home_name': home_name,
+                    'away_name': away_name,
+                    'home_score': home_score,
+                    'away_score': away_score,
+                    'status': status,
+                    'venue': venue,
+                    'link_url': link_url,
+                    'start_time': start_time,
+                    'sort_key': start_time or datetime.now()
+                })
+                db.session.commit()
+                flash('Ticker item added successfully', 'success')
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error adding ticker item: {str(e)}', 'error')
+            return redirect(url_for('admin.manage_navigation') + '#ticker-content')
+
+        elif action == 'delete_ticker_item':
+            try:
+                item_id = request.form.get('ticker_item_id')
+                from sqlalchemy import text
+                db.session.execute(text("DELETE FROM ticker_items WHERE id = :id"), {'id': item_id})
+                db.session.commit()
+                flash('Ticker item deleted successfully', 'success')
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error deleting ticker item: {str(e)}', 'error')
+            return redirect(url_for('admin.manage_navigation') + '#ticker-content')
+
+        elif action == 'update_ticker_settings':
+            try:
+                league_id = request.form.get('league_id')
+                enabled = request.form.get('enabled') == 'on'
+
+                from sqlalchemy import text
+                # Check if settings exist
+                result = db.session.execute(text("SELECT id FROM ticker_settings WHERE league_id = :league_id"), {'league_id': league_id})
+                existing = result.fetchone()
+
+                if existing:
+                    db.session.execute(text("""
+                        UPDATE ticker_settings
+                        SET enabled = :enabled, updated_at = NOW()
+                        WHERE league_id = :league_id
+                    """), {'enabled': enabled, 'league_id': league_id})
+                else:
+                    db.session.execute(text("""
+                        INSERT INTO ticker_settings (league_id, enabled)
+                        VALUES (:league_id, :enabled)
+                    """), {'league_id': league_id, 'enabled': enabled})
+
+                db.session.commit()
+                flash('Ticker settings updated successfully', 'success')
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error updating ticker settings: {str(e)}', 'error')
+            return redirect(url_for('admin.manage_navigation') + '#ticker-content')
+
+        elif action == 'sync_recent_matches':
+            try:
+                from sqlalchemy import text
+                days_back = int(request.form.get('days_back', 7))
+                selected_league_id = request.form.get('sync_league_id')
+
+                # Build query based on league filter
+                if selected_league_id:
+                    query = text("""
+                        SELECT m.match_id, m.league_id, t1.name as home_team, t2.name as away_team,
+                               COALESCE(m.home_score, 0) as home_score, COALESCE(m.away_score, 0) as away_score,
+                               m.status, m.venue, m.utc_date, l.league_name
+                        FROM matches m
+                        JOIN teams t1 ON m.home_team_id = t1.team_id
+                        JOIN teams t2 ON m.away_team_id = t2.team_id
+                        JOIN leagues l ON m.league_id = l.league_id
+                        WHERE l.org_id = :org_id
+                        AND m.league_id = :league_id
+                        AND m.utc_date >= NOW() - INTERVAL ':days days'
+                        AND m.status IN ('FINISHED', 'FINAL', 'LIVE')
+                        ORDER BY m.utc_date DESC
+                        LIMIT 20
+                    """)
+                    result = db.session.execute(query, {'org_id': str(org.id), 'league_id': selected_league_id, 'days': days_back})
+                else:
+                    query = text("""
+                        SELECT m.match_id, m.league_id, t1.name as home_team, t2.name as away_team,
+                               COALESCE(m.home_score, 0) as home_score, COALESCE(m.away_score, 0) as away_score,
+                               m.status, m.venue, m.utc_date, l.league_name
+                        FROM matches m
+                        JOIN teams t1 ON m.home_team_id = t1.team_id
+                        JOIN teams t2 ON m.away_team_id = t2.team_id
+                        JOIN leagues l ON m.league_id = l.league_id
+                        WHERE l.org_id = :org_id
+                        AND m.utc_date >= NOW() - INTERVAL ':days days'
+                        AND m.status IN ('FINISHED', 'FINAL', 'LIVE')
+                        ORDER BY m.utc_date DESC
+                        LIMIT 20
+                    """)
+                    result = db.session.execute(query, {'org_id': str(org.id), 'days': days_back})
+
+                matches = result.fetchall()
+                synced_count = 0
+
+                for match in matches:
+                    match_id, league_id, home_team, away_team, home_score, away_score, status, venue, utc_date, league_name = match
+
+                    # Map match status to ticker status
+                    ticker_status = 'FINAL' if status in ('FINISHED', 'FINAL') else status
+
+                    # Check if this match already exists in ticker
+                    check = db.session.execute(text("""
+                        SELECT id FROM ticker_items
+                        WHERE league_id = :league_id
+                        AND home_name = :home_name
+                        AND away_name = :away_name
+                        AND DATE(start_time) = DATE(:match_date)
+                    """), {
+                        'league_id': str(league_id),
+                        'home_name': home_team,
+                        'away_name': away_team,
+                        'match_date': utc_date
+                    })
+
+                    if not check.fetchone():
+                        # Insert new ticker item
+                        db.session.execute(text("""
+                            INSERT INTO ticker_items
+                            (league_id, home_name, away_name, home_score, away_score, status, venue, start_time, sort_key)
+                            VALUES (:league_id, :home_name, :away_name, :home_score, :away_score, :status, :venue, :start_time, :sort_key)
+                        """), {
+                            'league_id': str(league_id),
+                            'home_name': home_team,
+                            'away_name': away_team,
+                            'home_score': home_score,
+                            'away_score': away_score,
+                            'status': ticker_status,
+                            'venue': venue or '',
+                            'start_time': utc_date,
+                            'sort_key': utc_date
+                        })
+                        synced_count += 1
+
+                db.session.commit()
+
+                if synced_count > 0:
+                    flash(f'Successfully synced {synced_count} match(es) to ticker', 'success')
+                else:
+                    flash('No new matches to sync (all recent matches already in ticker)', 'info')
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error syncing matches: {str(e)}', 'error')
+            return redirect(url_for('admin.manage_navigation') + '#ticker-content')
+
     nav_config = _load_navigation_settings()
     current_links = nav_config.get('links', [])
     current_layout = nav_config.get('layout', 'top')
@@ -1989,6 +2177,46 @@ def manage_navigation():
         }
     ]
 
+    # Load ticker data
+    from sqlalchemy import text
+    leagues = []
+    ticker_items = []
+    ticker_settings = {}
+
+    if org:
+        # Get all leagues for this org
+        result = db.session.execute(text("""
+            SELECT league_id, league_name, sport
+            FROM leagues
+            WHERE org_id = :org_id
+            ORDER BY league_name
+        """), {'org_id': str(org.id)})
+        leagues = [{'league_id': str(row[0]), 'league_name': row[1], 'sport': row[2]} for row in result.fetchall()]
+
+        # Get all ticker items
+        result = db.session.execute(text("""
+            SELECT ti.id, ti.league_id, ti.home_name, ti.away_name, ti.home_score, ti.away_score,
+                   ti.status, ti.venue, ti.link_url, ti.created_at, l.league_name
+            FROM ticker_items ti
+            LEFT JOIN leagues l ON ti.league_id = l.league_id
+            WHERE l.org_id = :org_id
+            ORDER BY ti.sort_key DESC
+            LIMIT 50
+        """), {'org_id': str(org.id)})
+        ticker_items = [{'id': row[0], 'league_id': str(row[1]), 'home_name': row[2], 'away_name': row[3],
+                        'home_score': row[4], 'away_score': row[5], 'status': row[6], 'venue': row[7],
+                        'link_url': row[8], 'created_at': row[9], 'league_name': row[10]}
+                       for row in result.fetchall()]
+
+        # Get ticker settings for each league
+        result = db.session.execute(text("""
+            SELECT ts.league_id, ts.enabled
+            FROM ticker_settings ts
+            JOIN leagues l ON ts.league_id = l.league_id
+            WHERE l.org_id = :org_id
+        """), {'org_id': str(org.id)})
+        ticker_settings = {str(row[0]): {'enabled': row[1]} for row in result.fetchall()}
+
     return render_template(
         'manage_navigation.html',
         nav_links=links_for_form,
@@ -1998,6 +2226,9 @@ def manage_navigation():
         layout_choices=NAV_LAYOUT_CHOICES,
         audience_choices=NAV_AUDIENCE_CHOICES,
         icon_choices=ICON_PICKER_CHOICES,
+        leagues=leagues,
+        ticker_items=ticker_items,
+        ticker_settings=ticker_settings,
     )
 
 
@@ -3403,6 +3634,136 @@ def manage_players():
     return render_template('manage_players.html', players=players, teams=teams, sports=sports)
 
 
+@admin_bp.route('/api/ai/generate_news', methods=['POST'])
+@admin_required
+def generate_ai_news():
+    """Generate news article using AI"""
+    try:
+        data = request.get_json()
+        topic = data.get('topic', '')
+        include_recent_matches = data.get('include_recent_matches', False)
+        context = data.get('context', '')
+        league_id = data.get('league_id')
+
+        recent_matches = []
+        if include_recent_matches and league_id:
+            # Fetch recent matches from database
+            db = get_db()
+            cur = db.cursor()
+
+            cur.execute("""
+                SELECT
+                    m.match_id,
+                    m.match_date,
+                    ht.name as home_team,
+                    at.name as away_team,
+                    m.home_score,
+                    m.away_score
+                FROM matches m
+                JOIN teams ht ON m.home_team_id = ht.team_id
+                JOIN teams at ON m.away_team_id = at.team_id
+                WHERE m.league_id = %s
+                  AND m.home_score IS NOT NULL
+                  AND m.away_score IS NOT NULL
+                ORDER BY m.match_date DESC
+                LIMIT 10
+            """, (league_id,))
+
+            for row in cur.fetchall():
+                match_id, match_date, home_team, away_team, home_score, away_score = row
+                recent_matches.append({
+                    'match_id': match_id,
+                    'match_date': match_date.strftime('%Y-%m-%d') if match_date else '',
+                    'home_team': home_team,
+                    'away_team': away_team,
+                    'home_score': home_score,
+                    'away_score': away_score
+                })
+
+            cur.close()
+
+        # Generate article using AI
+        result = generate_news_article(topic, recent_matches, context)
+
+        if result.get('success'):
+            return jsonify(result)
+        else:
+            return jsonify({'error': result.get('error', 'Failed to generate article')}), 500
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/ai/generate_match_recap/<int:match_id>', methods=['POST'])
+@admin_required
+def generate_ai_match_recap(match_id):
+    """Generate a match recap article"""
+    try:
+        db = get_db()
+        cur = db.cursor()
+
+        # Get match details
+        cur.execute("""
+            SELECT
+                m.match_date,
+                ht.name as home_team,
+                at.name as away_team,
+                m.home_score,
+                m.away_score
+            FROM matches m
+            JOIN teams ht ON m.home_team_id = ht.team_id
+            JOIN teams at ON m.away_team_id = at.team_id
+            WHERE m.match_id = %s
+        """, (match_id,))
+
+        match_row = cur.fetchone()
+        if not match_row:
+            return jsonify({'error': 'Match not found'}), 404
+
+        match_date, home_team, away_team, home_score, away_score = match_row
+
+        # Get scorers
+        cur.execute("""
+            SELECT p.name as player_name, t.name as team_name, s.goals
+            FROM scorers s
+            JOIN players p ON s.player_id = p.player_id
+            JOIN teams t ON p.team_id = t.team_id
+            WHERE s.match_id = %s AND s.goals > 0
+            ORDER BY s.goals DESC
+        """, (match_id,))
+
+        scorers = []
+        for row in cur.fetchall():
+            player_name, team_name, goals = row
+            for _ in range(goals):
+                scorers.append({
+                    'player_name': player_name,
+                    'team_name': team_name
+                })
+
+        cur.close()
+
+        match_data = {
+            'match_date': match_date.strftime('%Y-%m-%d') if match_date else '',
+            'home_team': home_team,
+            'away_team': away_team,
+            'home_score': home_score or 0,
+            'away_score': away_score or 0,
+            'scorers': scorers
+        }
+
+        # Generate recap using AI
+        result = generate_match_recap(match_data)
+
+        if result.get('success'):
+            return jsonify(result)
+        else:
+            return jsonify({'error': result.get('error', 'Failed to generate recap')}), 500
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @admin_bp.route('/manage_news', methods=['GET', 'POST'])
 @admin_required
 def manage_news():
@@ -3459,8 +3820,137 @@ def manage_news():
                    created_at, published_at, author_id FROM news ORDER BY created_at DESC''')
     news_articles = cur.fetchall()
 
+    # Get leagues for AI generation
+    cur.execute('SELECT league_id, name FROM leagues ORDER BY name')
+    leagues = [{'id': row[0], 'name': row[1]} for row in cur.fetchall()]
+
     cur.close()
-    return render_template('manage_news.html', news_articles=news_articles)
+    return render_template('manage_news.html', news_articles=news_articles, leagues=leagues)
+
+
+@admin_bp.route('/api/ai/generate_waiver', methods=['POST'])
+@admin_required
+def generate_ai_waiver():
+    """Generate a waiver using AI"""
+    try:
+        from slms.models.models import Waiver
+
+        data = request.get_json()
+        waiver_type = data.get('waiver_type', 'general')
+        sport = data.get('sport', '')
+        custom_requirements = data.get('custom_requirements', '')
+
+        # Get organization name from g.org
+        org = getattr(g, 'org', None)
+        org_name = org.name if org else 'Sports League'
+
+        # Generate waiver using AI
+        result = generate_waiver(waiver_type, org_name, sport, custom_requirements)
+
+        if result.get('success'):
+            return jsonify(result)
+        else:
+            return jsonify({'error': result.get('error', 'Failed to generate waiver')}), 500
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/manage_waivers', methods=['GET', 'POST'])
+@admin_required
+def manage_waivers():
+    """Manage liability waivers"""
+    from slms.models.models import Waiver
+    from slms.extensions import db
+
+    org = getattr(g, 'org', None)
+    if not org:
+        flash('Organization not found', 'error')
+        return redirect(url_for('admin.admin_dashboard'))
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+
+        try:
+            if action == 'add':
+                # Create new waiver
+                version = request.form.get('version', '').strip()
+                title = request.form.get('title', '').strip()
+                content = request.form.get('content', '').strip()
+                is_active = request.form.get('is_active') == 'on'
+
+                if not version or not title or not content:
+                    flash('Version, title, and content are required', 'error')
+                    return redirect(url_for('admin.manage_waivers'))
+
+                # If setting as active, deactivate others
+                if is_active:
+                    Waiver.query.filter_by(org_id=org.id, is_active=True).update({'is_active': False})
+
+                waiver = Waiver(
+                    org_id=org.id,
+                    version=version,
+                    title=title,
+                    content=content,
+                    is_active=is_active
+                )
+                db.session.add(waiver)
+                db.session.commit()
+
+                flash('Waiver created successfully', 'success')
+
+            elif action == 'edit':
+                # Edit existing waiver
+                waiver_id = request.form.get('waiver_id')
+                waiver = Waiver.query.filter_by(id=waiver_id, org_id=org.id).first()
+
+                if not waiver:
+                    flash('Waiver not found', 'error')
+                    return redirect(url_for('admin.manage_waivers'))
+
+                waiver.version = request.form.get('version', '').strip()
+                waiver.title = request.form.get('title', '').strip()
+                waiver.content = request.form.get('content', '').strip()
+
+                is_active = request.form.get('is_active') == 'on'
+
+                # If setting as active, deactivate others
+                if is_active and not waiver.is_active:
+                    Waiver.query.filter_by(org_id=org.id, is_active=True).update({'is_active': False})
+
+                waiver.is_active = is_active
+                db.session.commit()
+
+                flash('Waiver updated successfully', 'success')
+
+            elif action == 'delete':
+                # Delete waiver
+                waiver_id = request.form.get('deleteEntityId')
+                waiver = Waiver.query.filter_by(id=waiver_id, org_id=org.id).first()
+
+                if not waiver:
+                    flash('Waiver not found', 'error')
+                    return redirect(url_for('admin.manage_waivers'))
+
+                if waiver.is_active:
+                    flash('Cannot delete active waiver. Please deactivate it first.', 'error')
+                    return redirect(url_for('admin.manage_waivers'))
+
+                db.session.delete(waiver)
+                db.session.commit()
+
+                flash('Waiver deleted successfully', 'success')
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error: {str(e)}', 'error')
+
+        return redirect(url_for('admin.manage_waivers'))
+
+    # GET request - list all waivers
+    waivers = Waiver.query.filter_by(org_id=org.id).order_by(Waiver.created_at.desc()).all()
+
+    return render_template('admin/manage_waivers.html', waivers=waivers)
 
 
 @admin_bp.route('/manage_sponsors', methods=['GET', 'POST'])

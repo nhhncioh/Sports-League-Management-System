@@ -133,12 +133,51 @@
                 <div class="modal-body">
                     <input type="hidden" name="action" value="add">
 
+                    <!-- AI Waiver Generator -->
+                    <div class="card bg-gradient mb-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <div class="card-body text-white">
+                            <h6 class="mb-3">
+                                <i class="ph ph-magic-wand me-2"></i>AI Waiver Generator
+                            </h6>
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <label class="form-label small">Waiver Type</label>
+                                    <select class="form-select form-select-sm" id="ai_waiver_type">
+                                        <option value="general">General Liability</option>
+                                        <option value="youth">Youth Participant</option>
+                                        <option value="adult">Adult Participant</option>
+                                        <option value="tournament">Tournament/Event</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Sport (Optional)</label>
+                                    <input type="text" class="form-control form-control-sm" id="ai_sport" placeholder="e.g., Soccer">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">&nbsp;</label>
+                                    <button type="button" class="btn btn-light btn-sm w-100" onclick="generateAIWaiver()">
+                                        <i class="ph ph-sparkle me-1"></i>Generate Waiver
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <label class="form-label small">Custom Requirements (Optional)</label>
+                                <input type="text" class="form-control form-control-sm" id="ai_custom"
+                                       placeholder="e.g., Include COVID-19 protocols">
+                            </div>
+                            <div id="ai-waiver-status" class="mt-2" style="display: none;">
+                                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                <span class="small">Generating waiver...</span>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="version" class="form-label">Version *</label>
                                 <input type="text" class="form-control" name="version" id="version"
-                                       placeholder="e.g. 2024.1" required>
+                                       placeholder="e.g. 2025.1" required>
                                 <div class="form-text">Unique version identifier</div>
                             </div>
                         </div>
@@ -286,6 +325,46 @@
         document.getElementById('deleteEntityId').value = id;
         document.getElementById('deleteEntityName').textContent = name;
         new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    }
+
+    async function generateAIWaiver() {
+        const waiverType = document.getElementById('ai_waiver_type').value;
+        const sport = document.getElementById('ai_sport').value;
+        const customReq = document.getElementById('ai_custom').value;
+        const statusDiv = document.getElementById('ai-waiver-status');
+
+        statusDiv.style.display = 'block';
+
+        try {
+            const response = await fetch('/api/ai/generate_waiver', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    waiver_type: waiverType,
+                    sport: sport,
+                    custom_requirements: customReq
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Fill in the form fields
+                document.getElementById('title').value = data.title;
+                document.getElementById('version').value = data.version;
+                document.getElementById('content').value = data.content;
+
+                alert('✨ AI waiver generated successfully! Review the content and make any necessary adjustments before saving.');
+            } else {
+                alert('Failed to generate waiver: ' + (data.error || 'Unknown error'));
+            }
+        } catch (error) {
+            alert('Error generating waiver: ' + error.message);
+        } finally {
+            statusDiv.style.display = 'none';
+        }
     }
 </script>
 {% endblock %}

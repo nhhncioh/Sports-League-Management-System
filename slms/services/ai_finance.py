@@ -344,6 +344,262 @@ Respond with JSON only:
         }
 
 
+def generate_news_article(topic: str, recent_matches: List[Dict] = None, context: str = None) -> Dict:
+    """
+    Generate a news article using AI
+
+    Args:
+        topic: The topic/title for the article
+        recent_matches: Optional list of recent match data
+        context: Optional additional context
+
+    Returns:
+        Dict with 'title', 'content', 'summary'
+    """
+    try:
+        client = _get_openai_client()
+
+        # Build prompt based on available data
+        prompt = f"Write a professional sports league news article.\n\n"
+
+        if topic:
+            prompt += f"Topic: {topic}\n\n"
+
+        if recent_matches and len(recent_matches) > 0:
+            prompt += "Recent Match Results:\n"
+            for match in recent_matches[:10]:  # Limit to 10 most recent
+                home_team = match.get('home_team', 'Team A')
+                away_team = match.get('away_team', 'Team B')
+                home_score = match.get('home_score', 0)
+                away_score = match.get('away_score', 0)
+                match_date = match.get('match_date', '')
+
+                prompt += f"- {home_team} {home_score} - {away_score} {away_team} ({match_date})\n"
+            prompt += "\n"
+
+        if context:
+            prompt += f"Additional Context: {context}\n\n"
+
+        prompt += """
+Write a compelling news article (300-500 words) that:
+1. Has an engaging headline
+2. Includes a brief summary (1-2 sentences)
+3. Covers the main story with relevant details
+4. Uses an enthusiastic but professional tone
+5. Includes quotes or highlights if applicable
+
+Respond with JSON only:
+{
+    "title": "Compelling headline",
+    "summary": "Brief 1-2 sentence summary",
+    "content": "Full article content in markdown format"
+}"""
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a professional sports journalist writing engaging articles for a sports league. Always respond with valid JSON."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=1500
+        )
+
+        result_text = response.choices[0].message.content.strip()
+        result = json.loads(result_text)
+
+        return {
+            'title': result.get('title', topic),
+            'summary': result.get('summary', ''),
+            'content': result.get('content', ''),
+            'success': True
+        }
+
+    except Exception as e:
+        return {
+            'title': topic or 'News Article',
+            'summary': '',
+            'content': '',
+            'success': False,
+            'error': str(e)
+        }
+
+
+def generate_match_recap(match_data: Dict) -> Dict:
+    """
+    Generate a match recap article
+
+    Args:
+        match_data: Match information including teams, scores, stats
+
+    Returns:
+        Dict with article content
+    """
+    try:
+        client = _get_openai_client()
+
+        home_team = match_data.get('home_team', 'Home Team')
+        away_team = match_data.get('away_team', 'Away Team')
+        home_score = match_data.get('home_score', 0)
+        away_score = match_data.get('away_score', 0)
+        match_date = match_data.get('match_date', '')
+        scorers = match_data.get('scorers', [])
+
+        prompt = f"""Write an exciting match recap article for:
+
+{home_team} {home_score} - {away_score} {away_team}
+Date: {match_date}
+
+"""
+        if scorers:
+            prompt += "Scorers:\n"
+            for scorer in scorers:
+                prompt += f"- {scorer.get('player_name', 'Unknown')} ({scorer.get('team_name', 'Unknown')})\n"
+            prompt += "\n"
+
+        prompt += """
+Create a 200-300 word match recap that:
+1. Describes the match outcome and key moments
+2. Highlights standout performances
+3. Captures the excitement and atmosphere
+4. Uses vivid sports journalism language
+
+Respond with JSON only:
+{
+    "title": "Match recap headline",
+    "summary": "One sentence match summary",
+    "content": "Full recap content"
+}"""
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are an enthusiastic sports journalist writing match recaps. Always respond with valid JSON."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.8,
+            max_tokens=800
+        )
+
+        result_text = response.choices[0].message.content.strip()
+        result = json.loads(result_text)
+
+        return {
+            'title': result.get('title', f'{home_team} vs {away_team} - Match Recap'),
+            'summary': result.get('summary', ''),
+            'content': result.get('content', ''),
+            'success': True
+        }
+
+    except Exception as e:
+        return {
+            'title': f'{match_data.get("home_team", "Home")} vs {match_data.get("away_team", "Away")} - Match Recap',
+            'summary': '',
+            'content': '',
+            'success': False,
+            'error': str(e)
+        }
+
+
+def generate_waiver(waiver_type: str, organization_name: str, sport: str = None,
+                   custom_requirements: str = None) -> Dict:
+    """
+    Generate a liability waiver using AI
+
+    Args:
+        waiver_type: Type of waiver ('general', 'youth', 'adult', 'tournament')
+        organization_name: Name of the sports organization
+        sport: Specific sport (optional)
+        custom_requirements: Any custom clauses or requirements
+
+    Returns:
+        Dict with 'title', 'content', 'version'
+    """
+    try:
+        client = _get_openai_client()
+
+        waiver_templates = {
+            'general': 'a comprehensive general liability waiver',
+            'youth': 'a youth participant waiver with parental consent sections',
+            'adult': 'an adult participant liability waiver',
+            'tournament': 'a tournament/event-specific waiver'
+        }
+
+        template_desc = waiver_templates.get(waiver_type, 'a general liability waiver')
+
+        prompt = f"""Create {template_desc} for a sports league organization.
+
+Organization: {organization_name}
+Sport: {sport or 'General Sports'}
+Waiver Type: {waiver_type.title()}
+
+"""
+        if custom_requirements:
+            prompt += f"Special Requirements:\n{custom_requirements}\n\n"
+
+        prompt += """
+The waiver MUST include:
+1. Clear assumption of risk language
+2. Release of liability and indemnification
+3. Medical emergency authorization
+4. Photography/media release
+5. Code of conduct acknowledgment
+6. Severability clause
+7. Signature and date fields (with placeholders)
+
+For youth waivers, include:
+- Parent/guardian consent section
+- Emergency contact information
+- Medical conditions disclosure
+
+Format the waiver professionally with:
+- Clear section headings
+- Numbered clauses
+- Legal language appropriate for liability protection
+- HTML formatting for web display (<p>, <strong>, <ul>, etc.)
+
+Generate a version number based on current year (e.g., 2025.1)
+
+Respond with JSON only:
+{
+    "title": "Appropriate waiver title",
+    "content": "Complete waiver content in HTML format",
+    "version": "2025.1",
+    "summary": "Brief description of what this waiver covers"
+}"""
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a legal document specialist creating liability waivers for sports organizations. Always respond with valid JSON. The waivers should be legally sound and comprehensive."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3,
+            max_tokens=2000
+        )
+
+        result_text = response.choices[0].message.content.strip()
+        result = json.loads(result_text)
+
+        return {
+            'title': result.get('title', f'{waiver_type.title()} Waiver'),
+            'content': result.get('content', ''),
+            'version': result.get('version', '2025.1'),
+            'summary': result.get('summary', ''),
+            'success': True
+        }
+
+    except Exception as e:
+        return {
+            'title': f'{waiver_type.title()} Waiver',
+            'content': '',
+            'version': '1.0',
+            'summary': '',
+            'success': False,
+            'error': str(e)
+        }
+
+
 def search_expenses_natural_language(query: str, expenses: List[Dict]) -> List[Dict]:
     """
     Search expenses using natural language query

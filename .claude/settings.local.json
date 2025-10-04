@@ -31,7 +31,8 @@
       "Bash(copy:*)",
       "Bash(cp:*)",
       "Bash(grep:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(del \"C:\\Users\\nicjo\\Sports-League-Management-System\\slms\\templates\\admin\\manage_ticker.html\")"
     ],
     "deny": [],
     "ask": []
